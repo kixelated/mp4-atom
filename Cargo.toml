@@ -1,0 +1,13 @@
+[package]
+name = "mp4box"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+paste = "1"
+thiserror = "1"
+bytes = "1"
+num = "0.4"
+
+[dev-dependencies]
+anyhow = "1"
