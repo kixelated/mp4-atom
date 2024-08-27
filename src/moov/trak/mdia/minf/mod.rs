@@ -1,134 +1,56 @@
-use serde::Serialize;
-use std::io::{Read, Seek, Write};
+mod dinf;
+mod smhd;
+mod stbl;
+mod vmhd;
 
-use crate::mp4box::*;
-use crate::mp4box::{dinf::DinfBox, smhd::SmhdBox, stbl::StblBox, vmhd::VmhdBox};
+pub use dinf::*;
+pub use smhd::*;
+pub use stbl::*;
+pub use vmhd::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
-pub struct MinfBox {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vmhd: Option<VmhdBox>,
+use crate::*;
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub smhd: Option<SmhdBox>,
-
-    pub dinf: DinfBox,
-    pub stbl: StblBox,
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Minf {
+    pub vmhd: Option<Vmhd>,
+    pub smhd: Option<Smhd>,
+    pub dinf: Dinf,
+    pub stbl: Stbl,
 }
 
-impl MinfBox {
-    pub fn get_type(&self) -> BoxType {
-        BoxType::MinfBox
-    }
+impl Atom for Minf {
+    const KIND: FourCC = FourCC::new(b"minf");
 
-    pub fn get_size(&self) -> u64 {
-        let mut size = HEADER_SIZE;
-        if let Some(ref vmhd) = self.vmhd {
-            size += vmhd.box_size();
-        }
-        if let Some(ref smhd) = self.smhd {
-            size += smhd.box_size();
-        }
-        size += self.dinf.box_size();
-        size += self.stbl.box_size();
-        size
-    }
-}
-
-impl Mp4Box for MinfBox {
-    fn box_type(&self) -> BoxType {
-        self.get_type()
-    }
-
-    fn box_size(&self) -> u64 {
-        self.get_size()
-    }
-
-    fn to_json(&self) -> Result<String> {
-        Ok(serde_json::to_string(&self).unwrap())
-    }
-
-    fn summary(&self) -> Result<String> {
-        let s = String::new();
-        Ok(s)
-    }
-}
-
-impl<R: Read + Seek> ReadBox<&mut R> for MinfBox {
-    fn read_box(reader: &mut R, size: u64) -> Result<Self> {
-        let start = box_start(reader)?;
-
+    fn decode_atom(buf: &mut Buf) -> Result<Self> {
         let mut vmhd = None;
         let mut smhd = None;
         let mut dinf = None;
         let mut stbl = None;
 
-        let mut current = reader.stream_position()?;
-        let end = start + size;
-        while current < end {
-            // Get box header.
-            let header = BoxHeader::read(reader)?;
-            let BoxHeader { name, size: s } = header;
-            if s > size {
-                return Err(Error::InvalidData(
-                    "minf box contains a box with a larger size than it",
-                ));
+        while let Some(atom) = buf.decode()? {
+            match atom {
+                Any::Vmhd(atom) => vmhd.replace(atom),
+                Any::Smhd(atom) => smhd.replace(atom),
+                Any::Dinf(atom) => dinf.replace(atom),
+                Any::Stbl(atom) => stbl.replace(atom),
+                atom => return Error::UnexpectedBox(atom.kind()),
             }
-
-            match name {
-                BoxType::VmhdBox => {
-                    vmhd = Some(VmhdBox::read_box(reader, s)?);
-                }
-                BoxType::SmhdBox => {
-                    smhd = Some(SmhdBox::read_box(reader, s)?);
-                }
-                BoxType::DinfBox => {
-                    dinf = Some(DinfBox::read_box(reader, s)?);
-                }
-                BoxType::StblBox => {
-                    stbl = Some(StblBox::read_box(reader, s)?);
-                }
-                _ => {
-                    // XXX warn!()
-                    skip_box(reader, s)?;
-                }
-            }
-
-            current = reader.stream_position()?;
         }
 
-        if dinf.is_none() {
-            return Err(Error::BoxNotFound(BoxType::DinfBox));
-        }
-        if stbl.is_none() {
-            return Err(Error::BoxNotFound(BoxType::StblBox));
-        }
-
-        skip_bytes_to(reader, start + size)?;
-
-        Ok(MinfBox {
+        Ok(Minf {
             vmhd,
             smhd,
-            dinf: dinf.unwrap(),
-            stbl: stbl.unwrap(),
+            dinf: dinf.ok_or(Error::MissingBox(Dinf::KIND)),
+            stbl: stbl.ok_or(Error::MissingBox(Stbl::KIND)),
         })
     }
-}
 
-impl<W: Write> WriteBox<&mut W> for MinfBox {
-    fn write_box(&self, writer: &mut W) -> Result<u64> {
-        let size = self.box_size();
-        BoxHeader::new(self.box_type(), size).write(writer)?;
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+        self.vmhd.encode(buf)?;
+        self.smhd.encode(buf)?;
+        self.dinf.encode(buf)?;
+        self.stbl.encode(buf)?;
 
-        if let Some(ref vmhd) = self.vmhd {
-            vmhd.write_box(writer)?;
-        }
-        if let Some(ref smhd) = self.smhd {
-            smhd.write_box(writer)?;
-        }
-        self.dinf.write_box(writer)?;
-        self.stbl.write_box(writer)?;
-
-        Ok(size)
+        Ok(())
     }
 }

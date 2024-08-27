@@ -1,7 +1,7 @@
 use crate::*;
 
 #[test]
-fn test_decode() {
+fn test_bbb() {
     const ENCODED: &[u8] = &[
         0x00, 0x00, 0x00, 0x1C, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x36, 0x00, 0x00, 0x02,
         0x00, 0x69, 0x73, 0x6F, 0x36, 0x63, 0x6D, 0x66, 0x63, 0x6D, 0x70, 0x34, 0x31, 0x00, 0x00,
@@ -165,7 +165,6 @@ fn test_decode() {
         moov,
         Moov {
             mvhd: Mvhd::V0 {
-                flags: [0; 3],
                 creation_time: 0,
                 modification_time: 0,
                 timescale: 0,
@@ -175,10 +174,8 @@ fn test_decode() {
                 matrix: [0; 9],
                 next_track_id: 0,
             },
-            trak: vec![Trak {
+            traks: vec![Trak {
                 tkhd: Tkhd {
-                    version: 0,
-                    flags: [0; 3],
                     creation_time: 0,
                     modification_time: 0,
                     track_id: 1,
@@ -189,11 +186,10 @@ fn test_decode() {
                     matrix: [0; 9],
                     width: 0,
                     height: 0,
+                    enabled: true,
                 },
                 mdia: Mdia {
                     mdhd: Mdhd {
-                        version: 0,
-                        flags: [0; 3],
                         language: 0,
                         creation_time: 0,
                         modification_time: 0,
@@ -201,22 +197,21 @@ fn test_decode() {
                         duration: 0,
                     },
                     hdlr: Hdlr {
-                        version: 0,
-                        flags: [0; 3],
-                        //handler_type: "vide".try_into().unwrap(),
-                        name: "VideoHandler".try_into().unwrap(),
+                        handler_type: b"vide".into(),
+                        name: "VideoHandler".into(),
                         component_flags: 0,
                         component_flags_mask: 0,
                         component_manufacturer: 0,
                         component_subtype: [0; 4],
                         component_type: [0; 4],
                     },
-                    /*
                     minf: Minf {
+                        smhd: None,
                         vmhd: Vmhd {
                             graphics_mode: 0,
-                            opcolor: [0; 3],
-                        },
+                            op_color: [0; 3],
+                        }
+                        .into(),
                         dinf: Dinf {
                             dref: Dref {
                                 entries: vec![DrefEntry {
@@ -261,10 +256,9 @@ fn test_decode() {
                             },
                         },
                     },
-                    */
                 },
             },],
-            mvex: None,
+            ..Default::default()
         },
     );
 }

@@ -10,17 +10,13 @@ pub struct Mdat {
 impl Atom for Mdat {
     const KIND: FourCC = FourCC::new(b"mdat");
 
-    fn decode_inner<B: Buf>(mut buf: &mut B) -> Result<Self> {
+    fn decode_atom(buf: &mut Buf) -> Result<Self> {
         Ok(Mdat {
             data: buf.decode()?,
         })
     }
 
-    fn encode_inner<B: BufMut>(&self, mut buf: &mut B) -> Result<()> {
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
         buf.encode(&self.data)
-    }
-
-    fn encode_inner_size(&self) -> usize {
-        self.data.encode_size()
     }
 }

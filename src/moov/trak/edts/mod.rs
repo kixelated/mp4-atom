@@ -1,85 +1,30 @@
-use serde::Serialize;
-use std::io::{Read, Seek, Write};
+mod elst;
+pub use elst::*;
 
-use crate::mp4box::elst::ElstBox;
-use crate::mp4box::*;
+use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
-pub struct EdtsBox {
-    pub elst: Option<ElstBox>,
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Edts {
+    pub elst: Option<Elst>,
 }
 
-impl EdtsBox {
-    pub(crate) fn new() -> EdtsBox {
-        Default::default()
-    }
+impl Atom for Edts {
+    const KIND: FourCC = FourCC::new(b"edts");
 
-    pub fn get_type(&self) -> BoxType {
-        BoxType::EdtsBox
-    }
+    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+        let mut elst = None;
 
-    pub fn get_size(&self) -> u64 {
-        let mut size = HEADER_SIZE;
-        if let Some(ref elst) = self.elst {
-            size += elst.box_size();
-        }
-        size
-    }
-}
-
-impl Mp4Box for EdtsBox {
-    fn box_type(&self) -> BoxType {
-        self.get_type()
-    }
-
-    fn box_size(&self) -> u64 {
-        self.get_size()
-    }
-
-    fn to_json(&self) -> Result<String> {
-        Ok(serde_json::to_string(&self).unwrap())
-    }
-
-    fn summary(&self) -> Result<String> {
-        let s = String::new();
-        Ok(s)
-    }
-}
-
-impl<R: Read + Seek> ReadBox<&mut R> for EdtsBox {
-    fn read_box(reader: &mut R, size: u64) -> Result<Self> {
-        let start = box_start(reader)?;
-
-        let mut edts = EdtsBox::new();
-
-        let header = BoxHeader::read(reader)?;
-        let BoxHeader { name, size: s } = header;
-        if s > size {
-            return Err(Error::InvalidData(
-                "edts box contains a box with a larger size than it",
-            ));
+        while let Some(atom) = buf.decode()? {
+            match atom {
+                Any::Elst(atom) => elst.replace(atom),
+                atom => return Err(Error::UnexpectedBox(atom.kind())),
+            }
         }
 
-        if let BoxType::ElstBox = name {
-            let elst = ElstBox::read_box(reader, s)?;
-            edts.elst = Some(elst);
-        }
-
-        skip_bytes_to(reader, start + size)?;
-
-        Ok(edts)
+        Ok(Edts { elst })
     }
-}
 
-impl<W: Write> WriteBox<&mut W> for EdtsBox {
-    fn write_box(&self, writer: &mut W) -> Result<u64> {
-        let size = self.box_size();
-        BoxHeader::new(self.box_type(), size).write(writer)?;
-
-        if let Some(ref elst) = self.elst {
-            elst.write_box(writer)?;
-        }
-
-        Ok(size)
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+        self.elst.encode(buf)
     }
 }

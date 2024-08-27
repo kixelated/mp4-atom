@@ -1,118 +1,60 @@
-use std::{
-    convert::TryFrom,
-    io::{Read, Seek},
-};
+use std::io::{Read, Seek};
 
-use serde::Serialize;
+use crate::*;
 
-use crate::mp4box::*;
-
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
-pub struct DataBox {
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Data {
     pub data: Vec<u8>,
     pub data_type: DataType,
 }
 
-impl DataBox {
-    pub fn get_type(&self) -> BoxType {
-        BoxType::DataBox
+impl Atom for Data {
+    const KIND: FourCC = FourCC::new(b"data");
+
+    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+        let data_type = DataType::try_from(u32::decode(buf)?)?;
+
+        u32::decode(buf)?; // reserved = 0
+        let data = buf.rest().to_vec();
+
+        Ok(Data { data, data_type })
     }
 
-    pub fn get_size(&self) -> u64 {
-        let mut size = HEADER_SIZE;
-        size += 4; // data_type
-        size += 4; // reserved
-        size += self.data.len() as u64;
-        size
-    }
-}
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+        buf.u32(self.data_type.clone() as u32)?;
+        buf.u32(0)?; // reserved = 0
+        buf.bytes(&self.data)?;
 
-impl Mp4Box for DataBox {
-    fn box_type(&self) -> BoxType {
-        self.get_type()
-    }
-
-    fn box_size(&self) -> u64 {
-        self.get_size()
-    }
-
-    fn to_json(&self) -> Result<String> {
-        Ok(serde_json::to_string(&self).unwrap())
-    }
-
-    fn summary(&self) -> Result<String> {
-        let s = format!("type={:?} len={}", self.data_type, self.data.len());
-        Ok(s)
-    }
-}
-
-impl<R: Read + Seek> ReadBox<&mut R> for DataBox {
-    fn read_box(reader: &mut R, size: u64) -> Result<Self> {
-        let start = box_start(reader)?;
-
-        let data_type = DataType::try_from(reader.read_u32::<BigEndian>()?)?;
-
-        reader.read_u32::<BigEndian>()?; // reserved = 0
-
-        let current = reader.stream_position()?;
-        let mut data = vec![0u8; (start + size - current) as usize];
-        reader.read_exact(&mut data)?;
-
-        Ok(DataBox { data, data_type })
-    }
-}
-
-impl<W: Write> WriteBox<&mut W> for DataBox {
-    fn write_box(&self, writer: &mut W) -> Result<u64> {
-        let size = self.box_size();
-        BoxHeader::new(self.box_type(), size).write(writer)?;
-
-        writer.write_u32::<BigEndian>(self.data_type.clone() as u32)?;
-        writer.write_u32::<BigEndian>(0)?; // reserved = 0
-        writer.write_all(&self.data)?;
-
-        Ok(size)
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mp4box::BoxHeader;
-    use std::io::Cursor;
 
     #[test]
     fn test_data() {
-        let src_box = DataBox {
+        let expected = Data {
             data_type: DataType::Text,
             data: b"test_data".to_vec(),
         };
-        let mut buf = Vec::new();
-        src_box.write_box(&mut buf).unwrap();
-        assert_eq!(buf.len(), src_box.box_size() as usize);
+        let mut buf = BufMut::new();
+        expected.encode(&mut buf).unwrap();
 
-        let mut reader = Cursor::new(&buf);
-        let header = BoxHeader::read(&mut reader).unwrap();
-        assert_eq!(header.name, BoxType::DataBox);
-        assert_eq!(src_box.box_size(), header.size);
-
-        let dst_box = DataBox::read_box(&mut reader, header.size).unwrap();
-        assert_eq!(src_box, dst_box);
+        let mut buf = buf.filled();
+        let decoded = Data::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
     }
 
     #[test]
     fn test_data_empty() {
-        let src_box = DataBox::default();
-        let mut buf = Vec::new();
-        src_box.write_box(&mut buf).unwrap();
-        assert_eq!(buf.len(), src_box.box_size() as usize);
+        let expected = Data::default();
+        let mut buf = BufMut::new();
+        expected.encode(&mut buf).unwrap();
 
-        let mut reader = Cursor::new(&buf);
-        let header = BoxHeader::read(&mut reader).unwrap();
-        assert_eq!(header.name, BoxType::DataBox);
-        assert_eq!(src_box.box_size(), header.size);
-
-        let dst_box = DataBox::read_box(&mut reader, header.size).unwrap();
-        assert_eq!(src_box, dst_box);
+        let mut buf = buf.filled();
+        let decoded = Data::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
     }
 }

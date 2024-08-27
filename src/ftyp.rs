@@ -10,7 +10,7 @@ pub struct Ftyp {
 impl Atom for Ftyp {
     const KIND: FourCC = FourCC::new(b"ftyp");
 
-    fn decode_inner<B: Buf>(mut buf: &mut B) -> Result<Self> {
+    fn decode_atom(buf: &mut Buf) -> Result<Self> {
         Ok(Ftyp {
             major_brand: buf.decode()?,
             minor_version: buf.decode()?,
@@ -18,24 +18,17 @@ impl Atom for Ftyp {
         })
     }
 
-    fn encode_inner<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
         self.major_brand.encode(buf)?;
         self.minor_version.encode(buf)?;
         self.compatible_brands.encode(buf)?;
         Ok(())
-    }
-
-    fn encode_inner_size(&self) -> usize {
-        self.major_brand.encode_size()
-            + self.minor_version.encode_size()
-            + self.compatible_brands.encode_size()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
 
     #[test]
     fn test_ftyp() {
@@ -51,11 +44,11 @@ mod tests {
             ],
         };
 
-        let mut buf = Vec::new();
+        let mut buf = BufMut::new();
         decoded.encode(&mut buf).expect("failed to encode");
 
-        let mut reader = Cursor::new(&buf);
-        let result = Ftyp::decode(&mut reader).expect("failed to decode");
+        let mut buf = buf.filled();
+        let result = Ftyp::decode(&mut buf).expect("failed to decode");
         assert_eq!(decoded, result);
     }
 }

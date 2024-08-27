@@ -1,119 +1,49 @@
-use serde::Serialize;
-use std::io::{Read, Seek, Write};
+mod tfdt;
+mod tfhd;
+mod trun;
 
-use crate::mp4box::*;
-use crate::mp4box::{tfdt::TfdtBox, tfhd::TfhdBox, trun::TrunBox};
+pub use tfdt::*;
+pub use tfhd::*;
+pub use trun::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
-pub struct TrafBox {
-    pub tfhd: TfhdBox,
-    pub tfdt: Option<TfdtBox>,
-    pub trun: Option<TrunBox>,
+use crate::*;
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Traf {
+    pub tfhd: Tfhd,
+    pub tfdt: Option<Tfdt>,
+    pub trun: Option<Trun>,
 }
 
-impl TrafBox {
-    pub fn get_type(&self) -> BoxType {
-        BoxType::TrafBox
-    }
+impl Atom for Traf {
+    const KIND: FourCC = FourCC::new(b"traf");
 
-    pub fn get_size(&self) -> u64 {
-        let mut size = HEADER_SIZE;
-        size += self.tfhd.box_size();
-        if let Some(ref tfdt) = self.tfdt {
-            size += tfdt.box_size();
-        }
-        if let Some(ref trun) = self.trun {
-            size += trun.box_size();
-        }
-        size
-    }
-}
-
-impl Mp4Box for TrafBox {
-    fn box_type(&self) -> BoxType {
-        self.get_type()
-    }
-
-    fn box_size(&self) -> u64 {
-        self.get_size()
-    }
-
-    fn to_json(&self) -> Result<String> {
-        Ok(serde_json::to_string(&self).unwrap())
-    }
-
-    fn summary(&self) -> Result<String> {
-        let s = String::new();
-        Ok(s)
-    }
-}
-
-impl<R: Read + Seek> ReadBox<&mut R> for TrafBox {
-    fn read_box(reader: &mut R, size: u64) -> Result<Self> {
-        let start = box_start(reader)?;
-
+    fn decode_atom(buf: &mut Buf) -> Result<Self> {
         let mut tfhd = None;
         let mut tfdt = None;
         let mut trun = None;
 
-        let mut current = reader.stream_position()?;
-        let end = start + size;
-        while current < end {
-            // Get box header.
-            let header = BoxHeader::read(reader)?;
-            let BoxHeader { name, size: s } = header;
-            if s > size {
-                return Err(Error::InvalidData(
-                    "traf box contains a box with a larger size than it",
-                ));
+        while let Some(atom) = buf.decode()? {
+            match atom {
+                Any::Tfhd(atom) => tfhd.replace(atom),
+                Any::Tfdt(atom) => tfdt.replace(atom),
+                Any::Trun(atom) => trun.replace(atom),
+                atom => return Error::UnexpectedBox(atom.kind()),
             }
-
-            match name {
-                BoxType::TfhdBox => {
-                    tfhd = Some(TfhdBox::read_box(reader, s)?);
-                }
-                BoxType::TfdtBox => {
-                    tfdt = Some(TfdtBox::read_box(reader, s)?);
-                }
-                BoxType::TrunBox => {
-                    trun = Some(TrunBox::read_box(reader, s)?);
-                }
-                _ => {
-                    // XXX warn!()
-                    skip_box(reader, s)?;
-                }
-            }
-
-            current = reader.stream_position()?;
         }
 
-        if tfhd.is_none() {
-            return Err(Error::BoxNotFound(BoxType::TfhdBox));
-        }
-
-        skip_bytes_to(reader, start + size)?;
-
-        Ok(TrafBox {
-            tfhd: tfhd.unwrap(),
+        Ok(Traf {
+            tfhd: tfhd.ok_or(Error::MissingBox(Tfhd::KIND)),
             tfdt,
             trun,
         })
     }
-}
 
-impl<W: Write> WriteBox<&mut W> for TrafBox {
-    fn write_box(&self, writer: &mut W) -> Result<u64> {
-        let size = self.box_size();
-        BoxHeader::new(self.box_type(), size).write(writer)?;
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+        self.tfhd.encode(buf)?;
+        self.tfdt.encode(buf)?;
+        self.trun.encode(buf)?;
 
-        self.tfhd.write_box(writer)?;
-        if let Some(ref tfdt) = self.tfdt {
-            tfdt.write_box(writer)?;
-        }
-        if let Some(ref trun) = self.trun {
-            trun.write_box(writer)?;
-        }
-
-        Ok(size)
+        Ok(())
     }
 }

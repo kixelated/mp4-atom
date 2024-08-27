@@ -1,14 +1,13 @@
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use serde::Serialize;
-use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
-use std::io::{Read, Seek, Write};
+use crate::*;
 
-use crate::mp4box::*;
+ext! {
+    name: Mdhd,
+    versions: [0, 1],
+    flags: {}
+}
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct MdhdBox {
-    pub version: u8,
-    pub flags: u32,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Mdhd {
     pub creation_time: u64,
     pub modification_time: u64,
     pub timescale: u32,
@@ -16,91 +15,30 @@ pub struct MdhdBox {
     pub language: String,
 }
 
-impl MdhdBox {
-    pub fn get_type(&self) -> BoxType {
-        BoxType::MdhdBox
-    }
+impl AtomExt for Mdhd {
+    const KIND: FourCC = FourCC::new(b"mdhd");
+    type Ext = MdhdExt;
 
-    pub fn get_size(&self) -> u64 {
-        let mut size = HEADER_SIZE + HEADER_EXT_SIZE;
-
-        if self.version == 1 {
-            size += 28;
-        } else if self.version == 0 {
-            size += 16;
-        }
-        size += 4;
-        size
-    }
-}
-
-impl Default for MdhdBox {
-    fn default() -> Self {
-        MdhdBox {
-            version: 0,
-            flags: 0,
-            creation_time: 0,
-            modification_time: 0,
-            timescale: 1000,
-            duration: 0,
-            language: String::from("und"),
-        }
-    }
-}
-
-impl Mp4Box for MdhdBox {
-    fn box_type(&self) -> BoxType {
-        self.get_type()
-    }
-
-    fn box_size(&self) -> u64 {
-        self.get_size()
-    }
-
-    fn to_json(&self) -> Result<String> {
-        Ok(serde_json::to_string(&self).unwrap())
-    }
-
-    fn summary(&self) -> Result<String> {
-        let s = format!(
-            "creation_time={} timescale={} duration={} language={}",
-            self.creation_time, self.timescale, self.duration, self.language
-        );
-        Ok(s)
-    }
-}
-
-impl<R: Read + Seek> ReadBox<&mut R> for MdhdBox {
-    fn read_box(reader: &mut R, size: u64) -> Result<Self> {
-        let start = box_start(reader)?;
-
-        let (version, flags) = read_box_header_ext(reader)?;
-
-        let (creation_time, modification_time, timescale, duration) = if version == 1 {
-            (
-                reader.read_u64::<BigEndian>()?,
-                reader.read_u64::<BigEndian>()?,
-                reader.read_u32::<BigEndian>()?,
-                reader.read_u64::<BigEndian>()?,
-            )
-        } else if version == 0 {
-            (
-                reader.read_u32::<BigEndian>()? as u64,
-                reader.read_u32::<BigEndian>()? as u64,
-                reader.read_u32::<BigEndian>()?,
-                reader.read_u32::<BigEndian>()? as u64,
-            )
-        } else {
-            return Err(Error::InvalidData("version must be 0 or 1"));
+    fn decode_atom(buf: &mut Buf, ext: MdhdExt) -> Result<Self> {
+        let (creation_time, modification_time, timescale, duration) = match ext.version {
+            MdhdVersion::V1 => (
+                u64::decode(buf)?,
+                u64::decode(buf)?,
+                u32::decode(buf)?,
+                u64::decode(buf)?,
+            ),
+            MdhdVersion::V0 => (
+                u32::decode(buf)? as u64,
+                u32::decode(buf)? as u64,
+                u32::decode(buf)?,
+                u32::decode(buf)? as u64,
+            ),
         };
-        let language_code = reader.read_u16::<BigEndian>()?;
+
+        let language_code = u16::decode(buf)?;
         let language = language_string(language_code);
 
-        skip_bytes_to(reader, start + size)?;
-
-        Ok(MdhdBox {
-            version,
-            flags,
+        Ok(Mdhd {
             creation_time,
             modification_time,
             timescale,
@@ -108,34 +46,18 @@ impl<R: Read + Seek> ReadBox<&mut R> for MdhdBox {
             language,
         })
     }
-}
 
-impl<W: Write> WriteBox<&mut W> for MdhdBox {
-    fn write_box(&self, writer: &mut W) -> Result<u64> {
-        let size = self.box_size();
-        BoxHeader::new(self.box_type(), size).write(writer)?;
-
-        write_box_header_ext(writer, self.version, self.flags)?;
-
-        if self.version == 1 {
-            writer.write_u64::<BigEndian>(self.creation_time)?;
-            writer.write_u64::<BigEndian>(self.modification_time)?;
-            writer.write_u32::<BigEndian>(self.timescale)?;
-            writer.write_u64::<BigEndian>(self.duration)?;
-        } else if self.version == 0 {
-            writer.write_u32::<BigEndian>(self.creation_time as u32)?;
-            writer.write_u32::<BigEndian>(self.modification_time as u32)?;
-            writer.write_u32::<BigEndian>(self.timescale)?;
-            writer.write_u32::<BigEndian>(self.duration as u32)?;
-        } else {
-            return Err(Error::InvalidData("version must be 0 or 1"));
-        }
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<MdhdExt> {
+        self.creation_time.encode(buf)?;
+        self.modification_time.encode(buf)?;
+        self.timescale.encode(buf)?;
+        self.duration.encode(buf)?;
 
         let language_code = language_code(&self.language);
-        writer.write_u16::<BigEndian>(language_code)?;
-        writer.write_u16::<BigEndian>(0)?; // pre-defined
+        buf.u16(language_code)?;
+        buf.u16(0)?; // pre-defined
 
-        Ok(size)
+        Ok(MdhdVersion::V1.into())
     }
 }
 
@@ -165,8 +87,6 @@ fn language_code(language: &str) -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mp4box::BoxHeader;
-    use std::io::Cursor;
 
     fn test_language_code(lang: &str) {
         let code = language_code(lang);
@@ -183,49 +103,35 @@ mod tests {
 
     #[test]
     fn test_mdhd32() {
-        let src_box = MdhdBox {
-            version: 0,
-            flags: 0,
+        let expected = Mdhd {
             creation_time: 100,
             modification_time: 200,
             timescale: 48000,
             duration: 30439936,
             language: String::from("und"),
         };
-        let mut buf = Vec::new();
-        src_box.write_box(&mut buf).unwrap();
-        assert_eq!(buf.len(), src_box.box_size() as usize);
+        let mut buf = BufMut::new();
+        expected.encode(&mut buf).unwrap();
 
-        let mut reader = Cursor::new(&buf);
-        let header = BoxHeader::read(&mut reader).unwrap();
-        assert_eq!(header.name, BoxType::MdhdBox);
-        assert_eq!(src_box.box_size(), header.size);
-
-        let dst_box = MdhdBox::read_box(&mut reader, header.size).unwrap();
-        assert_eq!(src_box, dst_box);
+        let mut buf = buf.filled();
+        let decoded = Mdhd::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
     }
 
     #[test]
     fn test_mdhd64() {
-        let src_box = MdhdBox {
-            version: 0,
-            flags: 0,
+        let expected = Mdhd {
             creation_time: 100,
             modification_time: 200,
             timescale: 48000,
             duration: 30439936,
             language: String::from("eng"),
         };
-        let mut buf = Vec::new();
-        src_box.write_box(&mut buf).unwrap();
-        assert_eq!(buf.len(), src_box.box_size() as usize);
+        let mut buf = BufMut::new();
+        expected.encode(&mut buf).unwrap();
 
-        let mut reader = Cursor::new(&buf);
-        let header = BoxHeader::read(&mut reader).unwrap();
-        assert_eq!(header.name, BoxType::MdhdBox);
-        assert_eq!(src_box.box_size(), header.size);
-
-        let dst_box = MdhdBox::read_box(&mut reader, header.size).unwrap();
-        assert_eq!(src_box, dst_box);
+        let mut buf = buf.filled();
+        let decoded = Mdhd::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
     }
 }

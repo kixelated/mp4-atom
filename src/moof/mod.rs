@@ -1,59 +1,45 @@
+mod mfhd;
+mod traf;
+
+pub use mfhd::*;
+pub use traf::*;
+
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Moof {
-    //pub mfhd: Mfhd,
-    //pub traf: Vec<Traf>,
-    pub unknown: Vec<Unknown>,
+    pub mfhd: Mfhd,
+    pub trafs: Vec<Traf>,
 }
 
 impl Atom for Moof {
     const KIND: FourCC = FourCC::new(b"moof");
 
-    fn decode_inner<B: Buf>(buf: &mut B) -> Result<Self> {
-        /*
+    fn decode_atom(buf: &mut Buf) -> Result<Self> {
         let mut mfhd = None;
-        let mut traf = Vec::new();
-        */
-        let mut unknown = Vec::new();
+        let mut trafs = Vec::new();
 
-        while buf.has_remaining() {
-            match Any::decode(buf)? {
-                /*
-                Any::Mfhd(atom) => {
-                    mfhd = Some(atom);
-                }
-                Any::Traf(atom) => {
-                    traf.push(atom);
-                }
-                */
-                Any::Unknown(atom) => unknown.push(atom),
+        while let Some(atom) = buf.decode()? {
+            match atom {
+                Any::Mfhd(atom) => mfhd
+                    .once_or(atom)
+                    .none_or(Error::DuplicateBox(Mfhd::KIND))?,
+                Any::Traf(atom) => trafs.push(atom),
                 other => return Err(Error::UnexpectedBox(other.kind())),
             }
         }
 
         Ok(Moof {
-            //mfhd: mfhd.ok_or(Error::MissingBox("mfhd".into()))?,
-            //traf,
-            unknown,
+            mfhd: mfhd.ok_or(Error::MissingBox(Mfhd::KIND))?,
+            trafs,
         })
     }
 
-    fn encode_inner<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        /*
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
         self.mfhd.encode(buf)?;
         for traf in &self.traf {
             traf.encode(buf)?;
         }
-        */
-        for unknown in &self.unknown {
-            unknown.encode(buf)?;
-        }
         Ok(())
-    }
-
-    fn encode_inner_size(&self) -> usize {
-        /*self.mfhd.encode_size() + self.traf.encode_size() + */
-        self.unknown.encode_size()
     }
 }

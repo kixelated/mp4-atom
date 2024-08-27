@@ -1,28 +1,21 @@
-use crate::mp4box::vpcc::VpccBox;
-use crate::mp4box::*;
-use crate::Mp4Box;
-use serde::Serialize;
+use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
-pub struct Vp09Box {
-    pub version: u8,
-    pub flags: u32,
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Vp09 {
     pub start_code: u16,
     pub data_reference_index: u16,
-    pub reserved0: [u8; 16],
     pub width: u16,
     pub height: u16,
     pub horizresolution: (u16, u16),
     pub vertresolution: (u16, u16),
-    pub reserved1: [u8; 4],
     pub frame_count: u16,
     pub compressorname: [u8; 32],
     pub depth: u16,
     pub end_code: u16,
-    pub vpcc: VpccBox,
+    pub vpcc: Vpcc,
 }
 
-impl Vp09Box {
+impl Vp09 {
     pub const DEFAULT_START_CODE: u16 = 0;
     pub const DEFAULT_END_CODE: u16 = 0xFFFF;
     pub const DEFAULT_DATA_REFERENCE_INDEX: u16 = 1;
@@ -33,27 +26,21 @@ impl Vp09Box {
     pub const DEFAULT_DEPTH: u16 = 24;
 
     pub fn new(config: &Vp9Config) -> Self {
-        Vp09Box {
-            version: 0,
-            flags: 0,
-            start_code: Vp09Box::DEFAULT_START_CODE,
-            data_reference_index: Vp09Box::DEFAULT_DATA_REFERENCE_INDEX,
-            reserved0: Default::default(),
+        Vp09 {
+            start_code: Vp09::DEFAULT_START_CODE,
+            data_reference_index: Vp09::DEFAULT_DATA_REFERENCE_INDEX,
             width: config.width,
             height: config.height,
-            horizresolution: Vp09Box::DEFAULT_HORIZRESOLUTION,
-            vertresolution: Vp09Box::DEFAULT_VERTRESOLUTION,
-            reserved1: Default::default(),
-            frame_count: Vp09Box::DEFAULT_FRAME_COUNT,
-            compressorname: Vp09Box::DEFAULT_COMPRESSORNAME,
-            depth: Vp09Box::DEFAULT_DEPTH,
-            end_code: Vp09Box::DEFAULT_END_CODE,
-            vpcc: VpccBox {
-                version: VpccBox::DEFAULT_VERSION,
-                flags: 0,
+            horizresolution: Vp09::DEFAULT_HORIZRESOLUTION,
+            vertresolution: Vp09::DEFAULT_VERTRESOLUTION,
+            frame_count: Vp09::DEFAULT_FRAME_COUNT,
+            compressorname: Vp09::DEFAULT_COMPRESSORNAME,
+            depth: Vp09::DEFAULT_DEPTH,
+            end_code: Vp09::DEFAULT_END_CODE,
+            vpcc: Vpcc {
                 profile: 0,
                 level: 0x1F,
-                bit_depth: VpccBox::DEFAULT_BIT_DEPTH,
+                bit_depth: Vpcc::DEFAULT_BIT_DEPTH,
                 chroma_subsampling: 0,
                 video_full_range_flag: false,
                 color_primaries: 0,
@@ -65,83 +52,34 @@ impl Vp09Box {
     }
 }
 
-impl Mp4Box for Vp09Box {
-    fn box_type(&self) -> BoxType {
-        BoxType::Vp09Box
-    }
+impl AtomExt for Vp09 {
+    type Ext = ();
 
-    fn box_size(&self) -> u64 {
-        0x6A
-    }
+    const KIND: FourCC = FourCC::new(b"vp09");
 
-    fn to_json(&self) -> Result<String> {
-        Ok(serde_json::to_string(&self).unwrap())
-    }
+    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+        let start_code: u16 = buf.decode()?;
+        let data_reference_index: u16 = buf.decode()?;
+        buf.skip(16)?;
+        let width: u16 = buf.decode()?;
+        let height: u16 = buf.decode()?;
+        let horizresolution: (u16, u16) = (buf.decode()?, buf.decode()?);
+        let vertresolution: (u16, u16) = (buf.decode()?, buf.decode()?);
+        buf.skip(4)?;
+        let frame_count: u16 = buf.decode()?;
+        let compressorname = buf.decode()?;
+        let depth: u16 = buf.decode()?;
+        let end_code: u16 = buf.decode()?;
 
-    fn summary(&self) -> Result<String> {
-        Ok(format!("{self:?}"))
-    }
-}
-
-impl<R: Read + Seek> ReadBox<&mut R> for Vp09Box {
-    fn read_box(reader: &mut R, size: u64) -> Result<Self> {
-        let start = box_start(reader)?;
-        let (version, flags) = read_box_header_ext(reader)?;
-
-        let start_code: u16 = reader.read_u16::<BigEndian>()?;
-        let data_reference_index: u16 = reader.read_u16::<BigEndian>()?;
-        let reserved0: [u8; 16] = {
-            let mut buf = [0u8; 16];
-            reader.read_exact(&mut buf)?;
-            buf
-        };
-        let width: u16 = reader.read_u16::<BigEndian>()?;
-        let height: u16 = reader.read_u16::<BigEndian>()?;
-        let horizresolution: (u16, u16) = (
-            reader.read_u16::<BigEndian>()?,
-            reader.read_u16::<BigEndian>()?,
-        );
-        let vertresolution: (u16, u16) = (
-            reader.read_u16::<BigEndian>()?,
-            reader.read_u16::<BigEndian>()?,
-        );
-        let reserved1: [u8; 4] = {
-            let mut buf = [0u8; 4];
-            reader.read_exact(&mut buf)?;
-            buf
-        };
-        let frame_count: u16 = reader.read_u16::<BigEndian>()?;
-        let compressorname: [u8; 32] = {
-            let mut buf = [0u8; 32];
-            reader.read_exact(&mut buf)?;
-            buf
-        };
-        let depth: u16 = reader.read_u16::<BigEndian>()?;
-        let end_code: u16 = reader.read_u16::<BigEndian>()?;
-
-        let vpcc = {
-            let header = BoxHeader::read(reader)?;
-            if header.size > size {
-                return Err(Error::InvalidData(
-                    "vp09 box contains a box with a larger size than it",
-                ));
-            }
-            VpccBox::read_box(reader, header.size)?
-        };
-
-        skip_bytes_to(reader, start + size)?;
+        let vpcc = Vpcc::decode(buf)?;
 
         Ok(Self {
-            version,
-            flags,
             start_code,
             data_reference_index,
-            reserved0,
             width,
             height,
             horizresolution,
             vertresolution,
-            reserved1,
             frame_count,
             compressorname,
             depth,
@@ -149,57 +87,43 @@ impl<R: Read + Seek> ReadBox<&mut R> for Vp09Box {
             vpcc,
         })
     }
-}
 
-impl<W: Write> WriteBox<&mut W> for Vp09Box {
-    fn write_box(&self, writer: &mut W) -> Result<u64> {
-        let size = self.box_size();
-        BoxHeader::new(self.box_type(), size).write(writer)?;
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+        self.start_code.encode(buf)?;
+        self.data_reference_index.encode(buf)?;
+        buf.zero(16)?;
+        self.width.encode(buf)?;
+        self.height.encode(buf)?;
+        buf.u16(self.horizresolution.0)?;
+        buf.u16(self.horizresolution.1)?;
+        buf.u16(self.vertresolution.0)?;
+        buf.u16(self.vertresolution.1)?;
+        buf.zero(4)?;
+        self.frame_count.encode(buf)?;
+        self.compressorname.encode(buf)?;
+        self.depth.encode(buf)?;
+        self.end_code.encode(buf)?;
+        self.vpcc.encode(buf)?;
 
-        write_box_header_ext(writer, self.version, self.flags)?;
-
-        writer.write_u16::<BigEndian>(self.start_code)?;
-        writer.write_u16::<BigEndian>(self.data_reference_index)?;
-        writer.write_all(&self.reserved0)?;
-        writer.write_u16::<BigEndian>(self.width)?;
-        writer.write_u16::<BigEndian>(self.height)?;
-        writer.write_u16::<BigEndian>(self.horizresolution.0)?;
-        writer.write_u16::<BigEndian>(self.horizresolution.1)?;
-        writer.write_u16::<BigEndian>(self.vertresolution.0)?;
-        writer.write_u16::<BigEndian>(self.vertresolution.1)?;
-        writer.write_all(&self.reserved1)?;
-        writer.write_u16::<BigEndian>(self.frame_count)?;
-        writer.write_all(&self.compressorname)?;
-        writer.write_u16::<BigEndian>(self.depth)?;
-        writer.write_u16::<BigEndian>(self.end_code)?;
-        VpccBox::write_box(&self.vpcc, writer)?;
-
-        Ok(size)
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mp4box::BoxHeader;
-    use std::io::Cursor;
 
     #[test]
     fn test_vpcc() {
-        let src_box = Vp09Box::new(&Vp9Config {
+        let expected = Vp09::new(&Vp9Config {
             width: 1920,
             height: 1080,
         });
-        let mut buf = Vec::new();
-        src_box.write_box(&mut buf).unwrap();
-        assert_eq!(buf.len(), src_box.box_size() as usize);
+        let mut buf = BufMut::new();
+        expected.encode(&mut buf).unwrap();
 
-        let mut reader = Cursor::new(&buf);
-        let header = BoxHeader::read(&mut reader).unwrap();
-        assert_eq!(header.name, BoxType::Vp09Box);
-        assert_eq!(src_box.box_size(), header.size);
-
-        let dst_box = Vp09Box::read_box(&mut reader, header.size).unwrap();
-        assert_eq!(src_box, dst_box);
+        let mut buf = buf.filled();
+        let decoded = Vp09::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
     }
 }

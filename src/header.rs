@@ -58,17 +58,13 @@ impl fmt::Debug for FourCC {
 }
 
 impl Encode for FourCC {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+    fn encode(&self, buf: &mut BufMut) -> Result<()> {
         self.0.encode(buf)
-    }
-
-    fn encode_size(&self) -> usize {
-        4
     }
 }
 
 impl Decode for FourCC {
-    fn decode<B: Buf>(mut buf: &mut B) -> Result<Self> {
+    fn decode(buf: &mut Buf) -> Result<Self> {
         Ok(FourCC(buf.decode()?))
     }
 }
@@ -82,53 +78,8 @@ pub struct Header {
     pub size: Option<usize>,
 }
 
-impl Header {
-    pub fn encode_inner<T: Atom, B: BufMut>(&self, buf: &mut B, atom: &T) -> Result<()> {
-        // Make sure we don't write too much data
-        if let Some(size) = self.size {
-            let mut buf = buf.limit(size);
-            atom.encode_inner(&mut buf)?;
-
-            // Sanity check for a correct implementation
-            assert!(!buf.has_remaining_mut(), "atom size mismatch");
-            if !buf.has_remaining_mut() {
-                return Err(Error::ShortWrite);
-            }
-        } else {
-            atom.encode_inner(buf)?;
-        }
-
-        Ok(())
-    }
-
-    pub fn decode_inner<B: Buf, T: Atom>(&self, buf: &mut B) -> Result<T> {
-        let size = self
-            .size
-            .map(|size| size as usize)
-            .unwrap_or(buf.remaining());
-        let mut buf = buf.take(size);
-
-        let atom = T::decode_inner(&mut buf)?;
-        if buf.has_remaining() {
-            return Err(Error::ShortRead);
-        }
-
-        Ok(atom)
-    }
-
-    pub fn skip_inner<B: Buf>(&self, buf: &mut B) -> Result<()> {
-        if let Some(size) = self.size {
-            buf.advance(size as usize);
-        } else {
-            buf.advance(buf.remaining());
-        }
-
-        Ok(())
-    }
-}
-
 impl Encode for Header {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+    fn encode(&self, buf: &mut BufMut) -> Result<()> {
         match self.size.map(|size| size + 8) {
             Some(size) if size > u32::MAX as usize => {
                 1u32.encode(buf)?;
@@ -147,17 +98,10 @@ impl Encode for Header {
             }
         }
     }
-
-    fn encode_size(&self) -> usize {
-        match self.size.map(|size| size + 8) {
-            Some(size) if size > u32::MAX as usize => 16,
-            _ => 8,
-        }
-    }
 }
 
 impl Decode for Header {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode(buf: &mut Buf) -> Result<Self> {
         let size = u32::decode(buf)?;
         let kind = FourCC::decode(buf)?;
 

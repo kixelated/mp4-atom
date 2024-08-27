@@ -1,113 +1,48 @@
-use serde::Serialize;
-use std::io::{Read, Seek, Write};
+mod hdlr;
+mod mdhd;
+mod minf;
 
-use crate::mp4box::*;
-use crate::mp4box::{hdlr::HdlrBox, mdhd::MdhdBox, minf::MinfBox};
+pub use hdlr::*;
+pub use mdhd::*;
+pub use minf::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
-pub struct MdiaBox {
-    pub mdhd: MdhdBox,
-    pub hdlr: HdlrBox,
-    pub minf: MinfBox,
+use crate::*;
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Mdia {
+    pub mdhd: Mdhd,
+    pub hdlr: Hdlr,
+    pub minf: Minf,
 }
 
-impl MdiaBox {
-    pub fn get_type(&self) -> BoxType {
-        BoxType::MdiaBox
-    }
-
-    pub fn get_size(&self) -> u64 {
-        HEADER_SIZE + self.mdhd.box_size() + self.hdlr.box_size() + self.minf.box_size()
-    }
-}
-
-impl Mp4Box for MdiaBox {
-    fn box_type(&self) -> BoxType {
-        self.get_type()
-    }
-
-    fn box_size(&self) -> u64 {
-        self.get_size()
-    }
-
-    fn to_json(&self) -> Result<String> {
-        Ok(serde_json::to_string(&self).unwrap())
-    }
-
-    fn summary(&self) -> Result<String> {
-        let s = String::new();
-        Ok(s)
-    }
-}
-
-impl<R: Read + Seek> ReadBox<&mut R> for MdiaBox {
-    fn read_box(reader: &mut R, size: u64) -> Result<Self> {
-        let start = box_start(reader)?;
-
+impl Atom for Mdia {
+    const KIND: FourCC = FourCC::new(b"mdia");
+    fn decode_atom(buf: &mut Buf) -> Result<Self> {
         let mut mdhd = None;
         let mut hdlr = None;
         let mut minf = None;
 
-        let mut current = reader.stream_position()?;
-        let end = start + size;
-        while current < end {
-            // Get box header.
-            let header = BoxHeader::read(reader)?;
-            let BoxHeader { name, size: s } = header;
-            if s > size {
-                return Err(Error::InvalidData(
-                    "mdia box contains a box with a larger size than it",
-                ));
+        while let Some(atom) = buf.decode()? {
+            match atom {
+                Any::Mdhd(atom) => mdhd.replace(atom),
+                Any::Hdlr(atom) => hdlr.replace(atom),
+                Any::Minf(atom) => minf.replace(atom),
+                atom => return Error::UnexpectedBox(atom.kind()),
             }
-
-            match name {
-                BoxType::MdhdBox => {
-                    mdhd = Some(MdhdBox::read_box(reader, s)?);
-                }
-                BoxType::HdlrBox => {
-                    hdlr = Some(HdlrBox::read_box(reader, s)?);
-                }
-                BoxType::MinfBox => {
-                    minf = Some(MinfBox::read_box(reader, s)?);
-                }
-                _ => {
-                    // XXX warn!()
-                    skip_box(reader, s)?;
-                }
-            }
-
-            current = reader.stream_position()?;
         }
 
-        if mdhd.is_none() {
-            return Err(Error::BoxNotFound(BoxType::MdhdBox));
-        }
-        if hdlr.is_none() {
-            return Err(Error::BoxNotFound(BoxType::HdlrBox));
-        }
-        if minf.is_none() {
-            return Err(Error::BoxNotFound(BoxType::MinfBox));
-        }
-
-        skip_bytes_to(reader, start + size)?;
-
-        Ok(MdiaBox {
-            mdhd: mdhd.unwrap(),
-            hdlr: hdlr.unwrap(),
-            minf: minf.unwrap(),
+        Ok(Mdia {
+            mdhd: mdhd.ok_or(Error::MissingBox(Mdhd::KIND)),
+            hdlr: hdlr.ok_or(Error::MissingBox(Hdlr::KIND)),
+            minf: minf.ok_or(Error::MissingBox(Minf::KIND)),
         })
     }
-}
 
-impl<W: Write> WriteBox<&mut W> for MdiaBox {
-    fn write_box(&self, writer: &mut W) -> Result<u64> {
-        let size = self.box_size();
-        BoxHeader::new(self.box_type(), size).write(writer)?;
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+        self.mdhd.encode(buf)?;
+        self.hdlr.encode(buf)?;
+        self.minf.encode(buf)?;
 
-        self.mdhd.write_box(writer)?;
-        self.hdlr.write_box(writer)?;
-        self.minf.write_box(writer)?;
-
-        Ok(size)
+        Ok(())
     }
 }

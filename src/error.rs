@@ -1,5 +1,3 @@
-use std::ffi;
-
 use crate::FourCC;
 
 #[derive(Debug, thiserror::Error)]
@@ -28,17 +26,20 @@ pub enum Error {
     #[error("divide by zero")]
     DivideByZero,
 
-    #[error("invalid cstring: {0}")]
-    CString(#[from] ffi::NulError),
-
-    #[error("invalid cstring: {0}")]
-    IntoStringError(#[from] ffi::IntoStringError),
+    #[error("invalid string: {0}")]
+    InvalidString(String),
 
     #[error("missing box: {0}")]
     MissingBox(FourCC),
 
     #[error("unexpected box: {0}")]
     UnexpectedBox(FourCC),
+
+    #[error("duplicate box: {0}")]
+    DuplicateBox(FourCC),
+
+    #[error("missing descriptor")]
+    MissingDescriptor,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

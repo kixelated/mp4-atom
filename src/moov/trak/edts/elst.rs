@@ -1,20 +1,17 @@
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use serde::Serialize;
-use std::io::{Read, Seek, Write};
-use std::mem::size_of;
+use crate::*;
 
-use crate::mp4box::*;
+ext! {
+    name: Elst,
+    versions: [0, 1],
+    flags: {}
+}
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
-pub struct ElstBox {
-    pub version: u8,
-    pub flags: u32,
-
-    #[serde(skip_serializing)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Elst {
     pub entries: Vec<ElstEntry>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ElstEntry {
     pub segment_duration: u64,
     pub media_time: u64,
@@ -22,138 +19,54 @@ pub struct ElstEntry {
     pub media_rate_fraction: u16,
 }
 
-impl ElstBox {
-    pub fn get_type(&self) -> BoxType {
-        BoxType::ElstBox
-    }
+impl AtomExt for Elst {
+    type Ext = ElstExt;
 
-    pub fn get_size(&self) -> u64 {
-        let mut size = HEADER_SIZE + HEADER_EXT_SIZE + 4;
-        if self.version == 1 {
-            size += self.entries.len() as u64 * 20;
-        } else if self.version == 0 {
-            size += self.entries.len() as u64 * 12;
-        }
-        size
-    }
-}
+    const KIND: FourCC = FourCC::new(b"elst");
 
-impl Mp4Box for ElstBox {
-    fn box_type(&self) -> BoxType {
-        self.get_type()
-    }
+    fn decode_atom(buf: &mut Buf, ext: ElstExt) -> Result<Self> {
+        let entry_count = u32::decode(buf)?;
 
-    fn box_size(&self) -> u64 {
-        self.get_size()
-    }
-
-    fn to_json(&self) -> Result<String> {
-        Ok(serde_json::to_string(&self).unwrap())
-    }
-
-    fn summary(&self) -> Result<String> {
-        let s = format!("elst_entries={}", self.entries.len());
-        Ok(s)
-    }
-}
-
-impl<R: Read + Seek> ReadBox<&mut R> for ElstBox {
-    fn read_box(reader: &mut R, size: u64) -> Result<Self> {
-        let start = box_start(reader)?;
-
-        let (version, flags) = read_box_header_ext(reader)?;
-
-        let header_size = HEADER_SIZE + HEADER_EXT_SIZE;
-        let entry_count = reader.read_u32::<BigEndian>()?;
-        let other_size = size_of::<i32>(); // entry_count
-        let entry_size = {
-            let mut entry_size = 0;
-            entry_size += if version == 1 {
-                size_of::<u64>() + size_of::<i64>() // segment_duration + media_time
-            } else {
-                size_of::<u32>() + size_of::<i32>() // segment_duration + media_time
-            };
-            entry_size += size_of::<i16>() + size_of::<i16>(); // media_rate_integer + media_rate_fraction
-            entry_size
-        };
-        if u64::from(entry_count)
-            > size
-                .saturating_sub(header_size)
-                .saturating_sub(other_size as u64)
-                / entry_size as u64
-        {
-            return Err(Error::InvalidData(
-                "elst entry_count indicates more entries than could fit in the box",
-            ));
-        }
-        let mut entries = Vec::with_capacity(entry_count as usize);
+        let mut entries = Vec::new();
         for _ in 0..entry_count {
-            let (segment_duration, media_time) = if version == 1 {
-                (
-                    reader.read_u64::<BigEndian>()?,
-                    reader.read_u64::<BigEndian>()?,
-                )
-            } else {
-                (
-                    reader.read_u32::<BigEndian>()? as u64,
-                    reader.read_u32::<BigEndian>()? as u64,
-                )
+            let (segment_duration, media_time) = match ext.version {
+                ElstVersion::V1 => (u64::decode(buf)?, u64::decode(buf)?),
+                ElstVersion::V0 => (u32::decode(buf)? as u64, u32::decode(buf)? as u64),
             };
 
             let entry = ElstEntry {
                 segment_duration,
                 media_time,
-                media_rate: reader.read_u16::<BigEndian>()?,
-                media_rate_fraction: reader.read_u16::<BigEndian>()?,
+                media_rate: buf.decode()?,
+                media_rate_fraction: buf.decode()?,
             };
             entries.push(entry);
         }
 
-        skip_bytes_to(reader, start + size)?;
-
-        Ok(ElstBox {
-            version,
-            flags,
-            entries,
-        })
+        Ok(Elst { entries })
     }
-}
 
-impl<W: Write> WriteBox<&mut W> for ElstBox {
-    fn write_box(&self, writer: &mut W) -> Result<u64> {
-        let size = self.box_size();
-        BoxHeader::new(self.box_type(), size).write(writer)?;
+    fn encode_atom(&self, buf: &mut BufMut) -> Result<ElstExt> {
+        (self.entries.len() as u32).encode(buf)?;
 
-        write_box_header_ext(writer, self.version, self.flags)?;
-
-        writer.write_u32::<BigEndian>(self.entries.len() as u32)?;
         for entry in self.entries.iter() {
-            if self.version == 1 {
-                writer.write_u64::<BigEndian>(entry.segment_duration)?;
-                writer.write_u64::<BigEndian>(entry.media_time)?;
-            } else {
-                writer.write_u32::<BigEndian>(entry.segment_duration as u32)?;
-                writer.write_u32::<BigEndian>(entry.media_time as u32)?;
-            }
-            writer.write_u16::<BigEndian>(entry.media_rate)?;
-            writer.write_u16::<BigEndian>(entry.media_rate_fraction)?;
+            entry.segment_duration.encode(buf)?;
+            entry.media_time.encode(buf)?;
+            entry.media_rate.encode(buf)?;
+            entry.media_rate_fraction.encode(buf)?;
         }
 
-        Ok(size)
+        Ok(ElstVersion::V1.into())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mp4box::BoxHeader;
-    use std::io::Cursor;
 
     #[test]
     fn test_elst32() {
-        let src_box = ElstBox {
-            version: 0,
-            flags: 0,
+        let expected = Elst {
             entries: vec![ElstEntry {
                 segment_duration: 634634,
                 media_time: 0,
@@ -161,24 +74,17 @@ mod tests {
                 media_rate_fraction: 0,
             }],
         };
-        let mut buf = Vec::new();
-        src_box.write_box(&mut buf).unwrap();
-        assert_eq!(buf.len(), src_box.box_size() as usize);
+        let mut buf = BufMut::new();
+        expected.encode(&mut buf).unwrap();
 
-        let mut reader = Cursor::new(&buf);
-        let header = BoxHeader::read(&mut reader).unwrap();
-        assert_eq!(header.name, BoxType::ElstBox);
-        assert_eq!(src_box.box_size(), header.size);
-
-        let dst_box = ElstBox::read_box(&mut reader, header.size).unwrap();
-        assert_eq!(src_box, dst_box);
+        let mut buf = buf.filled();
+        let decoded = Elst::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
     }
 
     #[test]
     fn test_elst64() {
-        let src_box = ElstBox {
-            version: 1,
-            flags: 0,
+        let expected = Elst {
             entries: vec![ElstEntry {
                 segment_duration: 634634,
                 media_time: 0,
@@ -186,16 +92,11 @@ mod tests {
                 media_rate_fraction: 0,
             }],
         };
-        let mut buf = Vec::new();
-        src_box.write_box(&mut buf).unwrap();
-        assert_eq!(buf.len(), src_box.box_size() as usize);
+        let mut buf = BufMut::new();
+        expected.encode(&mut buf).unwrap();
 
-        let mut reader = Cursor::new(&buf);
-        let header = BoxHeader::read(&mut reader).unwrap();
-        assert_eq!(header.name, BoxType::ElstBox);
-        assert_eq!(src_box.box_size(), header.size);
-
-        let dst_box = ElstBox::read_box(&mut reader, header.size).unwrap();
-        assert_eq!(src_box, dst_box);
+        let mut buf = buf.filled();
+        let decoded = Elst::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
     }
 }
