@@ -20,7 +20,7 @@ pub struct Moov {
 impl Atom for Moov {
     const KIND: FourCC = FourCC::new(b"moov");
 
-    fn decode_atom(mut buf: &mut Buf) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         let mut mvhd = None;
         let mut meta = None;
         let mut udta = None;
@@ -29,17 +29,17 @@ impl Atom for Moov {
 
         while let Some(any) = buf.decode()? {
             match any {
-                Any::Mvhd(atom) => mvhd.replace(atom),
-                Any::Meta(atom) => meta.replace(atom),
-                Any::Mvex(atom) => mvex.replace(atom),
+                Any::Mvhd(atom) => mvhd = atom.into(),
+                Any::Meta(atom) => meta = atom.into(),
+                Any::Mvex(atom) => mvex = atom.into(),
                 Any::Trak(atom) => traks.push(atom),
-                Any::Udta(atom) => udta.replace(atom),
+                Any::Udta(atom) => udta = atom.into(),
                 _ => return Err(Error::UnexpectedBox(any.kind())),
             }
         }
 
         Ok(Moov {
-            mvhd: mvhd.ok_or(Error::MissingBox("mvhd"))?,
+            mvhd: mvhd.ok_or(Error::MissingBox(b"mvhd".into()))?,
             meta,
             udta,
             mvex,
@@ -47,7 +47,7 @@ impl Atom for Moov {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
         self.mvhd.encode(buf)?;
         self.meta.encode(buf)?;
         self.mvex.encode(buf)?;

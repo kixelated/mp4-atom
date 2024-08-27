@@ -1,13 +1,13 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Vp09 {
     pub start_code: u16,
     pub data_reference_index: u16,
     pub width: u16,
     pub height: u16,
-    pub horizresolution: (u16, u16),
-    pub vertresolution: (u16, u16),
+    pub horizresolution: Ratio<u16>,
+    pub vertresolution: Ratio<u16>,
     pub frame_count: u16,
     pub compressorname: [u8; 32],
     pub depth: u16,
@@ -15,39 +15,20 @@ pub struct Vp09 {
     pub vpcc: Vpcc,
 }
 
-impl Vp09 {
-    pub const DEFAULT_START_CODE: u16 = 0;
-    pub const DEFAULT_END_CODE: u16 = 0xFFFF;
-    pub const DEFAULT_DATA_REFERENCE_INDEX: u16 = 1;
-    pub const DEFAULT_HORIZRESOLUTION: (u16, u16) = (0x48, 0x00);
-    pub const DEFAULT_VERTRESOLUTION: (u16, u16) = (0x48, 0x00);
-    pub const DEFAULT_FRAME_COUNT: u16 = 1;
-    pub const DEFAULT_COMPRESSORNAME: [u8; 32] = [0; 32];
-    pub const DEFAULT_DEPTH: u16 = 24;
-
-    pub fn new(config: &Vp9Config) -> Self {
+impl Default for Vp09 {
+    fn default() -> Self {
         Vp09 {
-            start_code: Vp09::DEFAULT_START_CODE,
-            data_reference_index: Vp09::DEFAULT_DATA_REFERENCE_INDEX,
-            width: config.width,
-            height: config.height,
-            horizresolution: Vp09::DEFAULT_HORIZRESOLUTION,
-            vertresolution: Vp09::DEFAULT_VERTRESOLUTION,
-            frame_count: Vp09::DEFAULT_FRAME_COUNT,
-            compressorname: Vp09::DEFAULT_COMPRESSORNAME,
-            depth: Vp09::DEFAULT_DEPTH,
-            end_code: Vp09::DEFAULT_END_CODE,
-            vpcc: Vpcc {
-                profile: 0,
-                level: 0x1F,
-                bit_depth: Vpcc::DEFAULT_BIT_DEPTH,
-                chroma_subsampling: 0,
-                video_full_range_flag: false,
-                color_primaries: 0,
-                transfer_characteristics: 0,
-                matrix_coefficients: 0,
-                codec_initialization_data_size: 0,
-            },
+            start_code: 0,
+            data_reference_index: 1,
+            width: 0,
+            height: 0,
+            horizresolution: 0x48.into(),
+            vertresolution: 0x48.into(),
+            frame_count: 1,
+            compressorname: [0; 32],
+            depth: 24,
+            end_code: 0xFFFF,
+            vpcc: Vpcc::default(),
         }
     }
 }
@@ -55,17 +36,17 @@ impl Vp09 {
 impl AtomExt for Vp09 {
     type Ext = ();
 
-    const KIND: FourCC = FourCC::new(b"vp09");
+    const KIND_EXT: FourCC = FourCC::new(b"vp09");
 
-    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let start_code: u16 = buf.decode()?;
         let data_reference_index: u16 = buf.decode()?;
-        buf.skip(16)?;
+        <[u8; 16]>::decode(buf)?;
         let width: u16 = buf.decode()?;
         let height: u16 = buf.decode()?;
-        let horizresolution: (u16, u16) = (buf.decode()?, buf.decode()?);
-        let vertresolution: (u16, u16) = (buf.decode()?, buf.decode()?);
-        buf.skip(4)?;
+        let horizresolution = buf.decode()?;
+        let vertresolution = buf.decode()?;
+        u32::decode(buf)?;
         let frame_count: u16 = buf.decode()?;
         let compressorname = buf.decode()?;
         let depth: u16 = buf.decode()?;
@@ -88,17 +69,15 @@ impl AtomExt for Vp09 {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
         self.start_code.encode(buf)?;
         self.data_reference_index.encode(buf)?;
-        buf.zero(16)?;
+        [0u8; 16].encode(buf)?;
         self.width.encode(buf)?;
         self.height.encode(buf)?;
-        buf.u16(self.horizresolution.0)?;
-        buf.u16(self.horizresolution.1)?;
-        buf.u16(self.vertresolution.0)?;
-        buf.u16(self.vertresolution.1)?;
-        buf.zero(4)?;
+        self.horizresolution.encode(buf)?;
+        self.vertresolution.encode(buf)?;
+        0u32.encode(buf)?;
         self.frame_count.encode(buf)?;
         self.compressorname.encode(buf)?;
         self.depth.encode(buf)?;
@@ -115,14 +94,15 @@ mod tests {
 
     #[test]
     fn test_vpcc() {
-        let expected = Vp09::new(&Vp9Config {
+        let expected = Vp09 {
             width: 1920,
             height: 1080,
-        });
-        let mut buf = BufMut::new();
+            ..Default::default()
+        };
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Vp09::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

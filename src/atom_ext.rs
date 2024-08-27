@@ -9,33 +9,36 @@ pub trait Ext: Default {
 
 // Rather than encoding/decoding the header in every atom, use this trait.
 pub trait AtomExt: Sized {
-    const KIND: FourCC;
+    const KIND_EXT: FourCC;
 
     // One day default associated types will be a thing, then this can be ()
     type Ext: Ext;
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<Self::Ext>;
-    fn decode_atom(buf: &mut Buf, ext: Self::Ext) -> Result<Self>;
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<Self::Ext>;
+    fn decode_atom_ext(buf: &mut Bytes, ext: Self::Ext) -> Result<Self>;
 }
 
 impl<T: AtomExt> Atom for T {
-    const KIND: FourCC = AtomExt::KIND;
+    const KIND: FourCC = Self::KIND_EXT;
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
-        let ext = AtomExt::Ext::decode(buf.u32()?)?;
-        AtomExt::decode_atom(buf, ext)
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+        let ext = Ext::decode(<[u8; 4]>::decode(buf)?)?;
+        AtomExt::decode_atom_ext(buf, ext)
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
         // Here's the magic, we reserve space for the version/flags first
         let start = buf.len();
-        buf.u32(0)?;
+        0u32.encode(buf)?;
 
         // That way we can return them as part of the trait, avoiding boilerplate
-        let ext = AtomExt::encode_atom(self, buf)?;
+        let ext = self.encode_atom_ext(buf)?;
 
         // Go back and update the version/flags
-        buf.u32_at(ext.encode(), start)
+        let header = ext.encode()?;
+        buf[start..start + 4].copy_from_slice(&header);
+
+        Ok(())
     }
 }
 
@@ -45,8 +48,8 @@ impl Ext for () {
         Ok([0, 0, 0, 0])
     }
 
-    fn decode(_: [u8; 4]) -> Result<Self> {
-        Ok(Self)
+    fn decode(_: [u8; 4]) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -87,17 +90,11 @@ struct TfdtExt {
 macro_rules! ext {
 	(name: $name:ident, versions: [$($version:expr),*], flags: { $($flag:ident = $bit:expr,)* }) => {
 		paste::paste! {
-			#[derive(Debug, Clone, PartialEq, Eq)]
+			#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 			enum [<$name Version>] {
 				$(
 					[<V $version>] = $version,
 				)*
-			}
-
-			impl From<[<$name Version>]> for u8 {
-				fn from(v: [<$name Version>]) -> u8 {
-					v as u8
-				}
 			}
 
 			impl TryFrom<u8> for [<$name Version>] {
@@ -114,8 +111,12 @@ macro_rules! ext {
 			}
 
 			impl Default for [<$name Version>] {
+				// Hilarious way to return the first version in the list
+				#[allow(unreachable_code)]
 				fn default() -> Self {
-					Self::[<V $($version)*>]
+					$(
+						return Self::[<V $version>];
+					)*
 				}
 			}
 
@@ -130,7 +131,7 @@ macro_rules! ext {
 			impl Ext for [<$name Ext>] {
 				fn encode(&self) -> Result<[u8; 4]>{
 					let mut v = [0u8; 4];
-					v[0] = self.version.into();
+					v[0] = self.version as u8;
 
 					$(
 						if self.$flag {

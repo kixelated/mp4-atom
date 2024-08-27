@@ -10,7 +10,7 @@ ext! {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Tkhd {
     pub creation_time: u64,
     pub modification_time: u64,
@@ -28,11 +28,11 @@ pub struct Tkhd {
 }
 
 impl AtomExt for Tkhd {
-    const KIND: FourCC = FourCC::new(b"tkhd");
+    const KIND_EXT: FourCC = FourCC::new(b"tkhd");
 
     type Ext = TkhdExt;
 
-    fn decode_atom(buf: &mut Buf, ext: TkhdExt) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, ext: TkhdExt) -> Result<Self> {
         let (creation_time, modification_time, track_id, _, duration) = match ext.version {
             TkhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -55,7 +55,7 @@ impl AtomExt for Tkhd {
         let alternate_group = buf.decode()?;
         let volume = buf.decode()?;
 
-        u16::buf.decode()?; // reserved
+        u16::decode(buf)?; // reserved
         let matrix = Matrix::decode(buf)?;
         let width = buf.decode()?;
         let height = buf.decode()?;
@@ -75,7 +75,7 @@ impl AtomExt for Tkhd {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<TkhdExt> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<TkhdExt> {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.track_id.encode(buf)?;
@@ -85,8 +85,8 @@ impl AtomExt for Tkhd {
         0u64.encode(buf)?; // reserved
         self.layer.encode(buf)?;
         self.alternate_group.encode(buf)?;
-        buf.u16(self.volume.raw_value())?;
-        buf.u16(0)?; // reserved
+        self.volume.encode(buf)?;
+        0u16.encode(buf)?; // reserved
         self.matrix.encode(buf)?;
 
         self.width.encode(buf)?;
@@ -114,7 +114,7 @@ pub struct Matrix {
 }
 
 impl Decode for Matrix {
-    fn decode(buf: &mut Buf) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         Ok(Self {
             a: buf.decode()?,
             b: buf.decode()?,
@@ -130,7 +130,7 @@ impl Decode for Matrix {
 }
 
 impl Encode for Matrix {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
         self.a.encode(buf)?;
         self.b.encode(buf)?;
         self.u.encode(buf)?;
@@ -189,10 +189,10 @@ mod tests {
             height: 288.into(),
             enabled: true,
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Tkhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -212,10 +212,10 @@ mod tests {
             height: 288.into(),
             enabled: true,
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Tkhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

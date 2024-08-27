@@ -11,9 +11,9 @@ pub struct Dref {
 impl AtomExt for Dref {
     type Ext = ();
 
-    const KIND: FourCC = FourCC::new(b"dref");
+    const KIND_EXT: FourCC = FourCC::new(b"dref");
 
-    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
         let mut urls = Vec::new();
 
@@ -25,7 +25,7 @@ impl AtomExt for Dref {
         Ok(Dref { urls })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
         (self.urls.len() as u32).encode(buf)?;
 
         for url in &self.urls {

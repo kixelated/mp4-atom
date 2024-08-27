@@ -21,9 +21,9 @@ pub struct Emsg {
 impl Atom for Emsg {
     const KIND: FourCC = FourCC::new(b"emsg");
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         let version = u8::decode(buf)?;
-        buf.u24()?;
+        <[u8; 3]>::decode(buf)?;
 
         Ok(match version {
             0u8 => Emsg {
@@ -52,13 +52,13 @@ impl Atom for Emsg {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
         match self.version {
             EmsgVersion::V0 {
                 presentation_time_delta,
             } => {
-                buf.u8(0)?;
-                buf.u24(0)?;
+                0u8.encode(buf)?;
+                [0u8; 3].encode(buf)?;
                 self.scheme_id_uri.as_str().encode(buf)?;
                 0u8.encode(buf)?;
                 self.value.as_str().encode(buf)?;
@@ -69,8 +69,8 @@ impl Atom for Emsg {
                 self.id.encode(buf)?;
             }
             EmsgVersion::V1 { presentation_time } => {
-                buf.u8(1)?;
-                buf.u24(0)?;
+                1u8.encode(buf)?;
+                [0u8; 3].encode(buf)?;
                 self.timescale.encode(buf)?;
                 presentation_time.encode(buf)?;
                 self.event_duration.encode(buf)?;
@@ -106,10 +106,10 @@ mod tests {
             message_data: vec![1, 2, 3],
         };
 
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         decoded.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let output = Emsg::decode(&mut buf).unwrap();
 
         assert_eq!(decoded, output);
@@ -129,10 +129,10 @@ mod tests {
             message_data: vec![3, 2, 1],
         };
 
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         decoded.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let output = Emsg::decode(&mut buf).unwrap();
         assert_eq!(decoded, output);
     }

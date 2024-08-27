@@ -19,6 +19,7 @@ pub struct Trun {
     pub entires: Vec<TrunEntry>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TrunEntry {
     pub duration: Option<u32>,
     pub size: Option<u32>,
@@ -27,23 +28,43 @@ pub struct TrunEntry {
 }
 
 impl AtomExt for Trun {
-    const KIND: FourCC = FourCC::new(b"trun");
+    const KIND_EXT: FourCC = FourCC::new(b"trun");
 
     type Ext = TrunExt;
 
-    fn decode_atom(buf: &mut Buf, ext: TrunExt) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, ext: TrunExt) -> Result<Self> {
         let sample_count = u32::decode(buf)?;
-        let data_offset = ext.data_offset.then(buf.decode()).transpose()?;
-        let first_sample_flags = ext.first_sample_flags.then(buf.decode()).transpose()?;
+        let data_offset = match ext.data_offset {
+            true => i32::decode(buf)?.into(),
+            false => None,
+        };
+
+        // TODO
+        let first_sample_flags = match ext.first_sample_flags {
+            true => u32::decode(buf)?.into(),
+            false => None,
+        };
 
         let mut entires = Vec::new();
 
         // TODO this is undoubtedly wrong
         for _ in 0..sample_count {
-            let duration = ext.sample_duration.then(buf.decode()).transpose()?;
-            let size = ext.sample_size.then(buf.decode()).transpose()?;
-            let sample_flags = ext.sample_flags.then(buf.decode()).transpose()?;
-            let cts = ext.sample_cts.then(buf.decode()).transpose()?;
+            let duration = match ext.sample_duration {
+                true => u32::decode(buf)?.into(),
+                false => None,
+            };
+            let size = match ext.sample_size {
+                true => u32::decode(buf)?.into(),
+                false => None,
+            };
+            let sample_flags = match ext.sample_flags {
+                true => u32::decode(buf)?.into(),
+                false => None,
+            };
+            let cts = match ext.sample_cts {
+                true => i32::decode(buf)?.into(),
+                false => None,
+            };
 
             entires.push(TrunEntry {
                 duration,
@@ -59,7 +80,7 @@ impl AtomExt for Trun {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<TrunExt> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<TrunExt> {
         let ext = TrunExt {
             version: TrunVersion::V1,
             data_offset: self.data_offset.is_some(),
@@ -78,10 +99,10 @@ impl AtomExt for Trun {
         0u32.encode(buf)?; // TODO first sample flags
 
         for entry in &self.entires {
-            ext.sample_duration.then(entry.duration).encode(buf)?;
-            ext.sample_size.then(entry.size).encode(buf)?;
-            ext.sample_flags.then(entry.flags).encode(buf)?;
-            ext.sample_cts.then(entry.cts).encode(buf)?;
+            ext.sample_duration.then_some(entry.duration).encode(buf)?;
+            ext.sample_size.then_some(entry.size).encode(buf)?;
+            ext.sample_flags.then_some(entry.flags).encode(buf)?;
+            ext.sample_cts.then_some(entry.cts).encode(buf)?;
         }
 
         Ok(ext)

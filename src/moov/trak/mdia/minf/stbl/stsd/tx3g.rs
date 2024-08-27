@@ -41,19 +41,19 @@ impl Default for Tx3g {
 impl Atom for Tx3g {
     const KIND: FourCC = FourCC::new(b"tx3g");
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         u32::decode(buf)?; // reserved
-        buf.decode()?; // reserved
+        u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
 
         let display_flags = u32::decode(buf)?;
-        let horizontal_justification = buf.i8()?()?;
-        let vertical_justification = buf.i8()?()?;
+        let horizontal_justification = i8::decode(buf)?;
+        let vertical_justification = i8::decode(buf)?;
         let bg_color_rgba = RgbaColor {
-            red: buf.u8()?,
-            green: buf.u8()?,
-            blue: buf.u8()?,
-            alpha: buf.u8()?,
+            red: u8::decode(buf)?,
+            green: u8::decode(buf)?,
+            blue: u8::decode(buf)?,
+            alpha: u8::decode(buf)?,
         };
         let box_record: [i16; 4] = [
             i16::decode(buf)?,
@@ -61,7 +61,7 @@ impl Atom for Tx3g {
             i16::decode(buf)?,
             i16::decode(buf)?,
         ];
-        let style_record = buf.fixed::<12>();
+        let style_record = <[u8; 12]>::decode(buf)?;
 
         Ok(Tx3g {
             data_reference_index,
@@ -74,22 +74,22 @@ impl Atom for Tx3g {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u32(0)?; // reserved
-        buf.u16(0)?; // reserved
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+        0u32.encode(buf)?; // reserved
+        0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;
         self.display_flags.encode(buf)?;
-        buf.i8(self.horizontal_justification)?;
-        buf.i8(self.vertical_justification)?;
-        buf.u8(self.bg_color_rgba.red)?;
-        buf.u8(self.bg_color_rgba.green)?;
-        buf.u8(self.bg_color_rgba.blue)?;
-        buf.u8(self.bg_color_rgba.alpha)?;
+        self.horizontal_justification.encode(buf)?;
+        self.vertical_justification.encode(buf)?;
+        self.bg_color_rgba.red.encode(buf)?;
+        self.bg_color_rgba.green.encode(buf)?;
+        self.bg_color_rgba.blue.encode(buf)?;
+        self.bg_color_rgba.alpha.encode(buf)?;
         for n in 0..4 {
-            buf.i16(self.box_record[n])?;
+            (self.box_record[n]).encode(buf)?;
         }
         for n in 0..12 {
-            buf.u8(self.style_record[n])?;
+            (self.style_record[n]).encode(buf)?;
         }
 
         Ok(())
@@ -116,10 +116,10 @@ mod tests {
             box_record: [0, 0, 0, 0],
             style_record: [0, 0, 0, 0, 0, 1, 0, 16, 255, 255, 255, 255],
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Tx3g::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

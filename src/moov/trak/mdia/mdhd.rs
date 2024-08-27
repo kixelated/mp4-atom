@@ -6,7 +6,7 @@ ext! {
     flags: {}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Mdhd {
     pub creation_time: u64,
     pub modification_time: u64,
@@ -16,10 +16,10 @@ pub struct Mdhd {
 }
 
 impl AtomExt for Mdhd {
-    const KIND: FourCC = FourCC::new(b"mdhd");
+    const KIND_EXT: FourCC = FourCC::new(b"mdhd");
     type Ext = MdhdExt;
 
-    fn decode_atom(buf: &mut Buf, ext: MdhdExt) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, ext: MdhdExt) -> Result<Self> {
         let (creation_time, modification_time, timescale, duration) = match ext.version {
             MdhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -47,15 +47,15 @@ impl AtomExt for Mdhd {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<MdhdExt> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<MdhdExt> {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.timescale.encode(buf)?;
         self.duration.encode(buf)?;
 
         let language_code = language_code(&self.language);
-        buf.u16(language_code)?;
-        buf.u16(0)?; // pre-defined
+        (language_code).encode(buf)?;
+        0u16.encode(buf)?; // pre-defined
 
         Ok(MdhdVersion::V1.into())
     }
@@ -69,11 +69,7 @@ fn language_string(language: u16) -> String {
     lang[2] = ((language) & 0x1F) + 0x60;
 
     // Decode utf-16 encoded bytes into a string.
-    let lang_str = decode_utf16(lang.iter().cloned())
-        .map(|r| r.unwrap_or(REPLACEMENT_CHARACTER))
-        .collect::<String>();
-
-    lang_str
+    String::from_utf16_lossy(&lang)
 }
 
 fn language_code(language: &str) -> u16 {
@@ -110,10 +106,10 @@ mod tests {
             duration: 30439936,
             language: String::from("und"),
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Mdhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -127,10 +123,10 @@ mod tests {
             duration: 30439936,
             language: String::from("eng"),
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Mdhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

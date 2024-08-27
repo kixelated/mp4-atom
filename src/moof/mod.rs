@@ -15,15 +15,13 @@ pub struct Moof {
 impl Atom for Moof {
     const KIND: FourCC = FourCC::new(b"moof");
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         let mut mfhd = None;
         let mut trafs = Vec::new();
 
         while let Some(atom) = buf.decode()? {
             match atom {
-                Any::Mfhd(atom) => mfhd
-                    .once_or(atom)
-                    .none_or(Error::DuplicateBox(Mfhd::KIND))?,
+                Any::Mfhd(atom) => mfhd = atom.into(),
                 Any::Traf(atom) => trafs.push(atom),
                 other => return Err(Error::UnexpectedBox(other.kind())),
             }
@@ -35,9 +33,9 @@ impl Atom for Moof {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
         self.mfhd.encode(buf)?;
-        for traf in &self.traf {
+        for traf in &self.trafs {
             traf.encode(buf)?;
         }
         Ok(())

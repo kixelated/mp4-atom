@@ -21,26 +21,14 @@ impl Default for Mp4a {
     }
 }
 
-impl Mp4a {
-    pub fn new(config: &AacConfig) -> Self {
-        Self {
-            data_reference_index: 1,
-            channelcount: config.chan_conf as u16,
-            samplesize: 16,
-            samplerate: config.freq_index.freq().into(),
-            esds: Some(Esds::new(config)),
-        }
-    }
-}
-
 impl Atom for Mp4a {
     const KIND: FourCC = FourCC::new(b"mp4a");
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
-        let version = buf.u16()?;
+        let version = u16::decode(buf)?;
         u16::decode(buf)?; // reserved
         u32::decode(buf)?; // reserved
         let channelcount = buf.decode()?;
@@ -55,20 +43,8 @@ impl Atom for Mp4a {
         }
 
         // Find esds in mp4a or wave
-        let mut esds = None;
-
-        while let Some(atom) = buf.decode()? {
-            match atom {
-                Any::Esds(atom) => {
-                    esds.replace(atom);
-                    break;
-                }
-                Any::Wave(atom) => {
-                    // Typically contains frma, mp4a, esds, and a terminator atom
-                }
-                _ => return Err(Error::UnexpectedBox(atom.kind())),
-            }
-        }
+        // TODO wave
+        let esds = buf.decode()?;
 
         Ok(Mp4a {
             data_reference_index,
@@ -79,16 +55,16 @@ impl Atom for Mp4a {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u32(0)?; // reserved
-        buf.u16(0)?; // reserved
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+        0u32.encode(buf)?; // reserved
+        0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;
-        buf.u16(0)?; // version
-        buf.u16(0)?; // reserved
-        buf.u32(0)?; // reserved
+        0u16.encode(buf)?; // version
+        0u16.encode(buf)?; // reserved
+        0u32.encode(buf)?; // reserved
         self.channelcount.encode(buf)?;
         self.samplesize.encode(buf)?;
-        buf.u32(0)?; // reserved
+        0u32.encode(buf)?; // reserved
         self.samplerate.encode(buf)?;
 
         self.esds.encode(buf)?;
@@ -102,29 +78,22 @@ pub struct Esds {
     pub es_desc: ESDescriptor,
 }
 
-impl Esds {
-    pub fn new(config: &AacConfig) -> Self {
-        Self {
-            es_desc: ESDescriptor::new(config),
-        }
-    }
-}
-
 impl AtomExt for Esds {
-  type Ext = ();
+    type Ext = ();
 
-  const KIND: FourCC = FourCC::new(b"esds");
+    const KIND_EXT: FourCC = FourCC::new(b"esds");
 
-fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let mut es_desc = None;
 
-        while let Some(atom) = buf.decode()? {
-            let (desc_tag, desc_size) = read_desc(reader)?;
-            match desc_tag {
-                0x03 => {
-                    es_desc = Some(ESDescriptor::read_desc(reader, desc_size)?);
-                }
-                _ => break,
+        while let Some(desc) = Option::<DescriptorHeader>::decode(buf)? {
+            if buf.len() < desc.size as usize {
+                return Err(Error::LongRead);
+            }
+            let mut buf = buf.split_to(desc.size as usize);
+            match desc.tag {
+                0x03 => es_desc = ESDescriptor::decode(&mut buf)?.into(),
+                _ => todo!("Esds tag: {:02X}", desc.tag),
             }
         }
 
@@ -133,52 +102,54 @@ fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
         })
     }
 
-fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        self.es_desc.write_desc(writer)?;
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+        // TODO also include the descriptor header
+        self.es_desc.encode(buf)?;
 
         Ok(())
     }
 }
 
-pub struct Descriptor {
+pub struct DescriptorHeader {
     pub tag: u8,
-    pub size: u32,
+    pub size: usize,
 }
 
-impl Decode for Descriptor {
-    fn decode(buf: &mut Buf) -> Result<Self> {
-        let tag = buf.u8()?;
+impl Decode for DescriptorHeader {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        let tag = u8::decode(buf)?;
 
         let mut size: u32 = 0;
         for _ in 0..4 {
-            let b = buf.u8()?;
+            let b = u8::decode(buf)?;
             size = (size << 7) | (b & 0x7F) as u32;
             if b & 0x80 == 0 {
                 break;
             }
         }
 
-        Ok(Descriptor { tag, size })
+        Ok(Self {
+            tag,
+            size: size as usize,
+        })
     }
 }
 
-impl Encode for Descriptor {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u8(self.tag)?;
+impl Encode for DescriptorHeader {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        self.tag.encode(buf)?;
 
-        let mut size = self.size;
-        let mut nbytes = 0;
+        let mut size = self.size as u32;
         while size > 0 {
             let mut b = (size & 0x7F) as u8;
             size >>= 7;
             if size > 0 {
                 b |= 0x80;
             }
-            buf.u8(b)?;
-            nbytes += 1;
+            (b).encode(buf)?;
         }
 
-        Ok(nbytes)
+        Ok(())
     }
 }
 
@@ -190,52 +161,20 @@ pub struct ESDescriptor {
     pub sl_config: SLConfigDescriptor,
 }
 
-impl ESDescriptor {
-    pub fn new(config: &AacConfig) -> Self {
-        Self {
-            es_id: 1,
-            dec_config: DecoderConfigDescriptor::new(config),
-            sl_config: SLConfigDescriptor::new(),
-        }
-    }
-}
-
-impl Descriptor for ESDescriptor {
-    fn desc_tag() -> u8 {
-        0x03
-    }
-
-    fn desc_size() -> u32 {
-        3 + 1
-            + size_of_length(DecoderConfigDescriptor::desc_size())
-            + DecoderConfigDescriptor::desc_size()
-            + 1
-            + size_of_length(SLConfigDescriptor::desc_size())
-            + SLConfigDescriptor::desc_size()
-    }
-}
-
-impl<R: Read + Seek> ReadDesc<&mut R> for ESDescriptor {
-    fn read_desc(reader: &mut R, size: u32) -> Result<Self> {
+impl Decode for ESDescriptor {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         let es_id = buf.decode()?;
-        buf.u8()?; // XXX flags must be 0
+        u8::decode(buf)?; // XXX flags must be 0
 
         let mut dec_config = None;
         let mut sl_config = None;
 
-        let end = start + size as u64;
-        while let Some(atom) = buf.decode()? {
-            let (desc_tag, desc_size) = read_desc(reader)?;
-            match desc_tag {
-                0x04 => {
-                    dec_config = Some(DecoderConfigDescriptor::read_desc(reader, desc_size)?);
-                }
-                0x06 => {
-                    sl_config = Some(SLConfigDescriptor::read_desc(reader, desc_size)?);
-                }
-                _ => {
-                    skip_bytes(reader, desc_size as u64)?;
-                }
+        while let Some(desc) = Option::<DescriptorHeader>::decode(buf)? {
+            let buf = &mut buf.split_to(desc.size as usize);
+            match desc.tag {
+                0x04 => dec_config = DecoderConfigDescriptor::decode(buf)?.into(),
+                0x06 => sl_config = SLConfigDescriptor::decode(buf)?.into(),
+                _ => todo!("ESDescriptor tag: {:02X}", desc.tag),
             }
         }
 
@@ -247,16 +186,15 @@ impl<R: Read + Seek> ReadDesc<&mut R> for ESDescriptor {
     }
 }
 
-impl<W: Write> WriteDesc<&mut W> for ESDescriptor {
-    fn write_desc(&self, writer: &mut W) -> Result<u32> {
-        let size = Self::desc_size();
-        write_desc(writer, Self::desc_tag(), size)?;
+impl Encode for ESDescriptor {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        // TODO write the header
 
         self.es_id.encode(buf)?;
-        buf.u8(0)?;
+        0u8.encode(buf)?;
 
-        self.dec_config.write_desc(writer)?;
-        self.sl_config.write_desc(writer)?;
+        self.dec_config.encode(buf)?;
+        self.sl_config.encode(buf)?;
 
         Ok(())
     }
@@ -267,61 +205,30 @@ pub struct DecoderConfigDescriptor {
     pub object_type_indication: u8,
     pub stream_type: u8,
     pub up_stream: u8,
-    pub buffer_size_db: u32,
+    pub buffer_size_db: u24,
     pub max_bitrate: u32,
     pub avg_bitrate: u32,
 
     pub dec_specific: DecoderSpecificDescriptor,
 }
 
-impl DecoderConfigDescriptor {
-    pub fn new(config: &AacConfig) -> Self {
-        Self {
-            object_type_indication: 0x40, // XXX AAC
-            stream_type: 0x05,            // XXX Audio
-            up_stream: 0,
-            buffer_size_db: 0,
-            max_bitrate: config.bitrate, // XXX
-            avg_bitrate: config.bitrate,
-            dec_specific: DecoderSpecificDescriptor::new(config),
-        }
-    }
-}
-
-impl Descriptor for DecoderConfigDescriptor {
-    fn desc_tag() -> u8 {
-        0x04
-    }
-
-    fn desc_size() -> u32 {
-        13 + 1
-            + size_of_length(DecoderSpecificDescriptor::desc_size())
-            + DecoderSpecificDescriptor::desc_size()
-    }
-}
-
-impl<R: Read + Seek> ReadDesc<&mut R> for DecoderConfigDescriptor {
-    fn read_desc(reader: &mut R, size: u32) -> Result<Self> {
-        let object_type_indication = buf.u8()?;
-        let byte_a = buf.u8()?;
+impl Decode for DecoderConfigDescriptor {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        let object_type_indication = u8::decode(buf)?;
+        let byte_a = u8::decode(buf)?;
         let stream_type = (byte_a & 0xFC) >> 2;
         let up_stream = byte_a & 0x02;
-        let buffer_size_db = buf.u24()?;
+        let buffer_size_db = u24::decode(buf)?;
         let max_bitrate = u32::decode(buf)?;
         let avg_bitrate = u32::decode(buf)?;
 
         let mut dec_specific = None;
 
-        let end = start + size as u64;
-        while let Some(atom) = buf.decode()? {
-            let (desc_tag, desc_size) = read_desc(reader)?;
-            match desc_tag {
-                0x05 => {
-                    dec_specific = Some(DecoderSpecificDescriptor::read_desc(reader, desc_size)?);
-                }
-                _ => {
-                    skip_bytes(reader, desc_size as u64)?;
-                }
+        while let Some(desc) = Option::<DescriptorHeader>::decode(buf)? {
+            let buf = &mut buf.split_to(desc.size as usize);
+            match desc.tag {
+                0x05 => dec_specific = DecoderSpecificDescriptor::decode(buf)?.into(),
+                _ => todo!("DecoderConfigDescriptor tag: {:02X}", desc.tag),
             }
         }
 
@@ -337,18 +244,17 @@ impl<R: Read + Seek> ReadDesc<&mut R> for DecoderConfigDescriptor {
     }
 }
 
-impl<W: Write> WriteDesc<&mut W> for DecoderConfigDescriptor {
-    fn write_desc(&self, writer: &mut W) -> Result<u32> {
-        let size = Self::desc_size();
-        write_desc(writer, Self::desc_tag(), size)?;
+impl Encode for DecoderConfigDescriptor {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        // TODO write the header
 
-        buf.u8(self.object_type_indication)?;
-        buf.u8((self.stream_type << 2) + (self.up_stream & 0x02) + 1)?; // 1 reserved
+        self.object_type_indication.encode(buf)?;
+        ((self.stream_type << 2) + (self.up_stream & 0x02) + 1).encode(buf)?; // 1 reserved
         self.buffer_size_db.encode(buf)?;
         self.max_bitrate.encode(buf)?;
         self.avg_bitrate.encode(buf)?;
 
-        self.dec_specific.write_desc(writer)?;
+        self.dec_specific.encode(buf)?;
 
         Ok(())
     }
@@ -361,26 +267,6 @@ pub struct DecoderSpecificDescriptor {
     pub chan_conf: u8,
 }
 
-impl DecoderSpecificDescriptor {
-    pub fn new(config: &AacConfig) -> Self {
-        Self {
-            profile: config.profile as u8,
-            freq_index: config.freq_index as u8,
-            chan_conf: config.chan_conf as u8,
-        }
-    }
-}
-
-impl Descriptor for DecoderSpecificDescriptor {
-    fn desc_tag() -> u8 {
-        0x05
-    }
-
-    fn desc_size() -> u32 {
-        2
-    }
-}
-
 fn get_audio_object_type(byte_a: u8, byte_b: u8) -> u8 {
     let mut profile = byte_a >> 3;
     if profile == 31 {
@@ -390,8 +276,8 @@ fn get_audio_object_type(byte_a: u8, byte_b: u8) -> u8 {
     profile
 }
 
-fn get_chan_conf<R: Read + Seek>(
-    reader: &mut R,
+fn decode_chan_conf(
+    buf: &mut Bytes,
     byte_b: u8,
     freq_index: u8,
     extended_profile: bool,
@@ -399,10 +285,10 @@ fn get_chan_conf<R: Read + Seek>(
     let chan_conf;
     if freq_index == 15 {
         // Skip the 24 bit sample rate
-        let sample_rate = buf.u24()?;
-        chan_conf = ((sample_rate >> 4) & 0x0F) as u8;
+        let sample_rate = u24::decode(buf)?;
+        chan_conf = ((u32::from(sample_rate) >> 4) & 0x0F) as u8;
     } else if extended_profile {
-        let byte_c = buf.u8()?;
+        let byte_c = u8::decode(buf)?;
         chan_conf = (byte_b & 1) | (byte_c & 0xE0);
     } else {
         chan_conf = (byte_b >> 3) & 0x0F;
@@ -411,19 +297,19 @@ fn get_chan_conf<R: Read + Seek>(
     Ok(chan_conf)
 }
 
-impl<R: Read + Seek> ReadDesc<&mut R> for DecoderSpecificDescriptor {
-    fn read_desc(reader: &mut R, _size: u32) -> Result<Self> {
-        let byte_a = buf.u8()?;
-        let byte_b = buf.u8()?;
+impl Decode for DecoderSpecificDescriptor {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        let byte_a = u8::decode(buf)?;
+        let byte_b = u8::decode(buf)?;
         let profile = get_audio_object_type(byte_a, byte_b);
         let freq_index;
         let chan_conf;
         if profile > 31 {
             freq_index = (byte_b >> 1) & 0x0F;
-            chan_conf = get_chan_conf(reader, byte_b, freq_index, true)?;
+            chan_conf = decode_chan_conf(buf, byte_b, freq_index, true)?;
         } else {
             freq_index = ((byte_a & 0x07) << 1) + (byte_b >> 7);
-            chan_conf = get_chan_conf(reader, byte_b, freq_index, false)?;
+            chan_conf = decode_chan_conf(buf, byte_b, freq_index, false)?;
         }
 
         Ok(DecoderSpecificDescriptor {
@@ -434,13 +320,12 @@ impl<R: Read + Seek> ReadDesc<&mut R> for DecoderSpecificDescriptor {
     }
 }
 
-impl<W: Write> WriteDesc<&mut W> for DecoderSpecificDescriptor {
-    fn write_desc(&self, writer: &mut W) -> Result<u32> {
-        let size = Self::desc_size();
-        write_desc(writer, Self::desc_tag(), size)?;
+impl Encode for DecoderSpecificDescriptor {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        // TODO write the header
 
-        buf.u8((self.profile << 3) + (self.freq_index >> 1))?;
-        buf.u8((self.freq_index << 7) + (self.chan_conf << 3))?;
+        ((self.profile << 3) + (self.freq_index >> 1)).encode(buf)?;
+        ((self.freq_index << 7) + (self.chan_conf << 3)).encode(buf)?;
 
         Ok(())
     }
@@ -449,36 +334,20 @@ impl<W: Write> WriteDesc<&mut W> for DecoderSpecificDescriptor {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SLConfigDescriptor {}
 
-impl SLConfigDescriptor {
-    pub fn new() -> Self {
-        SLConfigDescriptor {}
-    }
-}
-
-impl Descriptor for SLConfigDescriptor {
-    fn desc_tag() -> u8 {
-        0x06
-    }
-
-    fn desc_size() -> u32 {
-        1
-    }
-}
-
-impl<R: Read + Seek> ReadDesc<&mut R> for SLConfigDescriptor {
-    fn read_desc(reader: &mut R, _size: u32) -> Result<Self> {
-        buf.u8()?; // pre-defined
+impl Decode for SLConfigDescriptor {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        u8::decode(buf)?; // pre-defined
 
         Ok(SLConfigDescriptor {})
     }
 }
 
-impl<W: Write> WriteDesc<&mut W> for SLConfigDescriptor {
-    fn write_desc(&self, writer: &mut W) -> Result<u32> {
-        let size = Self::desc_size();
-        write_desc(writer, Self::desc_tag(), size)?;
+impl Encode for SLConfigDescriptor {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        // TODO write the header
 
-        buf.u8(2)?; // pre-defined
+        2u8.encode(buf)?; // pre-defined
+
         Ok(())
     }
 }
@@ -501,7 +370,7 @@ mod tests {
                         object_type_indication: 0x40,
                         stream_type: 0x05,
                         up_stream: 0,
-                        buffer_size_db: 0,
+                        buffer_size_db: Default::default(),
                         max_bitrate: 67695,
                         avg_bitrate: 67695,
                         dec_specific: DecoderSpecificDescriptor {
@@ -514,10 +383,10 @@ mod tests {
                 },
             }),
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Mp4a::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -531,10 +400,10 @@ mod tests {
             samplerate: 48000.into(),
             esds: None,
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Mp4a::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

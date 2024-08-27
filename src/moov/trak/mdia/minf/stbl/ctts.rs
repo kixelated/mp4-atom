@@ -14,16 +14,16 @@ pub struct CttsEntry {
 impl AtomExt for Ctts {
     type Ext = ();
 
-    const KIND: FourCC = FourCC::new(b"ctts");
+    const KIND_EXT: FourCC = FourCC::new(b"ctts");
 
-    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
 
         let mut entries = Vec::new();
         for _ in 0..entry_count {
             let entry = CttsEntry {
                 sample_count: u32::decode(buf)?,
-                sample_offset: buf.i32()?,
+                sample_offset: i32::decode(buf)?,
             };
             entries.push(entry);
         }
@@ -31,11 +31,11 @@ impl AtomExt for Ctts {
         Ok(Ctts { entries })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u32(self.entries.len() as u32)?;
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+        (self.entries.len() as u32).encode(buf)?;
         for entry in self.entries.iter() {
-            buf.u32(entry.sample_count)?;
-            buf.i32(entry.sample_offset)?;
+            (entry.sample_count).encode(buf)?;
+            (entry.sample_offset).encode(buf)?;
         }
 
         Ok(())
@@ -60,10 +60,10 @@ mod tests {
                 },
             ],
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Ctts::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

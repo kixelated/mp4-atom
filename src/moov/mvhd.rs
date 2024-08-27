@@ -21,11 +21,11 @@ pub struct Mvhd {
 }
 
 impl AtomExt for Mvhd {
-    const KIND: FourCC = FourCC::new(b"mvhd");
+    const KIND_EXT: FourCC = FourCC::new(b"mvhd");
 
     type Ext = MvhdExt;
 
-    fn decode_atom(buf: &mut Buf, ext: MvhdExt) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, ext: MvhdExt) -> Result<Self> {
         let (creation_time, modification_time, timescale, duration) = match ext.version {
             MvhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -44,11 +44,12 @@ impl AtomExt for Mvhd {
         let rate = buf.decode()?;
         let volume = buf.decode()?;
 
-        buf.skip(2 + 8)?; // reserved = 0
+        u16::decode(buf)?; // reserved
+        u64::decode(buf)?; // reserved
 
         let matrix = buf.decode()?;
 
-        buf.skip(24)?; // pre_defined = 0
+        u24::decode(buf)?; // pre_defined = 0
 
         let next_track_id = buf.decode()?;
 
@@ -64,7 +65,7 @@ impl AtomExt for Mvhd {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<MvhdExt> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<MvhdExt> {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.timescale.encode(buf)?;
@@ -73,11 +74,12 @@ impl AtomExt for Mvhd {
         self.rate.encode(buf)?;
         self.volume.encode(buf)?;
 
-        buf.zero(2 + 8)?; // reserved = 0
+        0u16.encode(buf)?; // reserved
+        0u64.encode(buf)?; // reserved
 
         self.matrix.encode(buf)?;
 
-        buf.zero(24)?; // pre_defined = 0
+        [0u8; 3].encode(buf)?; // pre_defined = 0
 
         self.next_track_id.encode(buf)?;
 
@@ -117,10 +119,10 @@ mod tests {
             next_track_id: 1,
         };
 
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Mvhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -138,10 +140,10 @@ mod tests {
             next_track_id: 1,
         };
 
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let output = Mvhd::decode(&mut buf).unwrap();
         assert_eq!(output, expected);
     }

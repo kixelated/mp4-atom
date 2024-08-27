@@ -8,9 +8,9 @@ pub struct Co64 {
 impl AtomExt for Co64 {
     type Ext = ();
 
-    const KIND: FourCC = FourCC::new(b"co64");
+    const KIND_EXT: FourCC = FourCC::new(b"co64");
 
-    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
         let mut entries = Vec::new();
         for _ in 0..entry_count {
@@ -21,10 +21,10 @@ impl AtomExt for Co64 {
         Ok(Co64 { entries })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u32(self.entries.len() as u32)?;
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+        (self.entries.len() as u32).encode(buf)?;
         for chunk_offset in self.entries.iter() {
-            buf.u64(chunk_offset)?;
+            (chunk_offset).encode(buf)?;
         }
 
         Ok(())
@@ -40,10 +40,10 @@ mod tests {
         let expected = Co64 {
             entries: vec![267, 1970, 2535, 2803, 11843, 22223, 33584],
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Co64::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

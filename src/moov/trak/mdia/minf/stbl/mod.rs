@@ -33,7 +33,7 @@ pub struct Stbl {
 impl Atom for Stbl {
     const KIND: FourCC = FourCC::new(b"stbl");
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         let mut stsd = None;
         let mut stts = None;
         let mut ctts = None;
@@ -45,15 +45,15 @@ impl Atom for Stbl {
 
         while let Some(atom) = buf.decode()? {
             match atom {
-                Any::Stsd(atom) => stsd.replace(atom),
-                Any::Stts(atom) => stts.replace(atom),
-                Any::Ctts(atom) => ctts.replace(atom),
-                Any::Stss(atom) => stss.replace(atom),
-                Any::Stsc(atom) => stsc.replace(atom),
-                Any::Stsz(atom) => stsz.replace(atom),
-                Any::Stco(atom) => stco.replace(atom),
-                Any::Co64(atom) => co64.replace(atom),
-                atom => return Error::UnexpectedBox(atom.kind()),
+                Any::Stsd(atom) => stsd = atom.into(),
+                Any::Stts(atom) => stts = atom.into(),
+                Any::Ctts(atom) => ctts = atom.into(),
+                Any::Stss(atom) => stss = atom.into(),
+                Any::Stsc(atom) => stsc = atom.into(),
+                Any::Stsz(atom) => stsz = atom.into(),
+                Any::Stco(atom) => stco = atom.into(),
+                Any::Co64(atom) => co64 = atom.into(),
+                atom => return Err(Error::UnexpectedBox(atom.kind())),
             }
         }
 
@@ -63,18 +63,18 @@ impl Atom for Stbl {
         }
 
         Ok(Stbl {
-            stsd: stsd.ok_or(Error::MissingBox(Stsd::KIND)),
-            stts: stts.ok_or(Error::MissingBox(Stts::KIND)),
+            stsd: stsd.ok_or(Error::MissingBox(Stsd::KIND))?,
+            stts: stts.ok_or(Error::MissingBox(Stts::KIND))?,
             ctts,
             stss,
-            stsc: stsc.ok_or(Error::MissingBox(Stsc::KIND)),
-            stsz: stsz.ok_or(Error::MissingBox(Stsz::KIND)),
+            stsc: stsc.ok_or(Error::MissingBox(Stsc::KIND))?,
+            stsz: stsz.ok_or(Error::MissingBox(Stsz::KIND))?,
             stco,
             co64,
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
         self.stsd.encode(buf)?;
         self.stts.encode(buf)?;
         self.ctts.encode(buf)?;

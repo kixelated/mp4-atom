@@ -8,16 +8,16 @@ pub struct Url {
 impl AtomExt for Url {
     type Ext = ();
 
-    const KIND: FourCC = FourCC::new(b"url ");
+    const KIND_EXT: FourCC = FourCC::new(b"url ");
 
-    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         Ok(Url {
             location: buf.decode()?,
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        self.location.encode(buf)?;
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+        self.location.as_str().encode(buf)?;
         Ok(())
     }
 }

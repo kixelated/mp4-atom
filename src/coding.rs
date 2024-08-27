@@ -1,13 +1,13 @@
 use std::ffi;
 
 // Export these common types.
-pub use bytes::Bytes;
+pub use bytes::{Buf, BufMut, Bytes, BytesMut};
 pub use num::rational::Ratio;
 
-use crate::{Buf, BufMut, Error, Result};
+use crate::{Error, Result};
 
 pub trait Decode: Sized {
-    fn decode(buf: &mut Buf) -> Result<Self>;
+    fn decode(buf: &mut Bytes) -> Result<Self>;
 }
 
 pub trait DecodeTo {
@@ -15,7 +15,7 @@ pub trait DecodeTo {
 }
 
 pub trait Encode {
-    fn encode(&self, buf: &mut BufMut) -> Result<()>;
+    fn encode(&self, buf: &mut BytesMut) -> Result<()>;
 }
 
 pub trait EncodeTo {
@@ -23,37 +23,75 @@ pub trait EncodeTo {
 }
 
 impl Decode for u8 {
-    fn decode(buf: &mut Buf) -> Result<Self> {
-        buf.u8()
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        if buf.is_empty() {
+            return Err(Error::LongRead);
+        }
+
+        Ok(buf.get_u8())
+    }
+}
+
+impl Decode for i8 {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        if buf.is_empty() {
+            return Err(Error::LongRead);
+        }
+
+        Ok(buf.get_i8())
     }
 }
 
 impl Decode for u16 {
-    fn decode(buf: &mut Buf) -> Result<Self> {
-        buf.u16()
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        Ok(Self::from_be_bytes(buf.decode()?))
+    }
+}
+
+impl Decode for i16 {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        Ok(Self::from_be_bytes(buf.decode()?))
     }
 }
 
 impl Decode for u32 {
-    fn decode(buf: &mut Buf) -> Result<Self> {
-        buf.u32()
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        Ok(Self::from_be_bytes(buf.decode()?))
+    }
+}
+
+impl Decode for i32 {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        Ok(Self::from_be_bytes(buf.decode()?))
     }
 }
 
 impl Decode for u64 {
-    fn decode(buf: &mut Buf) -> Result<Self> {
-        buf.u64()
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        Ok(Self::from_be_bytes(buf.decode()?))
+    }
+}
+
+impl Decode for i64 {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        Ok(Self::from_be_bytes(buf.decode()?))
     }
 }
 
 impl<const N: usize> Decode for [u8; N] {
-    fn decode(buf: &mut Buf) -> Result<Self> {
-        buf.fixed()
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        if buf.len() < N {
+            return Err(Error::LongRead);
+        }
+
+        let mut bytes = [0; N];
+        buf.copy_to_slice(&mut bytes);
+        Ok(bytes)
     }
 }
 
 impl<T: Decode> Decode for Vec<T> {
-    fn decode(buf: &mut Buf) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         let mut vec = Vec::new();
         while !buf.is_empty() {
             let item = T::decode(buf)?;
@@ -65,10 +103,10 @@ impl<T: Decode> Decode for Vec<T> {
 }
 
 impl Decode for String {
-    fn decode(buf: &mut Buf) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         let mut bytes = Vec::new();
         loop {
-            let byte = buf.u8()?;
+            let byte = u8::decode(buf)?;
             if byte == 0 {
                 break;
             }
@@ -83,7 +121,7 @@ impl Decode for String {
 }
 
 impl<T: Decode> Decode for Option<T> {
-    fn decode(buf: &mut Buf) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         if buf.is_empty() {
             Ok(Some(T::decode(buf)?))
         } else {
@@ -93,7 +131,7 @@ impl<T: Decode> Decode for Option<T> {
 }
 
 impl<T: Decode + Clone + num::Zero + num::Integer> Decode for Ratio<T> {
-    fn decode(buf: &mut Buf) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         let numer = T::decode(buf)?;
         let denom = T::decode(buf)?;
         if denom.is_zero() {
@@ -105,48 +143,76 @@ impl<T: Decode + Clone + num::Zero + num::Integer> Decode for Ratio<T> {
 }
 
 impl Decode for Bytes {
-    fn decode(buf: &mut Buf) -> Result<Self> {
-        Ok(Bytes::copy_from_slice(buf.rest()))
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        Ok(buf.split_to(buf.remaining()))
     }
 }
 
 impl Encode for u8 {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u8(*self);
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_u8(*self);
+        Ok(())
+    }
+}
+
+impl Encode for i8 {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_i8(*self);
+        Ok(())
+    }
+}
+
+impl Encode for i16 {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_i16(*self);
         Ok(())
     }
 }
 
 impl Encode for u16 {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u16(*self);
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_u16(*self);
         Ok(())
     }
 }
 
 impl Encode for u32 {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u32(*self);
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_u32(*self);
+        Ok(())
+    }
+}
+
+impl Encode for i32 {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_i32(*self);
         Ok(())
     }
 }
 
 impl Encode for u64 {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u64(*self);
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_u64(*self);
+        Ok(())
+    }
+}
+
+impl Encode for i64 {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_i64(*self);
         Ok(())
     }
 }
 
 impl<const N: usize> Encode for [u8; N] {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
-        buf.fixed(*self);
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_slice(self);
         Ok(())
     }
 }
 
 impl<T: Encode> Encode for &[T] {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
         for item in self.iter() {
             item.encode(buf)?;
         }
@@ -156,7 +222,7 @@ impl<T: Encode> Encode for &[T] {
 }
 
 impl<T: Encode> Encode for Option<T> {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
         match self {
             Some(v) => v.encode(buf),
             None => Ok(()),
@@ -165,7 +231,7 @@ impl<T: Encode> Encode for Option<T> {
 }
 
 impl<T: Encode + num::Zero> Encode for Ratio<T> {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
         if self.denom().is_zero() {
             return Err(Error::DivideByZero);
         }
@@ -176,15 +242,15 @@ impl<T: Encode + num::Zero> Encode for Ratio<T> {
 }
 
 impl Encode for &str {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
-        buf.str(self);
-        buf.u8(0);
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_slice(self.as_bytes());
+        buf.put_u8(0);
         Ok(())
     }
 }
 
 impl<T: Encode> Encode for Vec<T> {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
         for item in self.iter() {
             item.encode(buf)?;
         }
@@ -194,19 +260,19 @@ impl<T: Encode> Encode for Vec<T> {
 }
 
 impl Encode for Bytes {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
-        buf.slice(self);
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        buf.put_slice(self);
         Ok(())
     }
 }
 
-impl DecodeTo for Buf<'_> {
+impl DecodeTo for Bytes {
     fn decode<T: Decode>(&mut self) -> Result<T> {
         T::decode(self)
     }
 }
 
-impl EncodeTo for BufMut {
+impl EncodeTo for BytesMut {
     fn encode<T: Encode>(&mut self, v: &T) -> Result<()> {
         v.encode(self)
     }

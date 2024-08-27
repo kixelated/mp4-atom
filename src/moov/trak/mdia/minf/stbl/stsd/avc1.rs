@@ -27,27 +27,12 @@ impl Default for Avc1 {
     }
 }
 
-impl Avc1 {
-    pub fn new(config: &AvcConfig) -> Self {
-        Avc1 {
-            data_reference_index: 1,
-            width: config.width,
-            height: config.height,
-            horizresolution: 0x48.into(),
-            vertresolution: 0x48.into(),
-            frame_count: 1,
-            depth: 0x0018,
-            avcc: AvcCBox::new(&config.seq_param_set, &config.pic_param_set),
-        }
-    }
-}
-
 impl Atom for Avc1 {
     const KIND: FourCC = FourCC::new(b"avc1");
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         u32::decode(buf)?; // reserved
-        buf.decode()?; // reserved
+        u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
 
         u32::decode(buf)?; // pre-defined, reserved
@@ -59,7 +44,7 @@ impl Atom for Avc1 {
         let vertresolution = buf.decode()?;
         u32::decode(buf)?; // reserved
         let frame_count = buf.decode()?;
-        buf.skip(4)?; // compressorname
+        u32::decode(buf)?; // compressorname
         let depth = buf.decode()?;
         i16::decode(buf)?; // pre-defined
 
@@ -77,24 +62,24 @@ impl Atom for Avc1 {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u32(0)?; // reserved
-        buf.u16(0)?; // reserved
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+        0u32.encode(buf)?; // reserved
+        0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;
 
-        buf.u32(0)?; // pre-defined, reserved
-        buf.u64(0)?; // pre-defined
-        buf.u32(0)?; // pre-defined
+        0u32.encode(buf)?; // pre-defined, reserved
+        0u64.encode(buf)?; // pre-defined
+        0u32.encode(buf)?; // pre-defined
         self.width.encode(buf)?;
         self.height.encode(buf)?;
         self.horizresolution.encode(buf)?;
         self.vertresolution.encode(buf)?;
-        buf.u32(0)?; // reserved
+        0u32.encode(buf)?; // reserved
         self.frame_count.encode(buf)?;
         // skip compressorname
-        buf.zero(4)?;
+        0u32.encode(buf)?;
         self.depth.encode(buf)?;
-        buf.i32(-1)?; // pre-defined
+        (-1i32).encode(buf)?; // pre-defined
 
         self.avcc.encode(buf)?;
 
@@ -109,8 +94,8 @@ pub struct Avcc {
     pub profile_compatibility: u8,
     pub avc_level_indication: u8,
     pub length_size_minus_one: u8,
-    pub sequence_parameter_sets: Vec<Vec<u8>>,
-    pub picture_parameter_sets: Vec<Vec<u8>>,
+    pub sequence_parameter_sets: Vec<Bytes>,
+    pub picture_parameter_sets: Vec<Bytes>,
 }
 
 impl Avcc {
@@ -121,8 +106,8 @@ impl Avcc {
             profile_compatibility: sps[2],
             avc_level_indication: sps[3],
             length_size_minus_one: 0xff, // length_size = 4
-            sequence_parameter_sets: vec![Vec::from(sps)],
-            picture_parameter_sets: vec![Vec::from(pps)],
+            sequence_parameter_sets: vec![Bytes::copy_from_slice(sps)],
+            picture_parameter_sets: vec![Bytes::copy_from_slice(pps)],
         }
     }
 }
@@ -130,24 +115,30 @@ impl Avcc {
 impl Atom for Avcc {
     const KIND: FourCC = FourCC::new(b"avcC");
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
-        let configuration_version = buf.u8()?;
-        let avc_profile_indication = buf.u8()?;
-        let profile_compatibility = buf.u8()?;
-        let avc_level_indication = buf.u8()?;
-        let length_size_minus_one = buf.u8()? & 0x3;
-        let num_of_spss = buf.u8()? & 0x1F;
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+        let configuration_version = u8::decode(buf)?;
+        let avc_profile_indication = u8::decode(buf)?;
+        let profile_compatibility = u8::decode(buf)?;
+        let avc_level_indication = u8::decode(buf)?;
+        let length_size_minus_one = u8::decode(buf)? & 0x3;
+        let num_of_spss = u8::decode(buf)? & 0x1F;
         let mut sequence_parameter_sets = Vec::with_capacity(num_of_spss as usize);
         for _ in 0..num_of_spss {
-            let size = buf.u16()? as usize;
-            let nal = buf.bytes(size)?;
+            let size = u16::decode(buf)? as usize;
+            if buf.len() < size {
+                return Err(Error::LongRead);
+            }
+            let nal = buf.split_to(size);
             sequence_parameter_sets.push(nal);
         }
-        let num_of_ppss = buf.u8()?;
+        let num_of_ppss = u8::decode(buf)?;
         let mut picture_parameter_sets = Vec::with_capacity(num_of_ppss as usize);
         for _ in 0..num_of_ppss {
-            let size = buf.u16()? as usize;
-            let nal = buf.bytes(size)?;
+            let size = u16::decode(buf)? as usize;
+            if buf.len() < size {
+                return Err(Error::LongRead);
+            }
+            let nal = buf.split_to(size);
             picture_parameter_sets.push(nal);
         }
 
@@ -162,22 +153,21 @@ impl Atom for Avcc {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u8(self.configuration_version)?;
-        buf.u8(self.avc_profile_indication)?;
-        buf.u8(self.profile_compatibility)?;
-        buf.u8(self.avc_level_indication)?;
-        buf.u8(self.length_size_minus_one | 0xFC)?;
-
-        buf.u8(self.sequence_parameter_sets.len() as u8 | 0xE0)?;
-        for sps in self.sequence_parameter_sets {
-            buf.u16(sps.len() as u16)?;
-            buf.bytes(&sps)?;
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+        self.configuration_version.encode(buf)?;
+        self.avc_profile_indication.encode(buf)?;
+        self.profile_compatibility.encode(buf)?;
+        self.avc_level_indication.encode(buf)?;
+        (self.length_size_minus_one | 0xFC).encode(buf)?;
+        (self.sequence_parameter_sets.len() as u8 | 0xE0).encode(buf)?;
+        for sps in &self.sequence_parameter_sets {
+            (sps.len() as u16).encode(buf)?;
+            sps.encode(buf)?;
         }
-        buf.u8(self.picture_parameter_sets.len() as u8)?;
-        for pps in self.picture_parameter_sets {
-            buf.u16(pps.len() as u16)?;
-            buf.bytes(&pps)?;
+        (self.picture_parameter_sets.len() as u8).encode(buf)?;
+        for pps in &self.picture_parameter_sets {
+            (pps.len() as u16).encode(buf)?;
+            pps.encode(buf)?;
         }
         Ok(())
     }
@@ -203,17 +193,19 @@ mod tests {
                 profile_compatibility: 0,
                 avc_level_indication: 13,
                 length_size_minus_one: 3,
-                sequence_parameter_sets: vec![
+                sequence_parameter_sets: vec![Bytes::from_static(&[
                     0x67, 0x64, 0x00, 0x0D, 0xAC, 0xD9, 0x41, 0x41, 0xFA, 0x10, 0x00, 0x00, 0x03,
                     0x00, 0x10, 0x00, 0x00, 0x03, 0x03, 0x20, 0xF1, 0x42, 0x99, 0x60,
-                ],
-                picture_parameter_sets: vec![0x68, 0xEB, 0xE3, 0xCB, 0x22, 0xC0],
+                ])],
+                picture_parameter_sets: vec![Bytes::from_static(&[
+                    0x68, 0xEB, 0xE3, 0xCB, 0x22, 0xC0,
+                ])],
             },
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Avc1::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

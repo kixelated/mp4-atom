@@ -26,9 +26,9 @@ pub struct Stsd {
 impl AtomExt for Stsd {
     type Ext = ();
 
-    const KIND: FourCC = FourCC::new(b"stsd");
+    const KIND_EXT: FourCC = FourCC::new(b"stsd");
 
-    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let entries = u32::decode(buf)?;
 
         let mut avc1 = None;
@@ -40,11 +40,11 @@ impl AtomExt for Stsd {
         for _ in 0..entries {
             let atom = Any::decode(buf)?;
             match atom {
-                Any::Avc1(atom) => avc1.replace(atom),
-                Any::Hev1(atom) => hev1.replace(atom),
-                Any::Vp09(atom) => vp09.replace(atom),
-                Any::Mp4a(atom) => mp4a.replace(atom),
-                Any::Tx3g(atom) => tx3g.replace(atom),
+                Any::Avc1(atom) => avc1 = atom.into(),
+                Any::Hev1(atom) => hev1 = atom.into(),
+                Any::Vp09(atom) => vp09 = atom.into(),
+                Any::Mp4a(atom) => mp4a = atom.into(),
+                Any::Tx3g(atom) => tx3g = atom.into(),
                 _ => return Err(Error::UnexpectedBox(atom.kind())),
             }
         }
@@ -58,13 +58,13 @@ impl AtomExt for Stsd {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        let count = self.avc1.is_some() as u32
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+        (self.avc1.is_some() as u32
             + self.hev1.is_some() as u32
             + self.vp09.is_some() as u32
             + self.mp4a.is_some() as u32
-            + self.tx3g.is_some() as u32;
-        buf.u32(count)?;
+            + self.tx3g.is_some() as u32)
+            .encode(buf)?;
 
         self.avc1.encode(buf)?;
         self.hev1.encode(buf)?;

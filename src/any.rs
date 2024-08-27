@@ -5,7 +5,7 @@ macro_rules! any {
         #[derive(Debug, Clone, PartialEq)]
         pub enum Any {
             $($kind($kind),)*
-			Unknown(FourCC, Vec<u8>),
+			Unknown(FourCC, Bytes),
         }
 
         impl Any {
@@ -18,31 +18,39 @@ macro_rules! any {
 		}
 
 		impl Decode for Any {
-            fn decode(buf: &mut Buf) -> Result<Self> {
+            fn decode(buf: &mut Bytes) -> Result<Self> {
 				let header = Header::decode(buf)?;
-				let buf = &mut buf.take(header.size.unwrap_or(buf.len()))?;
+				let buf = &mut buf.split_to(header.size.unwrap_or(buf.len()));
 
-                Ok(match header.kind {
+                let atom = match header.kind {
 					// There's a bug preventing using constants in match arms?
                     $(_ if header.kind == $kind::KIND => Any::$kind(buf.decode()?),)*
 					_ => Any::Unknown(header.kind, buf.decode()?),
-                })
+                };
+
+				if buf.len() > 0 {
+					return Err(Error::ShortRead);
+				}
+
+				Ok(atom)
             }
 		}
 
 		impl Encode for Any {
-            fn encode(&self, buf: &mut BufMut) -> Result<()> {
+            fn encode(&self, buf: &mut BytesMut) -> Result<()> {
 				let start = buf.len();
 				0u32.encode(buf)?;
 				self.kind().encode(buf)?;
 
 				match self {
-					$(Any::$kind(inner) => inner.encode_inner(buf),)*
+					$(Any::$kind(inner) => Atom::encode_atom(inner, buf),)*
 					Any::Unknown(_, data) => data.encode(buf),
 				}?;
 
-				let size = (buf.len() - start).try_into().map_err(|_| Error::LongWrite)?;
-				buf.u32_at(size, start)
+				let size: u32 = (buf.len() - start).try_into().map_err(|_| Error::LongWrite)?;
+				buf[start..start + 4].copy_from_slice(&size.to_be_bytes());
+
+				Ok(())
             }
         }
     };
@@ -55,7 +63,10 @@ any! {
         Udta,
             Meta,
                 Ilst,
-                    Data,
+                    Covr,
+                    Desc,
+                    Name,
+                    Year,
         Trak,
             Tkhd,
             Mdia,
@@ -67,7 +78,9 @@ any! {
                             Avc1,
                             Hev1,
                             Mp4a,
+                                Esds,
                             Tx3g,
+                            Vp09,
                         Stts,
                         Stsc,
                         Stsz,

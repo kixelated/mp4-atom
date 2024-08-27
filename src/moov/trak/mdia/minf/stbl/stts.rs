@@ -14,9 +14,9 @@ pub struct SttsEntry {
 impl AtomExt for Stts {
     type Ext = ();
 
-    const KIND: FourCC = FourCC::new(b"stts");
+    const KIND_EXT: FourCC = FourCC::new(b"stts");
 
-    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
         let mut entries = Vec::new();
         for _ in 0..entry_count {
@@ -30,8 +30,8 @@ impl AtomExt for Stts {
         Ok(Stts { entries })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u32(self.entries.len() as u32)?;
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+        (self.entries.len() as u32).encode(buf)?;
         for entry in self.entries.iter() {
             entry.sample_count.encode(buf)?;
             entry.sample_delta.encode(buf)?;
@@ -59,10 +59,10 @@ mod tests {
                 },
             ],
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Stts::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

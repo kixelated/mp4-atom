@@ -10,11 +10,11 @@ pub struct Trex {
 }
 
 impl AtomExt for Trex {
-  type Ext = ();
+    type Ext = ();
 
-  const KIND: FourCC = FourCC::new(b"trex");
+    const KIND_EXT: FourCC = FourCC::new(b"trex");
 
-fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         Ok(Trex {
             track_id: buf.decode()?,
             default_sample_description_index: buf.decode()?,
@@ -24,7 +24,7 @@ fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
         self.track_id.encode(buf)?;
         self.default_sample_description_index.encode(buf)?;
         self.default_sample_duration.encode(buf)?;
@@ -48,10 +48,10 @@ mod tests {
             default_sample_size: 0,
             default_sample_flags: 65536,
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Trex::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

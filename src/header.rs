@@ -58,13 +58,13 @@ impl fmt::Debug for FourCC {
 }
 
 impl Encode for FourCC {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
         self.0.encode(buf)
     }
 }
 
 impl Decode for FourCC {
-    fn decode(buf: &mut Buf) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         Ok(FourCC(buf.decode()?))
     }
 }
@@ -79,7 +79,7 @@ pub struct Header {
 }
 
 impl Encode for Header {
-    fn encode(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
         match self.size.map(|size| size + 8) {
             Some(size) if size > u32::MAX as usize => {
                 1u32.encode(buf)?;
@@ -101,7 +101,7 @@ impl Encode for Header {
 }
 
 impl Decode for Header {
-    fn decode(buf: &mut Buf) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         let size = u32::decode(buf)?;
         let kind = FourCC::decode(buf)?;
 

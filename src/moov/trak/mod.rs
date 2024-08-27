@@ -18,9 +18,8 @@ pub struct Trak {
 
 impl Atom for Trak {
     const KIND: FourCC = FourCC::new(b"trak");
-    const KIND: FourCC = FourCC::new(b"trak");
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         let mut tkhd = None;
         let mut edts = None;
         let mut meta = None;
@@ -28,10 +27,10 @@ impl Atom for Trak {
 
         while let Some(atom) = buf.decode()? {
             match atom {
-                Any::Tkhd(atom) => tkhd.repace(atom),
-                Any::Edts(atom) => edts.repace(atom),
-                Any::Meta(atom) => meta.repace(atom),
-                Any::Mdia(atom) => mdia.repace(atom),
+                Any::Tkhd(atom) => tkhd = atom.into(),
+                Any::Edts(atom) => edts = atom.into(),
+                Any::Meta(atom) => meta = atom.into(),
+                Any::Mdia(atom) => mdia = atom.into(),
                 _ => return Err(Error::UnexpectedBox(atom.kind())),
             }
         }
@@ -44,7 +43,7 @@ impl Atom for Trak {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
         self.tkhd.encode(buf)?;
         self.edts.encode(buf)?;
         self.mdia.encode(buf)?;

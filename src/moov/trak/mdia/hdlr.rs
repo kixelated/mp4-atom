@@ -1,20 +1,29 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hdlr {
     pub handler_type: FourCC,
     pub name: String,
 }
 
+impl Default for Hdlr {
+    fn default() -> Self {
+        Hdlr {
+            handler_type: FourCC::new(b"none"),
+            name: String::new(),
+        }
+    }
+}
+
 impl AtomExt for Hdlr {
     type Ext = ();
-    const KIND: FourCC = FourCC::new(b"hdlr");
+    const KIND_EXT: FourCC = FourCC::new(b"hdlr");
 
-    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         u32::decode(buf)?; // pre-defined
         let handler = u32::decode(buf)?;
 
-        buf.skip(12)?; // reserved
+        <[u8; 12]>::decode(buf)?; // reserved
 
         let name = String::decode(buf)?;
 
@@ -24,14 +33,14 @@ impl AtomExt for Hdlr {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
-        buf.u32(0)?; // pre-defined
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+        0u32.encode(buf)?; // pre-defined
         self.handler_type.encode(buf)?;
 
         // 12 bytes reserved
-        buf.zero(12)?;
+        [0u8; 12].encode(buf)?;
 
-        self.name.encode(buf)?;
+        self.name.as_str().encode(buf)?;
 
         Ok(())
     }
@@ -44,13 +53,13 @@ mod tests {
     #[test]
     fn test_hdlr() {
         let expected = Hdlr {
-            handler_type: str::parse::<FourCC>("vide").unwrap(),
+            handler_type: FourCC::new(b"vide"),
             name: String::from("VideoHandler"),
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Hdlr::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -58,13 +67,13 @@ mod tests {
     #[test]
     fn test_hdlr_empty() {
         let expected = Hdlr {
-            handler_type: str::parse::<FourCC>("vide").unwrap(),
+            handler_type: FourCC::new(b"vide"),
             name: String::new(),
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Hdlr::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

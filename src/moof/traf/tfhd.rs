@@ -25,22 +25,37 @@ pub struct Tfhd {
 }
 
 impl AtomExt for Tfhd {
-    const KIND: FourCC = FourCC::new(b"tfhd");
+    const KIND_EXT: FourCC = FourCC::new(b"tfhd");
 
     type Ext = TfhdExt;
 
-    fn decode_atom(buf: &mut Buf, ext: TfhdExt) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, ext: TfhdExt) -> Result<Self> {
         let track_id = u32::decode(buf)?;
 
-        let base_data_offset = ext.base_data_offset.then(buf.decode()).transpose()?;
+        let base_data_offset = match ext.base_data_offset {
+            true => u64::decode(buf)?.into(),
+            false => None,
+        };
 
-        let sample_description_index = ext
-            .sample_description_index
-            .then(buf.decode())
-            .transpose()?;
-        let default_sample_duration = ext.default_sample_duration.then(buf.decode()).transpose()?;
-        let default_sample_size = ext.default_sample_size.then(buf.decode()).transpose()?;
-        let default_sample_flags = ext.default_sample_flags.then(buf.decode()).transpose()?;
+        let sample_description_index = match ext.sample_description_index {
+            true => u32::decode(buf)?.into(),
+            false => None,
+        };
+
+        let default_sample_duration = match ext.default_sample_duration {
+            true => u32::decode(buf)?.into(),
+            false => None,
+        };
+
+        let default_sample_size = match ext.default_sample_size {
+            true => u32::decode(buf)?.into(),
+            false => None,
+        };
+
+        let default_sample_flags = match ext.default_sample_flags {
+            true => u32::decode(buf)?.into(),
+            false => None,
+        };
 
         Ok(Tfhd {
             track_id,
@@ -52,7 +67,7 @@ impl AtomExt for Tfhd {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<TfhdExt> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<TfhdExt> {
         let ext = TfhdExt {
             base_data_offset: self.base_data_offset.is_some(),
             sample_description_index: self.sample_description_index.is_some(),
@@ -87,10 +102,10 @@ mod tests {
             default_sample_size: None,
             default_sample_flags: None,
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Tfhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -105,10 +120,10 @@ mod tests {
             default_sample_size: None,
             default_sample_flags: Some(0x1010000),
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Tfhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

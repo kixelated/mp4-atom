@@ -13,15 +13,15 @@ impl Default for Mfhd {
 
 impl AtomExt for Mfhd {
     type Ext = ();
-    const KIND: FourCC = FourCC::new(b"mfhd");
+    const KIND_EXT: FourCC = FourCC::new(b"mfhd");
 
-    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         Ok(Mfhd {
             sequence_number: u32::decode(buf)?,
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
         self.sequence_number.encode(buf)?;
         Ok(())
     }
@@ -34,10 +34,10 @@ mod tests {
     #[test]
     fn test_mfhd() {
         let expected = Mfhd { sequence_number: 1 };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Mfhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

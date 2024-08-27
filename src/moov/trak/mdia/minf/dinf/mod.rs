@@ -11,22 +11,22 @@ pub struct Dinf {
 impl Atom for Dinf {
     const KIND: FourCC = FourCC::new(b"dinf");
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         let mut dref = None;
 
         while let Some(atom) = buf.decode()? {
             match atom {
-                Any::Dref(atom) => dref.replace(atom),
-                atom => return Error::UnexpectedBox(atom.kind()),
+                Any::Dref(atom) => dref = atom.into(),
+                atom => return Err(Error::UnexpectedBox(atom.kind())),
             }
         }
 
         Ok(Dinf {
-            dref: dref.ok_or(Error::MissingBox(Dref::KIND)),
+            dref: dref.ok_or(Error::MissingBox(Dref::KIND))?,
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
         self.dref.encode(buf)?;
         Ok(())
     }

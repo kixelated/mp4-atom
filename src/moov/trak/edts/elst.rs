@@ -22,9 +22,9 @@ pub struct ElstEntry {
 impl AtomExt for Elst {
     type Ext = ElstExt;
 
-    const KIND: FourCC = FourCC::new(b"elst");
+    const KIND_EXT: FourCC = FourCC::new(b"elst");
 
-    fn decode_atom(buf: &mut Buf, ext: ElstExt) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, ext: ElstExt) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
 
         let mut entries = Vec::new();
@@ -46,7 +46,7 @@ impl AtomExt for Elst {
         Ok(Elst { entries })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<ElstExt> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<ElstExt> {
         (self.entries.len() as u32).encode(buf)?;
 
         for entry in self.entries.iter() {
@@ -74,10 +74,10 @@ mod tests {
                 media_rate_fraction: 0,
             }],
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Elst::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -92,10 +92,10 @@ mod tests {
                 media_rate_fraction: 0,
             }],
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Elst::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

@@ -176,17 +176,9 @@ fn test_bbb() {
             },
             traks: vec![Trak {
                 tkhd: Tkhd {
-                    creation_time: 0,
-                    modification_time: 0,
                     track_id: 1,
-                    duration: 0,
-                    layer: 0,
-                    alternate_group: 0,
-                    volume: 0,
-                    matrix: [0; 9],
-                    width: 0,
-                    height: 0,
                     enabled: true,
+                    ..Default::default()
                 },
                 mdia: Mdia {
                     mdhd: Mdhd {

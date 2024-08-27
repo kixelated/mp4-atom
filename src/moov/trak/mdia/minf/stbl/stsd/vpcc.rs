@@ -20,19 +20,19 @@ pub struct Vpcc {
 }
 
 impl AtomExt for Vpcc {
-    const KIND: FourCC = FourCC::new(b"vpcc");
+    const KIND_EXT: FourCC = FourCC::new(b"vpcc");
 
     type Ext = VpccExt;
 
-    fn decode_atom(buf: &mut Buf, ext: VpccExt) -> Result<Self> {
-        let profile: u8 = buf.u8()?;
-        let level: u8 = buf.u8()?;
+    fn decode_atom_ext(buf: &mut Bytes, _ext: VpccExt) -> Result<Self> {
+        let profile: u8 = u8::decode(buf)?;
+        let level: u8 = u8::decode(buf)?;
         let (bit_depth, chroma_subsampling, video_full_range_flag) = {
-            let b = buf.u8()?;
+            let b = u8::decode(buf)?;
             (b >> 4, b << 4 >> 5, b & 0x01 == 1)
         };
-        let transfer_characteristics: u8 = buf.u8()?;
-        let matrix_coefficients: u8 = buf.u8()?;
+        let transfer_characteristics: u8 = u8::decode(buf)?;
+        let matrix_coefficients: u8 = u8::decode(buf)?;
         let codec_initialization_data_size: u16 = buf.decode()?;
 
         Ok(Self {
@@ -48,15 +48,16 @@ impl AtomExt for Vpcc {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<VpccExt> {
-        buf.u8(self.profile)?;
-        buf.u8(self.level)?;
-        buf.u8((self.bit_depth << 4)
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<VpccExt> {
+        self.profile.encode(buf)?;
+        self.level.encode(buf)?;
+        ((self.bit_depth << 4)
             | (self.chroma_subsampling << 1)
-            | (self.video_full_range_flag as u8))?;
-        buf.u8(self.color_primaries)?;
-        buf.u8(self.transfer_characteristics)?;
-        buf.u8(self.matrix_coefficients)?;
+            | (self.video_full_range_flag as u8))
+            .encode(buf)?;
+        self.color_primaries.encode(buf)?;
+        self.transfer_characteristics.encode(buf)?;
+        self.matrix_coefficients.encode(buf)?;
         self.codec_initialization_data_size.encode(buf)?;
 
         Ok(VpccVersion::V1.into())
@@ -80,10 +81,10 @@ mod tests {
             matrix_coefficients: 0,
             codec_initialization_data_size: 0,
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Vpcc::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

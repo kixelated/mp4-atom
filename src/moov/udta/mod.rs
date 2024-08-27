@@ -11,12 +11,12 @@ pub struct Udta {
 impl Atom for Udta {
     const KIND: FourCC = FourCC::new(b"udta");
 
-    fn decode_atom(buf: &mut Buf) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         let mut meta = buf.decode()?;
         Ok(Udta { meta })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
         self.meta.encode(buf)?;
         Ok(())
     }
@@ -30,10 +30,10 @@ mod tests {
     fn test_udta_empty() {
         let expected = Udta { meta: None };
 
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let output = Udta::decode(&mut buf).unwrap();
         assert_eq!(output, expected);
     }
@@ -44,10 +44,10 @@ mod tests {
             meta: Some(Meta::default()),
         };
 
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let output = Udta::decode(&mut buf).unwrap();
         assert_eq!(output, expected);
     }

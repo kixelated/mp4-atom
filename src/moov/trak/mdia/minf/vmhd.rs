@@ -16,9 +16,9 @@ pub struct RgbColor {
 impl AtomExt for Vmhd {
     type Ext = ();
 
-    const KIND: FourCC = FourCC::new(b"vmhd");
+    const KIND_EXT: FourCC = FourCC::new(b"vmhd");
 
-    fn decode_atom(buf: &mut Buf, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let graphics_mode = buf.decode()?;
         let op_color = RgbColor {
             red: buf.decode()?,
@@ -32,11 +32,11 @@ impl AtomExt for Vmhd {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BufMut) -> Result<()> {
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
         self.graphics_mode.encode(buf)?;
-        buf.u16(self.op_color.red)?;
-        buf.u16(self.op_color.green)?;
-        buf.u16(self.op_color.blue)?;
+        self.op_color.red.encode(buf)?;
+        self.op_color.green.encode(buf)?;
+        self.op_color.blue.encode(buf)?;
 
         Ok(())
     }
@@ -56,10 +56,10 @@ mod tests {
                 blue: 0,
             },
         };
-        let mut buf = BufMut::new();
+        let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.filled();
+        let mut buf = buf.freeze();
         let decoded = Vmhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
