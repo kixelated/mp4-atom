@@ -148,7 +148,7 @@ fn test_bbb() {
         0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x70,
     ];
 
-    let buf = std::io::Cursor::new(&ENCODED);
+    let buf = Bytes::from_static(&ENCODED);
     let ftyp = Ftyp::decode(&mut buf).expect("failed to decode ftyp");
     let moov = Moov::decode(&mut buf).expect("failed to decode moov");
 
@@ -164,16 +164,7 @@ fn test_bbb() {
     assert_eq!(
         moov,
         Moov {
-            mvhd: Mvhd::V0 {
-                creation_time: 0,
-                modification_time: 0,
-                timescale: 0,
-                duration: 0,
-                rate: 0,
-                volume: 0,
-                matrix: [0; 9],
-                next_track_id: 0,
-            },
+            mvhd: Default::default(),
             traks: vec![Trak {
                 tkhd: Tkhd {
                     track_id: 1,
@@ -182,26 +173,17 @@ fn test_bbb() {
                 },
                 mdia: Mdia {
                     mdhd: Mdhd {
-                        language: 0,
-                        creation_time: 0,
-                        modification_time: 0,
-                        timescale: 0,
-                        duration: 0,
+                        ..Default::default()
                     },
                     hdlr: Hdlr {
                         handler_type: b"vide".into(),
                         name: "VideoHandler".into(),
-                        component_flags: 0,
-                        component_flags_mask: 0,
-                        component_manufacturer: 0,
-                        component_subtype: [0; 4],
-                        component_type: [0; 4],
+                        ..Default::default()
                     },
                     minf: Minf {
                         smhd: None,
                         vmhd: Vmhd {
-                            graphics_mode: 0,
-                            op_color: [0; 3],
+                            ..Default::default()
                         }
                         .into(),
                         dinf: Dinf {
@@ -249,6 +231,7 @@ fn test_bbb() {
                         },
                     },
                 },
+                ..Default::default()
             },],
             ..Default::default()
         },

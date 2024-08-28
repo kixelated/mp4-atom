@@ -1,8 +1,10 @@
 use crate::*;
 
+use std::fmt;
+
 macro_rules! any {
     ($($kind:ident,)*) => {
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(Clone, PartialEq)]
         pub enum Any {
             $($kind($kind),)*
 			Unknown(FourCC, Bytes),
@@ -15,24 +17,28 @@ macro_rules! any {
 					Any::Unknown(kind, _) => *kind,
                 }
             }
+
+            pub fn decode_with(header: Header, buf: &mut Bytes) -> Result<Self> {
+                let size = header.size.unwrap_or(buf.len());
+
+                let mut buf = buf.split_to(size);
+                let atom = match header.kind {
+                    $(_ if header.kind == $kind::KIND => Any::$kind($kind::decode_atom(&mut buf)?),)*
+                    _ => return Ok(Any::Unknown(header.kind, buf)),
+                };
+
+                if buf.len() > 0 {
+                    return Err(Error::ShortRead);
+                }
+
+                Ok(atom)
+            }
 		}
 
 		impl Decode for Any {
             fn decode(buf: &mut Bytes) -> Result<Self> {
 				let header = Header::decode(buf)?;
-				let buf = &mut buf.split_to(header.size.unwrap_or(buf.len()));
-
-                let atom = match header.kind {
-					// There's a bug preventing using constants in match arms?
-                    $(_ if header.kind == $kind::KIND => Any::$kind(buf.decode()?),)*
-					_ => Any::Unknown(header.kind, buf.decode()?),
-                };
-
-				if buf.len() > 0 {
-					return Err(Error::ShortRead);
-				}
-
-				Ok(atom)
+                Self::decode_with(header, buf)
             }
 		}
 
@@ -51,6 +57,15 @@ macro_rules! any {
 				buf[start..start + 4].copy_from_slice(&size.to_be_bytes());
 
 				Ok(())
+            }
+        }
+
+        impl fmt::Debug for Any {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self {
+                    $(Any::$kind(inner) => write!(f, "{:?}", inner),)*
+                    Any::Unknown(kind, body) => write!(f, "Unknown {{ kind: {:?}, size: {:?} }}", kind, body.len()),
+                }
             }
         }
     };

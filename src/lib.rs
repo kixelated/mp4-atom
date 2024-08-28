@@ -68,11 +68,12 @@ mod header;
 mod mdat;
 mod moof;
 mod moov;
+mod reader;
 mod types;
 
 pub use any::*;
 pub use atom::*;
-pub use atom_ext::*;
+pub(crate) use atom_ext::*;
 pub use coding::*;
 pub use emsg::*;
 pub use error::*;
@@ -82,6 +83,7 @@ pub use header::*;
 pub use mdat::*;
 pub use moof::*;
 pub use moov::*;
+pub use reader::*;
 pub use types::*;
 
 #[cfg(test)]

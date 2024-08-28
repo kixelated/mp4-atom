@@ -40,6 +40,9 @@ pub enum Error {
 
     #[error("missing descriptor")]
     MissingDescriptor,
+
+    #[error("io error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

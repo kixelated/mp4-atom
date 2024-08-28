@@ -8,6 +8,12 @@ pub enum Meta {
     Mdir { ilst: Option<Ilst> },
 }
 
+impl Default for Meta {
+    fn default() -> Self {
+        Self::Mdir { ilst: None }
+    }
+}
+
 const MDIR: FourCC = FourCC::new(b"mdir");
 
 impl AtomExt for Meta {
@@ -91,25 +97,5 @@ mod tests {
                 ilst: Some(Ilst::default())
             }
         );
-    }
-
-    #[test]
-    fn test_meta_unknown() {
-        let src_hdlr = Hdlr {
-            handler_type: FourCC::from(*b"test"),
-            ..Default::default()
-        };
-        let src_data = (Any::Unknown(0x42494241), b"123".to_vec());
-        let expected = Meta::Unknown {
-            hdlr: src_hdlr,
-            data: vec![src_data],
-        };
-
-        let mut buf = BytesMut::new();
-        expected.encode(&mut buf).unwrap();
-
-        let mut buf = buf.freeze();
-        let output = Meta::decode(&mut buf).unwrap();
-        assert_eq!(output, expected);
     }
 }

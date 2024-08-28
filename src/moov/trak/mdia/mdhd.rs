@@ -16,8 +16,9 @@ pub struct Mdhd {
 }
 
 impl AtomExt for Mdhd {
-    const KIND_EXT: FourCC = FourCC::new(b"mdhd");
     type Ext = MdhdExt;
+
+    const KIND_EXT: FourCC = FourCC::new(b"mdhd");
 
     fn decode_atom_ext(buf: &mut Bytes, ext: MdhdExt) -> Result<Self> {
         let (creation_time, modification_time, timescale, duration) = match ext.version {

@@ -2,8 +2,7 @@ use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Stsz {
-    pub sample_size: u32,
-    pub sample_count: u32,
+    // TODO maybe use an enum to be more efficient
     pub sample_sizes: Vec<u32>,
 }
 
@@ -22,23 +21,28 @@ impl AtomExt for Stsz {
                 let sample_number = u32::decode(buf)?;
                 sample_sizes.push(sample_number);
             }
+        } else {
+            sample_sizes = vec![sample_size; sample_count as usize];
         }
 
-        Ok(Stsz {
-            sample_size,
-            sample_count,
-            sample_sizes,
-        })
+        Ok(Stsz { sample_sizes })
     }
 
     fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
-        self.sample_size.encode(buf)?;
-        self.sample_count.encode(buf)?;
+        if self.sample_sizes.is_empty() {
+            0u32.encode(buf)?;
+            0u32.encode(buf)?;
+            return Ok(());
+        }
 
-        if self.sample_size == 0 {
-            if self.sample_count != self.sample_sizes.len() as u32 {
-                return Err(Error::InvalidData("sample count out of sync"));
-            }
+        let same = self.sample_sizes.iter().all(|&x| x == self.sample_sizes[0]);
+        if same {
+            self.sample_sizes[0].encode(buf)?;
+            (self.sample_sizes.len() as u32).encode(buf)?;
+        } else {
+            0u32.encode(buf)?;
+            (self.sample_sizes.len() as u32).encode(buf)?;
+
             for sample_number in self.sample_sizes.iter() {
                 sample_number.encode(buf)?;
             }
@@ -55,9 +59,7 @@ mod tests {
     #[test]
     fn test_stsz_same_size() {
         let expected = Stsz {
-            sample_size: 1165,
-            sample_count: 12,
-            sample_sizes: vec![],
+            sample_sizes: vec![1165, 1165, 1165, 1165],
         };
         let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();
@@ -70,8 +72,6 @@ mod tests {
     #[test]
     fn test_stsz_many_sizes() {
         let expected = Stsz {
-            sample_size: 0,
-            sample_count: 9,
             sample_sizes: vec![1165, 11, 11, 8545, 10126, 10866, 9643, 9351, 7730],
         };
         let mut buf = BytesMut::new();

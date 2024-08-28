@@ -1,7 +1,7 @@
 use crate::*;
 
 // I would not recommend using this for large files, as it reads the entire file into memory.
-// Instead, use MdatChunked (TODO)
+// Instead, use Reader to read the file in chunks.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Mdat {
     pub data: Bytes,

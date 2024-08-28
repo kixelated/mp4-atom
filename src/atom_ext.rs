@@ -2,13 +2,13 @@ use crate::*;
 
 // Combine the version and flags into a single struct
 // We use a special trait to ensure it's always a u32
-pub trait Ext: Default {
+pub(crate) trait Ext: Default {
     fn encode(&self) -> Result<[u8; 4]>;
     fn decode(v: [u8; 4]) -> Result<Self>;
 }
 
 // Rather than encoding/decoding the header in every atom, use this trait.
-pub trait AtomExt: Sized {
+pub(crate) trait AtomExt: Sized {
     const KIND_EXT: FourCC;
 
     // One day default associated types will be a thing, then this can be ()
@@ -91,7 +91,7 @@ macro_rules! ext {
 	(name: $name:ident, versions: [$($version:expr),*], flags: { $($flag:ident = $bit:expr,)* }) => {
 		paste::paste! {
 			#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-			enum [<$name Version>] {
+			pub(crate) enum [<$name Version>] {
 				$(
 					[<V $version>] = $version,
 				)*
@@ -121,7 +121,7 @@ macro_rules! ext {
 			}
 
 			#[derive(Debug, Clone, PartialEq, Eq, Default)]
-			struct [<$name Ext>] {
+			pub(crate) struct [<$name Ext>] {
 				pub version: [<$name Version>],
 				$(
 					pub $flag: bool,

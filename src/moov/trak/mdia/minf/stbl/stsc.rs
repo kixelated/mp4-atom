@@ -32,26 +32,6 @@ impl AtomExt for Stsc {
             entries.push(entry);
         }
 
-        let mut sample_id = 1;
-        for i in 0..entry_count {
-            let (first_chunk, samples_per_chunk) = {
-                let entry = entries.get_mut(i as usize).unwrap();
-                entry.first_sample = sample_id;
-                (entry.first_chunk, entry.samples_per_chunk)
-            };
-            if i < entry_count - 1 {
-                let next_entry = entries.get(i as usize + 1).unwrap();
-                sample_id = next_entry
-                    .first_chunk
-                    .checked_sub(first_chunk)
-                    .and_then(|n| n.checked_mul(samples_per_chunk))
-                    .and_then(|n| n.checked_add(sample_id))
-                    .ok_or(Error::InvalidData(
-                        "attempt to calculate stsc sample_id with overflow",
-                    ))?;
-            }
-        }
-
         Ok(Stsc { entries })
     }
 

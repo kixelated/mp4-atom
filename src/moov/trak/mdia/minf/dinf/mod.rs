@@ -5,7 +5,7 @@ use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Dinf {
-    dref: Dref,
+    pub dref: Dref,
 }
 
 impl Atom for Dinf {
