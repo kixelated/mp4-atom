@@ -1,7 +1,15 @@
 [package]
-name = "mp4box"
+name = "mp4-atom"
+description = "A MP4/ISOBMFF atom decoder and encoder"
+authors = ["Luke Curley <kixelated@gmail.com>"]
+repository = "https://github.com/kixelated/mp4-atom"
+license = "MIT OR Apache-2.0"
+
 version = "0.1.0"
 edition = "2021"
+
+keywords = ["mp4", "isobmff", "mp4box", "audio", "video"]
+categories = ["multimedia::encoding"]
 
 [dependencies]
 paste = "1"

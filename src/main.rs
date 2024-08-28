@@ -1,12 +1,11 @@
 use std::{
     fs::File,
-    io::{stdin, BufReader, Read, Seek},
+    io::{stdin, BufReader, Read},
     path::PathBuf,
 };
 
 use clap::{Parser, Subcommand};
-
-use mp4box::*;
+use mp4_atom::Atom;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -40,11 +39,11 @@ fn main() -> anyhow::Result<()> {
 
 fn info<R: Read>(input: R) -> anyhow::Result<()> {
     let mut reader = BufReader::new(input);
-    let mut reader = Reader::new(&mut reader);
+    let mut reader = mp4_atom::Reader::new(&mut reader);
 
     while let Some(header) = reader.header()? {
         reader = match header.kind() {
-            Mdat::KIND => {
+            mp4_atom::Mdat::KIND => {
                 println!("Mdat {{ size: {:?} }}", header.size());
                 header.skip()?
             }
