@@ -1,16 +1,21 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
-pub enum EmsgVersion {
-    V0 { presentation_time_delta: u32 },
-    V1 { presentation_time: u64 },
+ext! {
+    name: Emsg,
+    versions: [0, 1],
+    flags: {}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EmsgTimestamp {
+    Relative(u32),
+    Absolute(u64),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Emsg {
-    pub version: EmsgVersion,
-
     pub timescale: u32,
+    pub presentation_time: EmsgTimestamp,
     pub event_duration: u32,
     pub id: u32,
     pub scheme_id_uri: String,
@@ -18,73 +23,59 @@ pub struct Emsg {
     pub message_data: Vec<u8>,
 }
 
-impl Atom for Emsg {
-    const KIND: FourCC = FourCC::new(b"emsg");
+impl AtomExt for Emsg {
+    const KIND_EXT: FourCC = FourCC::new(b"emsg");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
-        let version = u8::decode(buf)?;
-        <[u8; 3]>::decode(buf)?;
+    type Ext = EmsgExt;
 
-        Ok(match version {
-            0u8 => Emsg {
+    fn decode_atom_ext(buf: &mut Bytes, ext: EmsgExt) -> Result<Self> {
+        Ok(match ext.version {
+            EmsgVersion::V0 => Emsg {
                 scheme_id_uri: buf.decode()?,
                 value: buf.decode()?,
                 timescale: buf.decode()?,
-                version: EmsgVersion::V0 {
-                    presentation_time_delta: buf.decode()?,
-                },
+                presentation_time: EmsgTimestamp::Relative(u32::decode(buf)?),
                 event_duration: buf.decode()?,
                 id: buf.decode()?,
                 message_data: buf.decode()?,
             },
-            1u8 => Emsg {
+            EmsgVersion::V1 => Emsg {
                 timescale: buf.decode()?,
-                version: EmsgVersion::V1 {
-                    presentation_time: buf.decode()?,
-                },
+                presentation_time: EmsgTimestamp::Absolute(buf.decode()?),
                 event_duration: buf.decode()?,
                 id: buf.decode()?,
                 scheme_id_uri: buf.decode()?,
                 value: buf.decode()?,
                 message_data: buf.decode()?,
             },
-            _ => return Err(Error::UnknownVersion(version)),
         })
     }
 
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
-        match self.version {
-            EmsgVersion::V0 {
-                presentation_time_delta,
-            } => {
-                0u8.encode(buf)?;
-                [0u8; 3].encode(buf)?;
-                self.scheme_id_uri.as_str().encode(buf)?;
-                0u8.encode(buf)?;
-                self.value.as_str().encode(buf)?;
-                0u8.encode(buf)?;
-                self.timescale.encode(buf)?;
-                presentation_time_delta.encode(buf)?;
-                self.event_duration.encode(buf)?;
-                self.id.encode(buf)?;
-            }
-            EmsgVersion::V1 { presentation_time } => {
-                1u8.encode(buf)?;
-                [0u8; 3].encode(buf)?;
+    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<EmsgExt> {
+        Ok(match self.presentation_time {
+            EmsgTimestamp::Absolute(presentation_time) => {
                 self.timescale.encode(buf)?;
                 presentation_time.encode(buf)?;
                 self.event_duration.encode(buf)?;
                 self.id.encode(buf)?;
                 self.scheme_id_uri.as_str().encode(buf)?;
-                0u8.encode(buf)?;
                 self.value.as_str().encode(buf)?;
-                0u8.encode(buf)?;
+                self.message_data.encode(buf)?;
+
+                EmsgVersion::V1.into()
             }
-        }
+            EmsgTimestamp::Relative(presentation_time) => {
+                self.scheme_id_uri.as_str().encode(buf)?;
+                self.value.as_str().encode(buf)?;
+                self.timescale.encode(buf)?;
+                presentation_time.encode(buf)?;
+                self.event_duration.encode(buf)?;
+                self.id.encode(buf)?;
+                self.message_data.encode(buf)?;
 
-        self.message_data.encode(buf)?;
-
-        Ok(())
+                EmsgVersion::V0.into()
+            }
+        })
     }
 }
 
@@ -95,11 +86,9 @@ mod tests {
     #[test]
     fn test_emsg_version0() {
         let decoded = Emsg {
-            version: EmsgVersion::V0 {
-                presentation_time_delta: 100,
-            },
             timescale: 48000,
             event_duration: 200,
+            presentation_time: EmsgTimestamp::Relative(100),
             id: 8,
             scheme_id_uri: String::from("foo"),
             value: String::from("foo"),
@@ -118,9 +107,7 @@ mod tests {
     #[test]
     fn test_emsg_version1() {
         let decoded = Emsg {
-            version: EmsgVersion::V1 {
-                presentation_time: 50000,
-            },
+            presentation_time: EmsgTimestamp::Absolute(50000),
             timescale: 48000,
             event_duration: 200,
             id: 8,

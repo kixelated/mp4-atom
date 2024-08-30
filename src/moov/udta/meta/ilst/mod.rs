@@ -33,6 +33,7 @@ impl Atom for Ilst {
                 Any::Year(atom) => year = atom.into(),
                 Any::Covr(atom) => covr = atom.into(),
                 Any::Desc(atom) => desc = atom.into(),
+                Any::Unknown(kind, _) => tracing::warn!("unknown atom: {:?}", kind),
                 atom => return Err(Error::UnexpectedBox(atom.kind())),
             }
         }

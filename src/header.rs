@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, io::Read};
 
 use crate::*;
 
@@ -45,14 +45,14 @@ impl From<&[u8; 4]> for FourCC {
 
 impl fmt::Display for FourCC {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = std::str::from_utf8(&self.0).unwrap();
+        let s = String::from_utf8_lossy(&self.0);
         write!(f, "{}", s)
     }
 }
 
 impl fmt::Debug for FourCC {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = std::str::from_utf8(&self.0).unwrap();
+        let s = String::from_utf8_lossy(&self.0);
         write!(f, "{}", s)
     }
 }
@@ -109,6 +109,33 @@ impl Decode for Header {
             0 => Self { kind, size: None },
             1 => {
                 let size = u64::decode(buf)?;
+                let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
+
+                Self {
+                    kind,
+                    size: Some(size as usize),
+                }
+            }
+            _ => {
+                let size = size.checked_sub(8).ok_or(Error::InvalidSize)?;
+                Self {
+                    kind,
+                    size: Some(size as usize),
+                }
+            }
+        })
+    }
+}
+
+impl ReadFrom for Header {
+    fn read_from<R: Read>(r: R) -> Result<Self> {
+        let buf = [0u8; 8];
+        r.read_exact(&mut buf)?;
+
+        Ok(match size {
+            0 => Self { kind, size: None },
+            1 => {
+                let size = u64::read_from(r)?;
                 let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
 
                 Self {

@@ -26,6 +26,7 @@ enum Commands {
 }
 
 fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
     let args = Args::parse();
 
     match args.input {
@@ -49,7 +50,7 @@ fn info<R: Read>(input: R) -> anyhow::Result<()> {
             }
             _ => {
                 let (atom, reader) = header.atom()?;
-                println!("{:?}", atom);
+                println!("{:#?}", atom);
                 reader
             }
         }

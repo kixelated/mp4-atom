@@ -5,9 +5,10 @@ pub struct Hev1 {
     pub data_reference_index: u16,
     pub width: u16,
     pub height: u16,
-    pub horizresolution: Ratio<u16>,
-    pub vertresolution: Ratio<u16>,
+    pub horizresolution: FixedPoint<u16>,
+    pub vertresolution: FixedPoint<u16>,
     pub frame_count: u16,
+    pub compressor: Compressor,
     pub depth: u16,
     pub hvcc: Hvcc,
 }
@@ -21,6 +22,7 @@ impl Default for Hev1 {
             horizresolution: 0x48.into(),
             vertresolution: 0x48.into(),
             frame_count: 1,
+            compressor: Default::default(),
             depth: 0x0018,
             hvcc: Hvcc::default(),
         }
@@ -40,11 +42,11 @@ impl Atom for Hev1 {
         u32::decode(buf)?; // pre-defined
         let width = buf.decode()?;
         let height = buf.decode()?;
-        let horizresolution = Ratio::<u16>::decode(buf)?;
-        let vertresolution = Ratio::<u16>::decode(buf)?;
+        let horizresolution = buf.decode()?;
+        let vertresolution = buf.decode()?;
         u32::decode(buf)?; // reserved
         let frame_count = buf.decode()?;
-        u32::decode(buf)?; // compressorname
+        let compressor = buf.decode()?;
         let depth = buf.decode()?;
         i16::decode(buf)?; // pre-defined
 
@@ -57,6 +59,7 @@ impl Atom for Hev1 {
             horizresolution,
             vertresolution,
             frame_count,
+            compressor,
             depth,
             hvcc,
         })
@@ -76,7 +79,7 @@ impl Atom for Hev1 {
         self.vertresolution.encode(buf)?;
         0u32.encode(buf)?; // reserved
         self.frame_count.encode(buf)?;
-        0u32.encode(buf)?; // skip compressorname
+        self.compressor.encode(buf)?;
         self.depth.encode(buf)?;
         (-1i16).encode(buf)?; // pre-defined
 
@@ -167,7 +170,7 @@ impl Atom for Hvcc {
             for _ in 0..num_nalus {
                 let size = u16::decode(buf)? as usize;
                 if buf.len() < size {
-                    return Err(Error::LongRead);
+                    return Err(Error::OutOfBounds);
                 }
 
                 let data = buf.split_to(size);
@@ -255,6 +258,7 @@ mod tests {
             horizresolution: 0x48.into(),
             vertresolution: 0x48.into(),
             frame_count: 1,
+            compressor: "ya boy".into(),
             depth: 24,
             hvcc: Hvcc {
                 configuration_version: 1,

@@ -39,6 +39,8 @@ impl AtomExt for Mdhd {
         let language_code = u16::decode(buf)?;
         let language = language_string(language_code);
 
+        u16::decode(buf)?; // pre-defined
+
         Ok(Mdhd {
             creation_time,
             modification_time,

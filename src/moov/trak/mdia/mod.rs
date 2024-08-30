@@ -17,32 +17,10 @@ pub struct Mdia {
 
 impl Atom for Mdia {
     const KIND: FourCC = FourCC::new(b"mdia");
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
-        let mut mdhd = None;
-        let mut hdlr = None;
-        let mut minf = None;
 
-        while let Some(atom) = buf.decode()? {
-            match atom {
-                Any::Mdhd(atom) => mdhd = atom.into(),
-                Any::Hdlr(atom) => hdlr = atom.into(),
-                Any::Minf(atom) => minf = atom.into(),
-                atom => return Err(Error::UnexpectedBox(atom.kind())),
-            }
-        }
-
-        Ok(Mdia {
-            mdhd: mdhd.ok_or(Error::MissingBox(Mdhd::KIND))?,
-            hdlr: hdlr.ok_or(Error::MissingBox(Hdlr::KIND))?,
-            minf: minf.ok_or(Error::MissingBox(Minf::KIND))?,
-        })
-    }
-
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
-        self.mdhd.encode(buf)?;
-        self.hdlr.encode(buf)?;
-        self.minf.encode(buf)?;
-
-        Ok(())
+    nested! {
+        required: [ Mdhd, Hdlr, Minf ],
+        optional: [] ,
+        multiple: [],
     }
 }

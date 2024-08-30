@@ -18,17 +18,23 @@ macro_rules! any {
                 }
             }
 
-            pub fn decode_with(header: Header, buf: &mut Bytes) -> Result<Self> {
+            pub fn decode_atom(header: Header, buf: &mut Bytes) -> Result<Self> {
                 let size = header.size.unwrap_or(buf.len());
 
                 let mut buf = buf.split_to(size);
                 let atom = match header.kind {
-                    $(_ if header.kind == $kind::KIND => Any::$kind($kind::decode_atom(&mut buf)?),)*
+                    $(_ if header.kind == $kind::KIND => {
+                        Any::$kind(match $kind::decode_atom(&mut buf) {
+                            Ok(atom) => atom,
+                            Err(Error::OutOfBounds) => return Err(Error::OverDecode($kind::KIND)),
+                            Err(err) => return Err(err),
+                        })
+                    },)*
                     _ => return Ok(Any::Unknown(header.kind, buf)),
                 };
 
-                if buf.len() > 0 {
-                    return Err(Error::ShortRead);
+                if !buf.is_empty() {
+                    return Err(Error::PartialDecode(header.kind));
                 }
 
                 Ok(atom)
@@ -38,7 +44,7 @@ macro_rules! any {
 		impl Decode for Any {
             fn decode(buf: &mut Bytes) -> Result<Self> {
 				let header = Header::decode(buf)?;
-                Self::decode_with(header, buf)
+                Self::decode_atom(header, buf)
             }
 		}
 
@@ -53,7 +59,7 @@ macro_rules! any {
 					Any::Unknown(_, data) => data.encode(buf),
 				}?;
 
-				let size: u32 = (buf.len() - start).try_into().map_err(|_| Error::LongWrite)?;
+				let size: u32 = (buf.len() - start).try_into().map_err(|_| Error::TooLarge(self.kind()))?;
 				buf[start..start + 4].copy_from_slice(&size.to_be_bytes());
 
 				Ok(())
@@ -91,7 +97,9 @@ any! {
                     Stbl,
                         Stsd,
                             Avc1,
+                                Avcc,
                             Hev1,
+                                Hvcc,
                             Mp4a,
                                 Esds,
                             Tx3g,

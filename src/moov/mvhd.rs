@@ -13,8 +13,8 @@ pub struct Mvhd {
     pub timescale: u32,
     pub duration: u64,
 
-    pub rate: Ratio<u16>,
-    pub volume: Ratio<u8>,
+    pub rate: FixedPoint<u16>,
+    pub volume: FixedPoint<u8>,
 
     pub matrix: Matrix,
     pub next_track_id: u32,
@@ -49,7 +49,7 @@ impl AtomExt for Mvhd {
 
         let matrix = buf.decode()?;
 
-        u24::decode(buf)?; // pre_defined = 0
+        <[u8; 24]>::decode(buf)?; // pre_defined = 0
 
         let next_track_id = buf.decode()?;
 
@@ -79,7 +79,7 @@ impl AtomExt for Mvhd {
 
         self.matrix.encode(buf)?;
 
-        [0u8; 3].encode(buf)?; // pre_defined = 0
+        [0u8; 24].encode(buf)?; // pre_defined = 0
 
         self.next_track_id.encode(buf)?;
 
@@ -94,9 +94,9 @@ impl Default for Mvhd {
             modification_time: 0,
             timescale: 1000,
             duration: 0,
-            rate: Ratio::default(),
-            matrix: Matrix::default(),
-            volume: Ratio::default(),
+            rate: Default::default(),
+            matrix: Default::default(),
+            volume: Default::default(),
             next_track_id: 1,
         }
     }
@@ -113,8 +113,8 @@ mod tests {
             modification_time: 200,
             timescale: 1000,
             duration: 634634,
-            rate: Ratio::new(1, 1),
-            volume: Ratio::new(1, 1),
+            rate: 1.into(),
+            volume: 1.into(),
             matrix: Matrix::default(),
             next_track_id: 1,
         };
@@ -134,8 +134,8 @@ mod tests {
             modification_time: 200,
             timescale: 1000,
             duration: 634634,
-            rate: Ratio::new(1, 1),
-            volume: Ratio::new(1, 1),
+            rate: 1.into(),
+            volume: 1.into(),
             matrix: Matrix::default(),
             next_track_id: 1,
         };

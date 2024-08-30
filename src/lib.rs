@@ -59,6 +59,7 @@
 mod any;
 mod atom;
 mod atom_ext;
+mod buf;
 mod coding;
 mod emsg;
 mod error;
@@ -74,6 +75,7 @@ mod types;
 pub use any::*;
 pub use atom::*;
 pub(crate) use atom_ext::*;
+pub use buf::*;
 pub use coding::*;
 pub use emsg::*;
 pub use error::*;

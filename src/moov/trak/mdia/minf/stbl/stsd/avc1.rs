@@ -5,9 +5,10 @@ pub struct Avc1 {
     pub data_reference_index: u16,
     pub width: u16,
     pub height: u16,
-    pub horizresolution: Ratio<u16>,
-    pub vertresolution: Ratio<u16>,
+    pub horizresolution: FixedPoint<u16>,
+    pub vertresolution: FixedPoint<u16>,
     pub frame_count: u16,
+    pub compressor: Compressor,
     pub depth: u16,
     pub avcc: Avcc,
 }
@@ -21,6 +22,7 @@ impl Default for Avc1 {
             horizresolution: 0x48.into(),
             vertresolution: 0x48.into(),
             frame_count: 1,
+            compressor: Default::default(),
             depth: 0x0018,
             avcc: Avcc::default(),
         }
@@ -44,11 +46,17 @@ impl Atom for Avc1 {
         let vertresolution = buf.decode()?;
         u32::decode(buf)?; // reserved
         let frame_count = buf.decode()?;
-        u32::decode(buf)?; // compressorname
+        let compressor = buf.decode()?;
         let depth = buf.decode()?;
         i16::decode(buf)?; // pre-defined
 
-        let avcc = Avcc::decode(buf)?;
+        let mut avcc = None;
+        while let Some(atom) = buf.decode()? {
+            match atom {
+                Any::Avcc(atom) => avcc = atom.into(),
+                _ => tracing::warn!("unknown atom: {:?}", atom),
+            }
+        }
 
         Ok(Avc1 {
             data_reference_index,
@@ -57,8 +65,9 @@ impl Atom for Avc1 {
             horizresolution,
             vertresolution,
             frame_count,
+            compressor,
             depth,
-            avcc,
+            avcc: avcc.ok_or(Error::MissingBox(Avcc::KIND))?,
         })
     }
 
@@ -76,8 +85,7 @@ impl Atom for Avc1 {
         self.vertresolution.encode(buf)?;
         0u32.encode(buf)?; // reserved
         self.frame_count.encode(buf)?;
-        // skip compressorname
-        0u32.encode(buf)?;
+        self.compressor.encode(buf)?;
         self.depth.encode(buf)?;
         (-1i32).encode(buf)?; // pre-defined
 
@@ -122,21 +130,23 @@ impl Atom for Avcc {
         let avc_level_indication = u8::decode(buf)?;
         let length_size_minus_one = u8::decode(buf)? & 0x3;
         let num_of_spss = u8::decode(buf)? & 0x1F;
+
         let mut sequence_parameter_sets = Vec::with_capacity(num_of_spss as usize);
         for _ in 0..num_of_spss {
             let size = u16::decode(buf)? as usize;
             if buf.len() < size {
-                return Err(Error::LongRead);
+                return Err(Error::OutOfBounds);
             }
             let nal = buf.split_to(size);
             sequence_parameter_sets.push(nal);
         }
+
         let num_of_ppss = u8::decode(buf)?;
         let mut picture_parameter_sets = Vec::with_capacity(num_of_ppss as usize);
         for _ in 0..num_of_ppss {
             let size = u16::decode(buf)? as usize;
             if buf.len() < size {
-                return Err(Error::LongRead);
+                return Err(Error::OutOfBounds);
             }
             let nal = buf.split_to(size);
             picture_parameter_sets.push(nal);
@@ -186,6 +196,7 @@ mod tests {
             horizresolution: 0x48.into(),
             vertresolution: 0x48.into(),
             frame_count: 1,
+            compressor: "ya boy".into(),
             depth: 24,
             avcc: Avcc {
                 configuration_version: 1,

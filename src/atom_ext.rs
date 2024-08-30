@@ -3,8 +3,8 @@ use crate::*;
 // Combine the version and flags into a single struct
 // We use a special trait to ensure it's always a u32
 pub(crate) trait Ext: Default {
-    fn encode(&self) -> Result<[u8; 4]>;
-    fn decode(v: [u8; 4]) -> Result<Self>;
+    fn encode(&self) -> Result<u32>;
+    fn decode(v: u32) -> Result<Self>;
 }
 
 // Rather than encoding/decoding the header in every atom, use this trait.
@@ -22,7 +22,7 @@ impl<T: AtomExt> Atom for T {
     const KIND: FourCC = Self::KIND_EXT;
 
     fn decode_atom(buf: &mut Bytes) -> Result<Self> {
-        let ext = Ext::decode(<[u8; 4]>::decode(buf)?)?;
+        let ext = Ext::decode(u32::decode(buf)?)?;
         AtomExt::decode_atom_ext(buf, ext)
     }
 
@@ -36,7 +36,7 @@ impl<T: AtomExt> Atom for T {
 
         // Go back and update the version/flags
         let header = ext.encode()?;
-        buf[start..start + 4].copy_from_slice(&header);
+        buf[start..start + 4].copy_from_slice(&header.to_be_bytes());
 
         Ok(())
     }
@@ -44,11 +44,11 @@ impl<T: AtomExt> Atom for T {
 
 // Some atoms don't have any version/flags, so we provide a default implementation
 impl Ext for () {
-    fn encode(&self) -> Result<[u8; 4]> {
-        Ok([0, 0, 0, 0])
+    fn encode(&self) -> Result<u32> {
+        Ok(0)
     }
 
-    fn decode(_: [u8; 4]) -> Result<()> {
+    fn decode(_: u32) -> Result<()> {
         Ok(())
     }
 }
@@ -129,25 +129,15 @@ macro_rules! ext {
 			}
 
 			impl Ext for [<$name Ext>] {
-				fn encode(&self) -> Result<[u8; 4]>{
-					let mut v = [0u8; 4];
-					v[0] = self.version as u8;
-
-					$(
-						if self.$flag {
-							v[$bit / 8] |= 1 << ($bit % 8);
-						}
-					)*
-
-					Ok(v)
+				fn encode(&self) -> Result<u32>{
+					Ok((self.version as u32) << 24 $(| (self.$flag as u32) << $bit)*)
 				}
 
-				fn decode(v: [u8; 4]) -> Result<Self> {
-					let version = v[0].try_into()?;
+				fn decode(v: u32) -> Result<Self> {
 					Ok([<$name Ext>] {
-						version,
+						version: [<$name Version>]::try_from((v >> 24) as u8)?,
 						$(
-							$flag: v[$bit / 8] & (1 << ($bit % 8)) != 0,
+							$flag: (v & (1 << $bit)) != 0,
 						)*
 					})
 				}

@@ -148,36 +148,63 @@ fn test_bbb() {
         0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x70,
     ];
 
-    let buf = Bytes::from_static(&ENCODED);
+    let mut buf = Bytes::from_static(&ENCODED);
     let ftyp = Ftyp::decode(&mut buf).expect("failed to decode ftyp");
     let moov = Moov::decode(&mut buf).expect("failed to decode moov");
 
     assert_eq!(
         ftyp,
         Ftyp {
-            major_brand: b"iso5".into(),
-            minor_version: 1,
-            compatible_brands: vec![b"trak".into()],
+            major_brand: b"iso6".into(),
+            minor_version: 512,
+            compatible_brands: vec![b"iso6".into(), b"cmfc".into(), b"mp41".into()],
         }
     );
+
+    println!("{:#?}", moov);
 
     assert_eq!(
         moov,
         Moov {
-            mvhd: Default::default(),
-            traks: vec![Trak {
+            mvhd: Mvhd {
+                timescale: 1000,
+                rate: 1.into(),
+                volume: 1.into(),
+                next_track_id: 2,
+                ..Default::default()
+            },
+            mvex: Some(Mvex {
+                trex: vec![
+                    Trex {
+                        track_id: 1,
+                        default_sample_description_index: 1,
+                        ..Default::default()
+                    },
+                    Trex {
+                        track_id: 2,
+                        default_sample_description_index: 1,
+                        ..Default::default()
+                    }
+                ],
+                ..Default::default()
+            }),
+            trak: vec![Trak {
                 tkhd: Tkhd {
                     track_id: 1,
                     enabled: true,
+                    width: 1280.into(),
+                    height: 720.into(),
                     ..Default::default()
                 },
                 mdia: Mdia {
                     mdhd: Mdhd {
+                        timescale: 24000,
+                        language: "und".into(),
                         ..Default::default()
                     },
                     hdlr: Hdlr {
                         handler_type: b"vide".into(),
-                        name: "VideoHandler".into(),
+                        name: "(C) 2007 Google Inc. v08.13.2007.".into(),
                         ..Default::default()
                     },
                     minf: Minf {
@@ -188,51 +215,132 @@ fn test_bbb() {
                         .into(),
                         dinf: Dinf {
                             dref: Dref {
-                                entries: vec![DrefEntry {
-                                    ty: "url ".try_into().unwrap(),
-                                    location: "data".try_into().unwrap(),
+                                urls: vec![Url {
+                                    location: "".try_into().unwrap(),
                                 }],
                             },
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                entries: vec![StsdEntry {
-                                    ty: "avc1".try_into().unwrap(),
+                                avc1: Some(Avc1 {
                                     data_reference_index: 1,
-                                    width: 0,
-                                    height: 0,
-                                    horiz_res: 0,
-                                    vert_res: 0,
+                                    width: 1280,
+                                    height: 720,
+                                    horizresolution: 72.into(),
+                                    vertresolution: 72.into(),
                                     frame_count: 1,
-                                    compressor_name: "Lavf61.1.100".try_into().unwrap(),
-                                    depth: 0,
-                                    config: vec![],
-                                }],
+                                    compressor: "".into(),
+                                    depth: 24,
+                                    avcc: Avcc {
+                                        configuration_version: 1,
+                                        avc_profile_indication: 100,
+                                        profile_compatibility: 0,
+                                        avc_level_indication: 31,
+                                        length_size_minus_one: 3,
+                                        sequence_parameter_sets: vec![Bytes::from_static(b"gd\0\x1f\xac$\x84\x01@\x16\xec\x04@\0\0\x03\0@\0\0\x0c#\xc6\x0c\x92")],
+                                        picture_parameter_sets:  vec![Bytes::from_static(b"h\xee2\xc8\xb0")],
+                                    },
+                                }),
+                                ..Default::default()
                             },
                             stts: Stts {
-                                entries: vec![SttsEntry {
-                                    count: 0,
-                                    duration: 0,
-                                }],
+                                ..Default::default()
                             },
                             stsc: Stsc {
-                                entries: vec![StscEntry {
-                                    first_chunk: 0,
-                                    samples_per_chunk: 0,
-                                    sample_description_index: 0,
-                                }],
+                                ..Default::default()
                             },
                             stsz: Stsz {
-                                sample_sizes: vec![0],
+                                ..Default::default()
                             },
-                            stco: Stco {
-                                chunk_offsets: vec![0],
-                            },
+                            stco: Some(Stco { ..Default::default() }),
+                            ..Default::default()
                         },
                     },
                 },
                 ..Default::default()
-            },],
+            },
+            Trak {
+                tkhd: Tkhd {
+                    track_id: 2,
+                    alternate_group: 1,
+                    enabled: true,
+                    volume: 1.into(),
+                    ..Default::default()
+                },
+                mdia: Mdia {
+                    mdhd: Mdhd {
+                        timescale: 44100,
+                        language: "und".into(),
+                        ..Default::default()
+                    },
+                    hdlr: Hdlr {
+                        handler_type: b"soun".into(),
+                        name: "(C) 2007 Google Inc. v08.13.2007.".into(),
+                    },
+                    minf: Minf {
+                        smhd: Some(Smhd {
+                            ..Default::default()
+                        }),
+                        dinf: Dinf {
+                            dref: Dref {
+                                urls: vec![Url {
+                                    location: "".try_into().unwrap(),
+                                }],
+                            },
+                        },
+                        stbl: Stbl {
+                            stsd: Stsd {
+                                mp4a: Some(Mp4a {
+                                    data_reference_index: 1,
+                                    channelcount: 2,
+                                    samplesize: 16,
+                                    samplerate: 44100.into(),
+                                    esds: Some(Esds {
+                                        es_desc: ESDescriptor {
+                                            es_id: 2,
+                                            dec_config: DecoderConfigDescriptor {
+                                                object_type_indication: 64,
+                                                stream_type: 5,
+                                                max_bitrate: 125587,
+                                                avg_bitrate: 125587,
+                                                dec_specific: DecoderSpecificDescriptor {
+                                                    profile: 2,
+                                                    freq_index: 4,
+                                                    chan_conf: 2,
+                                                },
+                                                ..Default::default()
+                                            },
+                                            sl_config: SLConfigDescriptor{},
+                                        },
+                                    }),
+                                }),
+                                ..Default::default()
+                            },
+                            stts: Stts {
+                                ..Default::default()
+                            },
+                            stsc: Stsc {
+                                ..Default::default()
+                            },
+                            stsz: Stsz {
+                                ..Default::default()
+                            },
+                            stco: Some(Stco { ..Default::default() }),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            }],
+            udta: Some(Udta {
+                meta: Some(Meta::Mdir {
+                    ilst: Some(Ilst {
+                        ..Default::default()
+                    }),
+                }),
+            }),
+
             ..Default::default()
         },
     );

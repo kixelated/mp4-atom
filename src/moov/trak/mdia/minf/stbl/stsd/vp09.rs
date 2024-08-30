@@ -6,10 +6,10 @@ pub struct Vp09 {
     pub data_reference_index: u16,
     pub width: u16,
     pub height: u16,
-    pub horizresolution: Ratio<u16>,
-    pub vertresolution: Ratio<u16>,
+    pub horizresolution: FixedPoint<u16>,
+    pub vertresolution: FixedPoint<u16>,
     pub frame_count: u16,
-    pub compressorname: [u8; 32],
+    pub compressor: Compressor,
     pub depth: u16,
     pub end_code: u16,
     pub vpcc: Vpcc,
@@ -25,7 +25,7 @@ impl Default for Vp09 {
             horizresolution: 0x48.into(),
             vertresolution: 0x48.into(),
             frame_count: 1,
-            compressorname: [0; 32],
+            compressor: Compressor::default(),
             depth: 24,
             end_code: 0xFFFF,
             vpcc: Vpcc::default(),
@@ -39,18 +39,19 @@ impl AtomExt for Vp09 {
     const KIND_EXT: FourCC = FourCC::new(b"vp09");
 
     fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
-        let start_code: u16 = buf.decode()?;
-        let data_reference_index: u16 = buf.decode()?;
+        let start_code = buf.decode()?;
+        let data_reference_index = buf.decode()?;
         <[u8; 16]>::decode(buf)?;
-        let width: u16 = buf.decode()?;
-        let height: u16 = buf.decode()?;
+        let width = buf.decode()?;
+        let height = buf.decode()?;
         let horizresolution = buf.decode()?;
         let vertresolution = buf.decode()?;
         u32::decode(buf)?;
-        let frame_count: u16 = buf.decode()?;
-        let compressorname = buf.decode()?;
-        let depth: u16 = buf.decode()?;
-        let end_code: u16 = buf.decode()?;
+        let frame_count = buf.decode()?;
+
+        let compressor = buf.decode()?;
+        let depth = buf.decode()?;
+        let end_code = buf.decode()?;
 
         let vpcc = Vpcc::decode(buf)?;
 
@@ -62,7 +63,7 @@ impl AtomExt for Vp09 {
             horizresolution,
             vertresolution,
             frame_count,
-            compressorname,
+            compressor,
             depth,
             end_code,
             vpcc,
@@ -79,7 +80,7 @@ impl AtomExt for Vp09 {
         self.vertresolution.encode(buf)?;
         0u32.encode(buf)?;
         self.frame_count.encode(buf)?;
-        self.compressorname.encode(buf)?;
+        self.compressor.encode(buf)?;
         self.depth.encode(buf)?;
         self.end_code.encode(buf)?;
         self.vpcc.encode(buf)?;

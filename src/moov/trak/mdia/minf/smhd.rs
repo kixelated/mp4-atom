@@ -1,8 +1,8 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Smhd {
-    pub balance: Ratio<i8>,
+    pub balance: FixedPoint<i8>,
 }
 
 impl AtomExt for Smhd {
@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn test_smhd() {
         let expected = Smhd {
-            balance: Ratio::new(-1, 1),
+            balance: FixedPoint::from(-1),
         };
         let mut buf = BytesMut::new();
         expected.encode(&mut buf).unwrap();

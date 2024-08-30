@@ -1,6 +1,9 @@
-use std::ffi;
+use std::{
+    ffi,
+    io::{Read, Write},
+};
 
-// Export these common types.
+// Re-export these common types.
 pub use bytes::{Buf, BufMut, Bytes, BytesMut};
 pub use num::rational::Ratio;
 
@@ -22,10 +25,18 @@ pub trait EncodeTo {
     fn encode<T: Encode>(&mut self, v: &T) -> Result<()>;
 }
 
+pub trait ReadFrom: Sized {
+    fn read_from<R: Read>(r: R) -> Result<Self>;
+}
+
+pub trait WriteTo {
+    fn write_to<W: Write>(&self, w: W) -> Result<()>;
+}
+
 impl Decode for u8 {
     fn decode(buf: &mut Bytes) -> Result<Self> {
         if buf.is_empty() {
-            return Err(Error::LongRead);
+            return Err(Error::OutOfBounds);
         }
 
         Ok(buf.get_u8())
@@ -35,7 +46,7 @@ impl Decode for u8 {
 impl Decode for i8 {
     fn decode(buf: &mut Bytes) -> Result<Self> {
         if buf.is_empty() {
-            return Err(Error::LongRead);
+            return Err(Error::OutOfBounds);
         }
 
         Ok(buf.get_i8())
@@ -81,7 +92,7 @@ impl Decode for i64 {
 impl<const N: usize> Decode for [u8; N] {
     fn decode(buf: &mut Bytes) -> Result<Self> {
         if buf.len() < N {
-            return Err(Error::LongRead);
+            return Err(Error::OutOfBounds);
         }
 
         let mut bytes = [0; N];
@@ -122,23 +133,11 @@ impl Decode for String {
 
 impl<T: Decode> Decode for Option<T> {
     fn decode(buf: &mut Bytes) -> Result<Self> {
-        if buf.is_empty() {
+        if !buf.is_empty() {
             Ok(Some(T::decode(buf)?))
         } else {
             Ok(None)
         }
-    }
-}
-
-impl<T: Decode + Clone + num::Zero + num::Integer> Decode for Ratio<T> {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        let numer = T::decode(buf)?;
-        let denom = T::decode(buf)?;
-        if denom.is_zero() {
-            return Err(Error::DivideByZero);
-        }
-
-        Ok(Ratio::new(numer, denom))
     }
 }
 
@@ -227,17 +226,6 @@ impl<T: Encode> Encode for Option<T> {
             Some(v) => v.encode(buf),
             None => Ok(()),
         }
-    }
-}
-
-impl<T: Encode + num::Zero> Encode for Ratio<T> {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
-        if self.denom().is_zero() {
-            return Err(Error::DivideByZero);
-        }
-
-        self.numer().encode(buf)?;
-        self.denom().encode(buf)
     }
 }
 

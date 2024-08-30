@@ -45,6 +45,7 @@ impl AtomExt for Stsd {
                 Any::Vp09(atom) => vp09 = atom.into(),
                 Any::Mp4a(atom) => mp4a = atom.into(),
                 Any::Tx3g(atom) => tx3g = atom.into(),
+                Any::Unknown(kind, _) => tracing::warn!("unknown atom: {:?}", kind),
                 _ => return Err(Error::UnexpectedBox(atom.kind())),
             }
         }

@@ -20,11 +20,11 @@ pub struct Tkhd {
     pub alternate_group: u16,
     pub enabled: bool,
 
-    pub volume: Ratio<u8>,
+    pub volume: FixedPoint<u8>,
     pub matrix: Matrix,
 
-    pub width: Ratio<u16>,
-    pub height: Ratio<u16>,
+    pub width: FixedPoint<u16>,
+    pub height: FixedPoint<u16>,
 }
 
 impl AtomExt for Tkhd {

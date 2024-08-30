@@ -25,15 +25,16 @@ impl AtomExt for Vpcc {
     type Ext = VpccExt;
 
     fn decode_atom_ext(buf: &mut Bytes, _ext: VpccExt) -> Result<Self> {
-        let profile: u8 = u8::decode(buf)?;
-        let level: u8 = u8::decode(buf)?;
+        let profile = buf.decode()?;
+        let level = buf.decode()?;
         let (bit_depth, chroma_subsampling, video_full_range_flag) = {
             let b = u8::decode(buf)?;
-            (b >> 4, b << 4 >> 5, b & 0x01 == 1)
+            (b >> 4, (b >> 1) & 0x01, b & 0x01 == 1)
         };
-        let transfer_characteristics: u8 = u8::decode(buf)?;
-        let matrix_coefficients: u8 = u8::decode(buf)?;
-        let codec_initialization_data_size: u16 = buf.decode()?;
+        let color_primaries = buf.decode()?;
+        let transfer_characteristics = buf.decode()?;
+        let matrix_coefficients = buf.decode()?;
+        let codec_initialization_data_size = buf.decode()?;
 
         Ok(Self {
             profile,
@@ -41,7 +42,7 @@ impl AtomExt for Vpcc {
             bit_depth,
             chroma_subsampling,
             video_full_range_flag,
-            color_primaries: 0,
+            color_primaries,
             transfer_characteristics,
             matrix_coefficients,
             codec_initialization_data_size,

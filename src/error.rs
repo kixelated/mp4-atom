@@ -2,17 +2,17 @@ use crate::FourCC;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("partial decode")]
-    ShortRead,
+    #[error("out of bounds")]
+    OutOfBounds,
 
-    #[error("partial encode")]
-    ShortWrite,
+    #[error("partial decode: {0}")]
+    PartialDecode(FourCC),
 
-    #[error("out of bounds read")]
-    LongRead,
+    #[error("over decode: {0}")]
+    OverDecode(FourCC),
 
-    #[error("out of bounds write")]
-    LongWrite,
+    #[error("atom too large")]
+    TooLarge(FourCC),
 
     #[error("invalid size")]
     InvalidSize,
@@ -22,9 +22,6 @@ pub enum Error {
 
     #[error("unknown version: {0}")]
     UnknownVersion(u8),
-
-    #[error("divide by zero")]
-    DivideByZero,
 
     #[error("invalid string: {0}")]
     InvalidString(String),
@@ -40,6 +37,9 @@ pub enum Error {
 
     #[error("missing descriptor")]
     MissingDescriptor,
+
+    #[error("unexpected eof")]
+    UnexpectedEof,
 
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),

@@ -5,7 +5,7 @@ pub struct Mp4a {
     pub data_reference_index: u16,
     pub channelcount: u16,
     pub samplesize: u16,
-    pub samplerate: Ratio<u16>,
+    pub samplerate: FixedPoint<u16>,
     pub esds: Option<Esds>,
 }
 
@@ -42,9 +42,15 @@ impl Atom for Mp4a {
             u64::decode(buf)?;
         }
 
+        let mut esds = None;
+
         // Find esds in mp4a or wave
-        // TODO wave
-        let esds = buf.decode()?;
+        while let Some(atom) = buf.decode()? {
+            match atom {
+                Any::Esds(atom) => esds = atom.into(),
+                _ => tracing::warn!("unknown atom: {:?}", atom),
+            }
+        }
 
         Ok(Mp4a {
             data_reference_index,
@@ -88,9 +94,10 @@ impl AtomExt for Esds {
 
         while let Some(desc) = Option::<DescriptorHeader>::decode(buf)? {
             if buf.len() < desc.size as usize {
-                return Err(Error::LongRead);
+                return Err(Error::OutOfBounds);
             }
             let mut buf = buf.split_to(desc.size as usize);
+
             match desc.tag {
                 0x03 => es_desc = ESDescriptor::decode(&mut buf)?.into(),
                 _ => todo!("Esds tag: {:02X}", desc.tag),

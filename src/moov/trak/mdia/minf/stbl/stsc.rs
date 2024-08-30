@@ -10,7 +10,6 @@ pub struct StscEntry {
     pub first_chunk: u32,
     pub samples_per_chunk: u32,
     pub sample_description_index: u32,
-    pub first_sample: u32,
 }
 
 impl AtomExt for Stsc {
@@ -27,7 +26,6 @@ impl AtomExt for Stsc {
                 first_chunk: u32::decode(buf)?,
                 samples_per_chunk: u32::decode(buf)?,
                 sample_description_index: u32::decode(buf)?,
-                first_sample: 0,
             };
             entries.push(entry);
         }
@@ -59,13 +57,11 @@ mod tests {
                     first_chunk: 1,
                     samples_per_chunk: 1,
                     sample_description_index: 1,
-                    first_sample: 1,
                 },
                 StscEntry {
                     first_chunk: 19026,
                     samples_per_chunk: 14,
                     sample_description_index: 1,
-                    first_sample: 19026,
                 },
             ],
         };

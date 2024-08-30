@@ -26,9 +26,9 @@ impl<R: Read> Reader<R> {
         let buf = self.fill(header.size)?;
         let mut buf = buf.split_to(header.size.unwrap_or(buf.len())).freeze();
 
-        let atom = Any::decode_with(header, &mut buf)?;
-        if buf.len() > 0 {
-            return Err(Error::ShortRead);
+        let atom = Any::decode_atom(header, &mut buf)?;
+        if !buf.is_empty() {
+            return Err(Error::PartialDecode(atom.kind()));
         }
 
         Ok(Some(atom))
@@ -47,7 +47,7 @@ impl<R: Read> Reader<R> {
         let buf = self.read(8)?;
         match buf.len() {
             0 => return Ok(None),
-            0..=7 => return Err(Error::ShortRead),
+            0..=7 => return Err(Error::UnexpectedEof),
             _ => {}
         }
 
@@ -58,13 +58,15 @@ impl<R: Read> Reader<R> {
             _ => self.buf.split_to(8).freeze(),
         };
 
-        Ok(Some(Header::decode(&mut buf)?))
+        let header = Header::decode(&mut buf)?;
+
+        Ok(Some(header))
     }
 
     fn fill(&mut self, size: Option<usize>) -> Result<&mut BytesMut> {
         let buf = self.read(size.unwrap_or(usize::MAX))?;
         if buf.len() < size.unwrap_or(0) {
-            return Err(Error::ShortRead);
+            return Err(Error::UnexpectedEof);
         }
 
         Ok(buf)
@@ -93,7 +95,7 @@ impl<R: Read> Reader<R> {
                 let actual = io::copy(&mut reader, &mut io::sink())?;
 
                 if actual < limit {
-                    return Err(Error::ShortRead);
+                    return Err(Error::UnexpectedEof);
                 }
             }
             None => {
@@ -127,9 +129,9 @@ impl<R: Read> ReaderHeader<R> {
             None => self.reader.fill(None)?.split().freeze(),
         };
 
-        let atom = Any::decode_with(self.header, &mut buf)?;
+        let atom = Any::decode_atom(self.header, &mut buf)?;
         if buf.len() > 0 {
-            return Err(Error::ShortRead);
+            return Err(Error::PartialDecode(atom.kind()));
         }
 
         Ok((atom, self.reader))
@@ -141,9 +143,14 @@ impl<R: Read> ReaderHeader<R> {
             None => self.reader.fill(None)?.split().freeze(),
         };
 
-        let atom = A::decode_atom(&mut buf)?;
-        if buf.len() > 0 {
-            return Err(Error::ShortRead);
+        let atom = match A::decode_atom(&mut buf) {
+            Ok(atom) => atom,
+            Err(Error::OutOfBounds) => return Err(Error::OverDecode(A::KIND)),
+            Err(err) => return Err(err),
+        };
+
+        if !buf.is_empty() {
+            return Err(Error::PartialDecode(A::KIND));
         }
 
         Ok((atom, self.reader))
