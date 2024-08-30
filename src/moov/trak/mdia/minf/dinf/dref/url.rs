@@ -18,10 +18,10 @@ impl AtomExt for Url {
 
     const KIND_EXT: FourCC = FourCC::new(b"url ");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: UrlExt) -> Result<Self> {
-        let location = match buf.is_empty() {
-            true => "".to_string(),
-            false => buf.decode()?,
+    fn decode_atom_ext<B: Buf>(buf: &mut B, _ext: UrlExt) -> Result<Self> {
+        let location = match buf.has_remaining() {
+            true => buf.decode()?,
+            false => "".to_string(),
         };
 
         Ok(Url { location })

@@ -24,7 +24,7 @@ impl Default for Mp4a {
 impl Atom for Mp4a {
     const KIND: FourCC = FourCC::new(b"mp4a");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
@@ -89,15 +89,11 @@ impl AtomExt for Esds {
 
     const KIND_EXT: FourCC = FourCC::new(b"esds");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let mut es_desc = None;
 
         while let Some(desc) = Option::<DescriptorHeader>::decode(buf)? {
-            if buf.len() < desc.size as usize {
-                return Err(Error::OutOfBounds);
-            }
-            let mut buf = buf.split_to(desc.size as usize);
-
+            let mut buf = buf.take(desc.size);
             match desc.tag {
                 0x03 => es_desc = ESDescriptor::decode(&mut buf)?.into(),
                 _ => todo!("Esds tag: {:02X}", desc.tag),
@@ -123,7 +119,7 @@ pub struct DescriptorHeader {
 }
 
 impl Decode for DescriptorHeader {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let tag = u8::decode(buf)?;
 
         let mut size: u32 = 0;
@@ -169,7 +165,7 @@ pub struct ESDescriptor {
 }
 
 impl Decode for ESDescriptor {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let es_id = buf.decode()?;
         u8::decode(buf)?; // XXX flags must be 0
 
@@ -177,7 +173,7 @@ impl Decode for ESDescriptor {
         let mut sl_config = None;
 
         while let Some(desc) = Option::<DescriptorHeader>::decode(buf)? {
-            let buf = &mut buf.split_to(desc.size as usize);
+            let buf = &mut buf.take(desc.size);
             match desc.tag {
                 0x04 => dec_config = DecoderConfigDescriptor::decode(buf)?.into(),
                 0x06 => sl_config = SLConfigDescriptor::decode(buf)?.into(),
@@ -220,7 +216,7 @@ pub struct DecoderConfigDescriptor {
 }
 
 impl Decode for DecoderConfigDescriptor {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let object_type_indication = u8::decode(buf)?;
         let byte_a = u8::decode(buf)?;
         let stream_type = (byte_a & 0xFC) >> 2;
@@ -232,7 +228,7 @@ impl Decode for DecoderConfigDescriptor {
         let mut dec_specific = None;
 
         while let Some(desc) = Option::<DescriptorHeader>::decode(buf)? {
-            let buf = &mut buf.split_to(desc.size as usize);
+            let buf = &mut buf.take(desc.size);
             match desc.tag {
                 0x05 => dec_specific = DecoderSpecificDescriptor::decode(buf)?.into(),
                 _ => todo!("DecoderConfigDescriptor tag: {:02X}", desc.tag),
@@ -283,8 +279,8 @@ fn get_audio_object_type(byte_a: u8, byte_b: u8) -> u8 {
     profile
 }
 
-fn decode_chan_conf(
-    buf: &mut Bytes,
+fn decode_chan_conf<B: Buf>(
+    buf: &mut B,
     byte_b: u8,
     freq_index: u8,
     extended_profile: bool,
@@ -305,7 +301,7 @@ fn decode_chan_conf(
 }
 
 impl Decode for DecoderSpecificDescriptor {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let byte_a = u8::decode(buf)?;
         let byte_b = u8::decode(buf)?;
         let profile = get_audio_object_type(byte_a, byte_b);
@@ -342,7 +338,7 @@ impl Encode for DecoderSpecificDescriptor {
 pub struct SLConfigDescriptor {}
 
 impl Decode for SLConfigDescriptor {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         u8::decode(buf)?; // pre-defined
 
         Ok(SLConfigDescriptor {})
@@ -362,6 +358,7 @@ impl Encode for SLConfigDescriptor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_mp4a() {

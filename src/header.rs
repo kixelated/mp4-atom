@@ -64,7 +64,7 @@ impl Encode for FourCC {
 }
 
 impl Decode for FourCC {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(FourCC(buf.decode()?))
     }
 }
@@ -101,7 +101,7 @@ impl Encode for Header {
 }
 
 impl Decode for Header {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let size = u32::decode(buf)?;
         let kind = FourCC::decode(buf)?;
 
@@ -128,28 +128,37 @@ impl Decode for Header {
 }
 
 impl ReadFrom for Header {
-    fn read_from<R: Read>(r: R) -> Result<Self> {
-        let buf = [0u8; 8];
-        r.read_exact(&mut buf)?;
+    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+        Option::<Header>::read_from(r)?.ok_or(Error::UnexpectedEof)
+    }
+}
 
-        Ok(match size {
-            0 => Self { kind, size: None },
+impl ReadFrom for Option<Header> {
+    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+        let mut buf = [0u8; 8];
+        let n = r.read(&mut buf)?;
+        if n == 0 {
+            return Ok(None);
+        }
+
+        r.read_exact(&mut buf[n..])?;
+
+        let size = u32::decode(&mut &buf[..4])?;
+        let kind = FourCC::decode(&mut &buf[4..])?;
+
+        let size = match size {
+            0 => None,
             1 => {
-                let size = u64::read_from(r)?;
+                // Read another 8 bytes
+                r.read_exact(&mut buf)?;
+                let size = u64::decode(&mut &buf[..8])?;
                 let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
 
-                Self {
-                    kind,
-                    size: Some(size as usize),
-                }
+                Some(size as usize)
             }
-            _ => {
-                let size = size.checked_sub(8).ok_or(Error::InvalidSize)?;
-                Self {
-                    kind,
-                    size: Some(size as usize),
-                }
-            }
-        })
+            _ => Some(size.checked_sub(8).ok_or(Error::InvalidSize)? as usize),
+        };
+
+        Ok(Some(Header { kind, size }))
     }
 }

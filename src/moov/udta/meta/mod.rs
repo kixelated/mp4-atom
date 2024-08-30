@@ -20,7 +20,7 @@ impl AtomExt for Meta {
     type Ext = ();
     const KIND_EXT: FourCC = FourCC::new(b"meta");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
 
         match hdlr.handler_type {
@@ -55,6 +55,7 @@ impl AtomExt for Meta {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_meta_mdir_empty() {

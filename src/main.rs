@@ -1,11 +1,11 @@
 use std::{
     fs::File,
-    io::{stdin, BufReader, Read},
+    io::{stdin, Read},
     path::PathBuf,
 };
 
 use clap::{Parser, Subcommand};
-use mp4_atom::Atom;
+use mp4_atom::ReadFrom;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -31,27 +31,24 @@ fn main() -> anyhow::Result<()> {
 
     match args.input {
         Some(path) => {
-            let file = File::open(path)?;
-            info(file)
+            let mut file = File::open(path)?;
+            info(&mut file)
         }
-        None => info(stdin()),
+        None => info(&mut stdin()),
     }
 }
 
-fn info<R: Read>(input: R) -> anyhow::Result<()> {
-    let mut reader = BufReader::new(input);
-    let mut reader = mp4_atom::Reader::new(&mut reader);
-
-    while let Some(header) = reader.header()? {
-        reader = match header.kind() {
-            mp4_atom::Mdat::KIND => {
-                println!("Mdat {{ size: {:?} }}", header.size());
-                header.skip()?
+fn info<R: Read>(input: &mut R) -> anyhow::Result<()> {
+    while let Some(atom) = Option::<mp4_atom::Any>::read_from(input)? {
+        match atom {
+            mp4_atom::Any::Mdat(mdat) => {
+                println!("Mdat {{ size: {:?} }}", mdat.data.len());
+            }
+            mp4_atom::Any::Unknown(kind, data) => {
+                println!("Unknown {{ kind: {:?}, size: {:?} }}", kind, data.len());
             }
             _ => {
-                let (atom, reader) = header.atom()?;
                 println!("{:#?}", atom);
-                reader
             }
         }
     }

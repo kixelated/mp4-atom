@@ -6,7 +6,7 @@ pub struct Covr(pub Bytes);
 impl Atom for Covr {
     const KIND: FourCC = FourCC::new(b"covr");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Covr(buf.decode()?))
     }
 

@@ -11,7 +11,7 @@ pub struct Udta {
 impl Atom for Udta {
     const KIND: FourCC = FourCC::new(b"udta");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         let mut meta = buf.decode()?;
         Ok(Udta { meta })
     }
@@ -25,6 +25,7 @@ impl Atom for Udta {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_udta_empty() {

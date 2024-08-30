@@ -6,7 +6,7 @@ pub struct Year(pub String);
 impl Atom for Year {
     const KIND: FourCC = FourCC::new(b"day ");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self(buf.decode()?))
     }
 

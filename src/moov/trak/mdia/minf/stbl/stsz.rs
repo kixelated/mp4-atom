@@ -11,7 +11,7 @@ impl AtomExt for Stsz {
 
     const KIND_EXT: FourCC = FourCC::new(b"stsz");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let sample_size = u32::decode(buf)?;
         let sample_count = u32::decode(buf)?;
 
@@ -55,6 +55,7 @@ impl AtomExt for Stsz {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_stsz_same_size() {

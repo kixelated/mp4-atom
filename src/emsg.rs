@@ -20,7 +20,7 @@ pub struct Emsg {
     pub id: u32,
     pub scheme_id_uri: String,
     pub value: String,
-    pub message_data: Vec<u8>,
+    pub message_data: Bytes,
 }
 
 impl AtomExt for Emsg {
@@ -28,7 +28,7 @@ impl AtomExt for Emsg {
 
     type Ext = EmsgExt;
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: EmsgExt) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, ext: EmsgExt) -> Result<Self> {
         Ok(match ext.version {
             EmsgVersion::V0 => Emsg {
                 scheme_id_uri: buf.decode()?,
@@ -83,6 +83,7 @@ impl AtomExt for Emsg {
 mod tests {
     use super::*;
 
+
     #[test]
     fn test_emsg_version0() {
         let decoded = Emsg {
@@ -92,7 +93,7 @@ mod tests {
             id: 8,
             scheme_id_uri: String::from("foo"),
             value: String::from("foo"),
-            message_data: vec![1, 2, 3],
+            message_data: Bytes::from_static(&[1, 2, 3]),
         };
 
         let mut buf = BytesMut::new();
@@ -113,7 +114,7 @@ mod tests {
             id: 8,
             scheme_id_uri: String::from("foo"),
             value: String::from("foo"),
-            message_data: vec![3, 2, 1],
+            message_data: Bytes::from_static(&[3, 2, 1]),
         };
 
         let mut buf = BytesMut::new();

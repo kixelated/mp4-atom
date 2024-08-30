@@ -8,9 +8,10 @@ pub struct Free {
 impl Atom for Free {
     const KIND: FourCC = FourCC::new(b"free");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
-        let data = buf.split_to(buf.len());
-        Ok(Free { size: data.len() })
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
+        let size = buf.remaining();
+        buf.advance(size);
+        Ok(Free { size })
     }
 
     fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {

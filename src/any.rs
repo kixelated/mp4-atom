@@ -1,6 +1,7 @@
 use crate::*;
 
 use std::fmt;
+use std::io::Read;
 
 macro_rules! any {
     ($($kind:ident,)*) => {
@@ -18,10 +19,9 @@ macro_rules! any {
                 }
             }
 
-            pub fn decode_atom(header: Header, buf: &mut Bytes) -> Result<Self> {
-                let size = header.size.unwrap_or(buf.len());
+            pub fn decode_atom<B: Buf>(header: Header, buf: &mut B) -> Result<Self> {
+                let mut buf = buf.take(header.size.unwrap_or(buf.remaining()));
 
-                let mut buf = buf.split_to(size);
                 let atom = match header.kind {
                     $(_ if header.kind == $kind::KIND => {
                         Any::$kind(match $kind::decode_atom(&mut buf) {
@@ -30,10 +30,10 @@ macro_rules! any {
                             Err(err) => return Err(err),
                         })
                     },)*
-                    _ => return Ok(Any::Unknown(header.kind, buf)),
+                    _ => return Ok(Any::Unknown(header.kind, buf.decode()?)),
                 };
 
-                if !buf.is_empty() {
+                if buf.has_remaining() {
                     return Err(Error::PartialDecode(header.kind));
                 }
 
@@ -42,7 +42,7 @@ macro_rules! any {
 		}
 
 		impl Decode for Any {
-            fn decode(buf: &mut Bytes) -> Result<Self> {
+            fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
 				let header = Header::decode(buf)?;
                 Self::decode_atom(header, buf)
             }
@@ -63,6 +63,46 @@ macro_rules! any {
 				buf[start..start + 4].copy_from_slice(&size.to_be_bytes());
 
 				Ok(())
+            }
+        }
+
+        impl ReadFrom for Any {
+            fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+                Option::<Any>::read_from(r)?.ok_or(Error::UnexpectedEof)
+            }
+        }
+
+        impl ReadFrom for Option<Any> {
+            fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+                let header = match Option::<Header>::read_from(r)? {
+                    Some(header) => header,
+                    None => return Ok(None),
+                };
+
+                // TODO This allocates on the heap.
+                // Ideally, we should use ReadFrom instead of Decode to avoid this.
+
+                // Don't use `with_capacity` on an untrusted size
+                // We allocate at most 4096 bytes upfront and grow as needed
+                let cap = header
+                    .size
+                    .map(|size| std::cmp::max(size, 4096))
+                    .unwrap_or(0);
+                let buf = &mut BytesMut::with_capacity(cap).writer();
+
+                match header.size {
+                    Some(size) => {
+                        let n = std::io::copy(&mut r.take(size as _), buf)? as _;
+                        if size != n {
+                            return Err(Error::OutOfBounds);
+                        }
+                    }
+                    None => {
+                        std::io::copy(r, buf)?;
+                    }
+                };
+
+                Ok(Some(Any::decode_atom(header, buf.get_mut())?))
             }
         }
 

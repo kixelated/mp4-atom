@@ -38,7 +38,7 @@ impl AtomExt for Vp09 {
 
     const KIND_EXT: FourCC = FourCC::new(b"vp09");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let start_code = buf.decode()?;
         let data_reference_index = buf.decode()?;
         <[u8; 16]>::decode(buf)?;
@@ -92,6 +92,7 @@ impl AtomExt for Vp09 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_vpcc() {

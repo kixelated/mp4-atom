@@ -15,13 +15,13 @@ pub(crate) trait AtomExt: Sized {
     type Ext: Ext;
 
     fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<Self::Ext>;
-    fn decode_atom_ext(buf: &mut Bytes, ext: Self::Ext) -> Result<Self>;
+    fn decode_atom_ext<B: Buf>(buf: &mut B, ext: Self::Ext) -> Result<Self>;
 }
 
 impl<T: AtomExt> Atom for T {
     const KIND: FourCC = Self::KIND_EXT;
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         let ext = Ext::decode(u32::decode(buf)?)?;
         AtomExt::decode_atom_ext(buf, ext)
     }

@@ -24,7 +24,7 @@ impl AtomExt for Elst {
 
     const KIND_EXT: FourCC = FourCC::new(b"elst");
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: ElstExt) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, ext: ElstExt) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
 
         let mut entries = Vec::new();
@@ -63,6 +63,7 @@ impl AtomExt for Elst {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_elst32() {

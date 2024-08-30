@@ -41,7 +41,7 @@ impl Default for Tx3g {
 impl Atom for Tx3g {
     const KIND: FourCC = FourCC::new(b"tx3g");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
@@ -99,6 +99,7 @@ impl Atom for Tx3g {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_tx3g() {

@@ -15,7 +15,7 @@ impl AtomExt for Mfhd {
     type Ext = ();
     const KIND_EXT: FourCC = FourCC::new(b"mfhd");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         Ok(Mfhd {
             sequence_number: u32::decode(buf)?,
         })
@@ -29,6 +29,7 @@ impl AtomExt for Mfhd {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]

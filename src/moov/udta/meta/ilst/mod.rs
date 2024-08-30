@@ -21,7 +21,7 @@ pub struct Ilst {
 impl Atom for Ilst {
     const KIND: FourCC = FourCC::new(b"ilst");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         let mut name = None;
         let mut year = None;
         let mut covr = None;
@@ -58,6 +58,7 @@ impl Atom for Ilst {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_ilst() {

@@ -10,13 +10,17 @@ pub use num::rational::Ratio;
 use crate::{Error, Result};
 
 pub trait Decode: Sized {
-    fn decode(buf: &mut Bytes) -> Result<Self>;
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self>;
 }
 
-pub trait DecodeTo {
+pub trait DecodeFrom {
     fn decode<T: Decode>(&mut self) -> Result<T>;
 }
 
+// Why not BufMut?
+// Well it's because we need to write the size of each atom.
+// If we use BufMut, we can't seek backwards so we have to calculate it upfront.
+// If we use Vec, then we can write 0 for the size, then write the atom, then go back and fix the size.
 pub trait Encode {
     fn encode(&self, buf: &mut BytesMut) -> Result<()>;
 }
@@ -25,17 +29,19 @@ pub trait EncodeTo {
     fn encode<T: Encode>(&mut self, v: &T) -> Result<()>;
 }
 
+// What about AsyncReadFrom?
+// One day, but async traits kinda suck so I'm putting it off.
 pub trait ReadFrom: Sized {
-    fn read_from<R: Read>(r: R) -> Result<Self>;
+    fn read_from<R: Read>(r: &mut R) -> Result<Self>;
 }
 
 pub trait WriteTo {
-    fn write_to<W: Write>(&self, w: W) -> Result<()>;
+    fn write_to<W: Write>(&self, w: &mut W) -> Result<()>;
 }
 
 impl Decode for u8 {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        if buf.is_empty() {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        if !buf.has_remaining() {
             return Err(Error::OutOfBounds);
         }
 
@@ -44,8 +50,8 @@ impl Decode for u8 {
 }
 
 impl Decode for i8 {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        if buf.is_empty() {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        if !buf.has_remaining() {
             return Err(Error::OutOfBounds);
         }
 
@@ -54,44 +60,44 @@ impl Decode for i8 {
 }
 
 impl Decode for u16 {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self::from_be_bytes(buf.decode()?))
     }
 }
 
 impl Decode for i16 {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self::from_be_bytes(buf.decode()?))
     }
 }
 
 impl Decode for u32 {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self::from_be_bytes(buf.decode()?))
     }
 }
 
 impl Decode for i32 {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self::from_be_bytes(buf.decode()?))
     }
 }
 
 impl Decode for u64 {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self::from_be_bytes(buf.decode()?))
     }
 }
 
 impl Decode for i64 {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self::from_be_bytes(buf.decode()?))
     }
 }
 
 impl<const N: usize> Decode for [u8; N] {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        if buf.len() < N {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        if buf.remaining() < N {
             return Err(Error::OutOfBounds);
         }
 
@@ -102,9 +108,9 @@ impl<const N: usize> Decode for [u8; N] {
 }
 
 impl<T: Decode> Decode for Vec<T> {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let mut vec = Vec::new();
-        while !buf.is_empty() {
+        while buf.has_remaining() {
             let item = T::decode(buf)?;
             vec.push(item);
         }
@@ -114,7 +120,7 @@ impl<T: Decode> Decode for Vec<T> {
 }
 
 impl Decode for String {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let mut bytes = Vec::new();
         loop {
             let byte = u8::decode(buf)?;
@@ -132,8 +138,8 @@ impl Decode for String {
 }
 
 impl<T: Decode> Decode for Option<T> {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        if !buf.is_empty() {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        if buf.has_remaining() {
             Ok(Some(T::decode(buf)?))
         } else {
             Ok(None)
@@ -142,8 +148,8 @@ impl<T: Decode> Decode for Option<T> {
 }
 
 impl Decode for Bytes {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        Ok(buf.split_to(buf.remaining()))
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        Ok(buf.copy_to_bytes(buf.remaining()))
     }
 }
 
@@ -254,7 +260,7 @@ impl Encode for Bytes {
     }
 }
 
-impl DecodeTo for Bytes {
+impl<B: Buf> DecodeFrom for B {
     fn decode<T: Decode>(&mut self) -> Result<T> {
         T::decode(self)
     }

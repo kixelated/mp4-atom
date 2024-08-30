@@ -6,7 +6,7 @@ use crate::*;
 pub trait Atom: Sized {
     const KIND: FourCC;
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self>;
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self>;
     fn encode_atom(&self, buf: &mut BytesMut) -> Result<()>;
 }
 
@@ -34,22 +34,19 @@ impl<T: Atom> Encode for T {
 
 impl<T: Atom> Decode for T {
     #[tracing::instrument(skip_all, fields(?kind = Self::KIND))]
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let header = Header::decode(buf)?;
 
-        let size = header.size.unwrap_or(buf.len());
-        if buf.len() < size {
-            return Err(Error::OutOfBounds);
-        }
+        let size = header.size.unwrap_or(buf.remaining());
+        let mut data = buf.take(size);
 
-        let mut data = buf.split_to(size);
         let atom = match Self::decode_atom(&mut data) {
             Ok(atom) => atom,
             Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
             Err(err) => return Err(err),
         };
 
-        if !data.is_empty() {
+        if data.has_remaining() {
             return Err(Error::PartialDecode(T::KIND));
         }
 
@@ -58,8 +55,55 @@ impl<T: Atom> Decode for T {
 }
 
 impl<T: Atom> ReadFrom for T {
-    fn read_from<T: Decode, R: Read>(&mut self, r: R) -> Result<T> {
-        let header = Header::read_from(r)?;
+    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+        Option::<T>::read_from(r)?.ok_or(Error::MissingBox(T::KIND))
+    }
+}
+
+impl<T: Atom> ReadFrom for Option<T> {
+    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+        let header = match Option::<Header>::read_from(r)? {
+            Some(header) => header,
+            None => return Ok(None),
+        };
+
+        // TODO This allocates on the heap.
+        // Ideally, we should use ReadFrom instead of Decode to avoid this.
+
+        // Don't use `with_capacity` on an untrusted size
+        // We allocate at most 4096 bytes upfront and grow as needed
+        let cap = header
+            .size
+            .map(|size| std::cmp::max(size, 4096))
+            .unwrap_or(0);
+
+        let buf = &mut BytesMut::with_capacity(cap).writer();
+
+        match header.size {
+            Some(size) => {
+                let n = std::io::copy(&mut r.take(size as _), buf)? as _;
+                if size != n {
+                    return Err(Error::OutOfBounds);
+                }
+            }
+            None => {
+                std::io::copy(r, buf)?;
+            }
+        };
+
+        let buf = buf.get_mut();
+
+        let atom = match T::decode_atom(buf) {
+            Ok(atom) => atom,
+            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
+            Err(err) => return Err(err),
+        };
+
+        if buf.has_remaining() {
+            return Err(Error::PartialDecode(T::KIND));
+        }
+
+        Ok(Some(atom))
     }
 }
 
@@ -75,7 +119,7 @@ nested! {
 macro_rules! nested {
     (required: [$($required:ident),*$(,)?], optional: [$($optional:ident),*$(,)?], multiple: [$($multiple:ident),*$(,)?],) => {
         paste::paste! {
-            fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+            fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
                 $( let mut [<$required:lower>] = None;)*
                 $( let mut [<$optional:lower>] = None;)*
                 $( let mut [<$multiple:lower>] = Vec::new();)*

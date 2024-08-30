@@ -19,7 +19,7 @@ impl AtomExt for Hdlr {
     type Ext = ();
     const KIND_EXT: FourCC = FourCC::new(b"hdlr");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         u32::decode(buf)?; // pre-defined
         let handler = u32::decode(buf)?;
 
@@ -49,6 +49,7 @@ impl AtomExt for Hdlr {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_hdlr() {

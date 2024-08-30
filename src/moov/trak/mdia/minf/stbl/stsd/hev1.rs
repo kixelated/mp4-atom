@@ -32,7 +32,7 @@ impl Default for Hev1 {
 impl Atom for Hev1 {
     const KIND: FourCC = FourCC::new(b"hev1");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
@@ -136,7 +136,7 @@ pub struct HvcCArray {
 impl Atom for Hvcc {
     const KIND: FourCC = FourCC::new(b"hvcC");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         let configuration_version = u8::decode(buf)?;
         let params = u8::decode(buf)?;
         let general_profile_space = params & 0b11000000 >> 6;
@@ -169,11 +169,7 @@ impl Atom for Hvcc {
 
             for _ in 0..num_nalus {
                 let size = u16::decode(buf)? as usize;
-                if buf.len() < size {
-                    return Err(Error::OutOfBounds);
-                }
-
-                let data = buf.split_to(size);
+                let data = buf.take(size).decode()?;
                 nalus.push(HvcCArrayNalu { size, data })
             }
 
@@ -248,6 +244,7 @@ impl Atom for Hvcc {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_hev1() {

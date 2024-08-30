@@ -32,7 +32,7 @@ impl Default for Avc1 {
 impl Atom for Avc1 {
     const KIND: FourCC = FourCC::new(b"avc1");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
@@ -123,7 +123,7 @@ impl Avcc {
 impl Atom for Avcc {
     const KIND: FourCC = FourCC::new(b"avcC");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
         let configuration_version = u8::decode(buf)?;
         let avc_profile_indication = u8::decode(buf)?;
         let profile_compatibility = u8::decode(buf)?;
@@ -134,10 +134,7 @@ impl Atom for Avcc {
         let mut sequence_parameter_sets = Vec::with_capacity(num_of_spss as usize);
         for _ in 0..num_of_spss {
             let size = u16::decode(buf)? as usize;
-            if buf.len() < size {
-                return Err(Error::OutOfBounds);
-            }
-            let nal = buf.split_to(size);
+            let nal = buf.take(size).decode()?;
             sequence_parameter_sets.push(nal);
         }
 
@@ -145,10 +142,7 @@ impl Atom for Avcc {
         let mut picture_parameter_sets = Vec::with_capacity(num_of_ppss as usize);
         for _ in 0..num_of_ppss {
             let size = u16::decode(buf)? as usize;
-            if buf.len() < size {
-                return Err(Error::OutOfBounds);
-            }
-            let nal = buf.split_to(size);
+            let nal = buf.take(size).decode()?;
             picture_parameter_sets.push(nal);
         }
 
@@ -186,6 +180,7 @@ impl Atom for Avcc {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_avc1() {

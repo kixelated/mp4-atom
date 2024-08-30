@@ -25,7 +25,7 @@ impl AtomExt for Mvhd {
 
     type Ext = MvhdExt;
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: MvhdExt) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, ext: MvhdExt) -> Result<Self> {
         let (creation_time, modification_time, timescale, duration) = match ext.version {
             MvhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -105,6 +105,7 @@ impl Default for Mvhd {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_mvhd32() {

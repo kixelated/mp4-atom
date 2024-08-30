@@ -29,7 +29,7 @@ impl AtomExt for Tfhd {
 
     type Ext = TfhdExt;
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: TfhdExt) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, ext: TfhdExt) -> Result<Self> {
         let track_id = u32::decode(buf)?;
 
         let base_data_offset = match ext.base_data_offset {
@@ -91,6 +91,7 @@ impl AtomExt for Tfhd {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_tfhd() {

@@ -10,7 +10,7 @@ impl AtomExt for Co64 {
 
     const KIND_EXT: FourCC = FourCC::new(b"co64");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
         let mut entries = Vec::new();
         for _ in 0..entry_count {
@@ -34,6 +34,7 @@ impl AtomExt for Co64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_co64() {

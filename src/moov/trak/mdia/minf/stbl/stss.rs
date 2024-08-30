@@ -10,7 +10,7 @@ impl AtomExt for Stss {
 
     const KIND_EXT: FourCC = FourCC::new(b"stss");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
 
         let mut entries = Vec::new();
@@ -35,6 +35,7 @@ impl AtomExt for Stss {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_stss() {

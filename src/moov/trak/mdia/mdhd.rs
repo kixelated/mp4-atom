@@ -20,7 +20,7 @@ impl AtomExt for Mdhd {
 
     const KIND_EXT: FourCC = FourCC::new(b"mdhd");
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: MdhdExt) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, ext: MdhdExt) -> Result<Self> {
         let (creation_time, modification_time, timescale, duration) = match ext.version {
             MdhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -86,6 +86,7 @@ fn language_code(language: &str) -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     fn test_language_code(lang: &str) {
         let code = language_code(lang);

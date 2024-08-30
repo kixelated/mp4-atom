@@ -16,7 +16,7 @@ impl AtomExt for Mehd {
 
     type Ext = MehdExt;
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: MehdExt) -> Result<Self> {
+    fn decode_atom_ext<B: Buf>(buf: &mut B, ext: MehdExt) -> Result<Self> {
         let fragment_duration = match ext.version {
             MehdVersion::V1 => u64::decode(buf)?,
             MehdVersion::V0 => u32::decode(buf)? as u64,
@@ -34,6 +34,7 @@ impl AtomExt for Mehd {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_mehd32() {
