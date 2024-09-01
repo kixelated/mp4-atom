@@ -8,7 +8,6 @@ pub use desc::*;
 pub use name::*;
 pub use year::*;
 
-use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Ilst {
@@ -21,7 +20,7 @@ pub struct Ilst {
 impl Atom for Ilst {
     const KIND: FourCC = FourCC::new(b"ilst");
 
-    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         let mut name = None;
         let mut year = None;
         let mut covr = None;

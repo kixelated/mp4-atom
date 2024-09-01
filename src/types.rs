@@ -7,7 +7,7 @@ pub use crate::*;
 pub struct u24([u8; 3]);
 
 impl Decode for u24 {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         Ok(Self(buf.decode()?))
     }
 }
@@ -37,7 +37,7 @@ impl TryFrom<u32> for u24 {
 pub struct u48([u8; 6]);
 
 impl Decode for u48 {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         Ok(Self(buf.decode()?))
     }
 }
@@ -87,7 +87,7 @@ impl<T: Copy> FixedPoint<T> {
 }
 
 impl<T: Decode> Decode for FixedPoint<T> {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         Ok(Self {
             int: T::decode(buf)?,
             dec: T::decode(buf)?,
@@ -158,7 +158,7 @@ impl Encode for Compressor {
         let name = self.0.as_bytes();
         let max = name.len().min(31);
         buf.put_slice(&name[..max]);
-        for _ in max..31 {
+        for _ in max..32 {
             buf.put_u8(0);
         }
 
@@ -167,7 +167,7 @@ impl Encode for Compressor {
 }
 
 impl Decode for Compressor {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         let mut name = [0; 32];
         buf.copy_to_slice(&mut name);
 

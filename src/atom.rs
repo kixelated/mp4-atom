@@ -6,7 +6,7 @@ use crate::*;
 pub trait Atom: Sized {
     const KIND: FourCC;
 
-    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self>;
+    fn decode_atom(buf: &mut Bytes) -> Result<Self>;
     fn encode_atom(&self, buf: &mut BytesMut) -> Result<()>;
 }
 
@@ -34,20 +34,22 @@ impl<T: Atom> Encode for T {
 
 impl<T: Atom> Decode for T {
     #[tracing::instrument(skip_all, fields(?kind = Self::KIND))]
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         let header = Header::decode(buf)?;
+        println!("header: {:?}", header);
 
         let size = header.size.unwrap_or(buf.remaining());
-        let mut data = buf.take(size);
+        let buf = &mut buf.decode_exact(size)?;
 
-        let atom = match Self::decode_atom(&mut data) {
+        let atom = match Self::decode_atom(buf) {
             Ok(atom) => atom,
             Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
+            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
             Err(err) => return Err(err),
         };
 
-        if data.has_remaining() {
-            return Err(Error::PartialDecode(T::KIND));
+        if buf.has_remaining() {
+            return Err(Error::UnderDecode(T::KIND));
         }
 
         Ok(atom)
@@ -77,30 +79,31 @@ impl<T: Atom> ReadFrom for Option<T> {
             .map(|size| std::cmp::max(size, 4096))
             .unwrap_or(0);
 
-        let buf = &mut BytesMut::with_capacity(cap).writer();
+        let mut buf = BytesMut::with_capacity(cap).writer();
 
         match header.size {
             Some(size) => {
-                let n = std::io::copy(&mut r.take(size as _), buf)? as _;
+                let n = std::io::copy(&mut r.take(size as _), &mut buf)? as _;
                 if size != n {
                     return Err(Error::OutOfBounds);
                 }
             }
             None => {
-                std::io::copy(r, buf)?;
+                std::io::copy(r, &mut buf)?;
             }
         };
 
-        let buf = buf.get_mut();
+        let buf = &mut buf.into_inner().freeze();
 
         let atom = match T::decode_atom(buf) {
             Ok(atom) => atom,
             Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
+            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
             Err(err) => return Err(err),
         };
 
         if buf.has_remaining() {
-            return Err(Error::PartialDecode(T::KIND));
+            return Err(Error::UnderDecode(T::KIND));
         }
 
         Ok(Some(atom))
@@ -119,7 +122,7 @@ nested! {
 macro_rules! nested {
     (required: [$($required:ident),*$(,)?], optional: [$($optional:ident),*$(,)?], multiple: [$($multiple:ident),*$(,)?],) => {
         paste::paste! {
-            fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
+            fn decode_atom(buf: &mut Bytes) -> Result<Self> {
                 $( let mut [<$required:lower>] = None;)*
                 $( let mut [<$optional:lower>] = None;)*
                 $( let mut [<$multiple:lower>] = Vec::new();)*

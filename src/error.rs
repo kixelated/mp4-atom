@@ -5,11 +5,14 @@ pub enum Error {
     #[error("out of bounds")]
     OutOfBounds,
 
-    #[error("partial decode: {0}")]
-    PartialDecode(FourCC),
+    #[error("short read")]
+    ShortRead,
 
     #[error("over decode: {0}")]
     OverDecode(FourCC),
+
+    #[error("under decode: {0}")]
+    UnderDecode(FourCC),
 
     #[error("atom too large")]
     TooLarge(FourCC),
@@ -35,8 +38,11 @@ pub enum Error {
     #[error("duplicate box: {0}")]
     DuplicateBox(FourCC),
 
-    #[error("missing descriptor")]
-    MissingDescriptor,
+    #[error("missing descriptor: {0}")]
+    MissingDescriptor(u8),
+
+    #[error("unexpected descriptor: {0}")]
+    UnexpectedDescriptor(u8),
 
     #[error("unexpected eof")]
     UnexpectedEof,

@@ -32,7 +32,7 @@ impl Default for Avc1 {
 impl Atom for Avc1 {
     const KIND: FourCC = FourCC::new(b"avc1");
 
-    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
@@ -87,7 +87,7 @@ impl Atom for Avc1 {
         self.frame_count.encode(buf)?;
         self.compressor.encode(buf)?;
         self.depth.encode(buf)?;
-        (-1i32).encode(buf)?; // pre-defined
+        (-1i16).encode(buf)?; // pre-defined
 
         self.avcc.encode(buf)?;
 
@@ -123,18 +123,18 @@ impl Avcc {
 impl Atom for Avcc {
     const KIND: FourCC = FourCC::new(b"avcC");
 
-    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         let configuration_version = u8::decode(buf)?;
         let avc_profile_indication = u8::decode(buf)?;
         let profile_compatibility = u8::decode(buf)?;
         let avc_level_indication = u8::decode(buf)?;
         let length_size_minus_one = u8::decode(buf)? & 0x3;
-        let num_of_spss = u8::decode(buf)? & 0x1F;
 
+        let num_of_spss = u8::decode(buf)? & 0x1F;
         let mut sequence_parameter_sets = Vec::with_capacity(num_of_spss as usize);
         for _ in 0..num_of_spss {
             let size = u16::decode(buf)? as usize;
-            let nal = buf.take(size).decode()?;
+            let nal = buf.decode_exact(size)?;
             sequence_parameter_sets.push(nal);
         }
 
@@ -142,7 +142,7 @@ impl Atom for Avcc {
         let mut picture_parameter_sets = Vec::with_capacity(num_of_ppss as usize);
         for _ in 0..num_of_ppss {
             let size = u16::decode(buf)? as usize;
-            let nal = buf.take(size).decode()?;
+            let nal = buf.decode_exact(size)?;
             picture_parameter_sets.push(nal);
         }
 
@@ -163,11 +163,13 @@ impl Atom for Avcc {
         self.profile_compatibility.encode(buf)?;
         self.avc_level_indication.encode(buf)?;
         (self.length_size_minus_one | 0xFC).encode(buf)?;
+
         (self.sequence_parameter_sets.len() as u8 | 0xE0).encode(buf)?;
         for sps in &self.sequence_parameter_sets {
             (sps.len() as u16).encode(buf)?;
             sps.encode(buf)?;
         }
+
         (self.picture_parameter_sets.len() as u8).encode(buf)?;
         for pps in &self.picture_parameter_sets {
             (pps.len() as u16).encode(buf)?;
@@ -180,7 +182,6 @@ impl Atom for Avcc {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_avc1() {

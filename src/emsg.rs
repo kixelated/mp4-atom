@@ -28,13 +28,13 @@ impl AtomExt for Emsg {
 
     type Ext = EmsgExt;
 
-    fn decode_atom_ext<B: Buf>(buf: &mut B, ext: EmsgExt) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, ext: EmsgExt) -> Result<Self> {
         Ok(match ext.version {
             EmsgVersion::V0 => Emsg {
                 scheme_id_uri: buf.decode()?,
                 value: buf.decode()?,
                 timescale: buf.decode()?,
-                presentation_time: EmsgTimestamp::Relative(u32::decode(buf)?),
+                presentation_time: EmsgTimestamp::Relative(buf.decode()?),
                 event_duration: buf.decode()?,
                 id: buf.decode()?,
                 message_data: buf.decode()?,
@@ -83,7 +83,6 @@ impl AtomExt for Emsg {
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_emsg_version0() {
         let decoded = Emsg {
@@ -100,7 +99,7 @@ mod tests {
         decoded.encode(&mut buf).unwrap();
 
         let mut buf = buf.freeze();
-        let output = Emsg::decode(&mut buf).unwrap();
+        let output = buf.decode().unwrap();
 
         assert_eq!(decoded, output);
     }
@@ -121,7 +120,7 @@ mod tests {
         decoded.encode(&mut buf).unwrap();
 
         let mut buf = buf.freeze();
-        let output = Emsg::decode(&mut buf).unwrap();
+        let output = buf.decode().unwrap();
         assert_eq!(decoded, output);
     }
 }

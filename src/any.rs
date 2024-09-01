@@ -19,14 +19,16 @@ macro_rules! any {
                 }
             }
 
-            pub fn decode_atom<B: Buf>(header: Header, buf: &mut B) -> Result<Self> {
-                let mut buf = buf.take(header.size.unwrap_or(buf.remaining()));
+            pub fn decode_atom(header: Header, buf: &mut Bytes) -> Result<Self> {
+                let size = header.size.unwrap_or(buf.remaining());
+                let mut buf = buf.decode_exact(size)?;
 
                 let atom = match header.kind {
                     $(_ if header.kind == $kind::KIND => {
                         Any::$kind(match $kind::decode_atom(&mut buf) {
                             Ok(atom) => atom,
                             Err(Error::OutOfBounds) => return Err(Error::OverDecode($kind::KIND)),
+                            Err(Error::ShortRead) => return Err(Error::UnderDecode($kind::KIND)),
                             Err(err) => return Err(err),
                         })
                     },)*
@@ -34,7 +36,7 @@ macro_rules! any {
                 };
 
                 if buf.has_remaining() {
-                    return Err(Error::PartialDecode(header.kind));
+                    return Err(Error::UnderDecode(header.kind));
                 }
 
                 Ok(atom)
@@ -42,8 +44,8 @@ macro_rules! any {
 		}
 
 		impl Decode for Any {
-            fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
-				let header = Header::decode(buf)?;
+            fn decode(buf: &mut Bytes) -> Result<Self> {
+				let header = buf.decode()?;
                 Self::decode_atom(header, buf)
             }
 		}
@@ -88,21 +90,24 @@ macro_rules! any {
                     .size
                     .map(|size| std::cmp::max(size, 4096))
                     .unwrap_or(0);
-                let buf = &mut BytesMut::with_capacity(cap).writer();
+
+                let mut buf = BytesMut::with_capacity(cap).writer();
 
                 match header.size {
                     Some(size) => {
-                        let n = std::io::copy(&mut r.take(size as _), buf)? as _;
+                        let n = std::io::copy(&mut r.take(size as _), &mut buf)? as _;
                         if size != n {
                             return Err(Error::OutOfBounds);
                         }
                     }
                     None => {
-                        std::io::copy(r, buf)?;
+                        std::io::copy(r, &mut buf)?;
                     }
                 };
 
-                Ok(Some(Any::decode_atom(header, buf.get_mut())?))
+
+                let mut buf = buf.into_inner().freeze();
+                Ok(Some(Any::decode_atom(header, &mut buf)?))
             }
         }
 

@@ -1,7 +1,6 @@
 mod url;
 pub use url::*;
 
-use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Dref {
@@ -13,7 +12,7 @@ impl AtomExt for Dref {
 
     const KIND_EXT: FourCC = FourCC::new(b"dref");
 
-    fn decode_atom_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
         let mut urls = Vec::new();
 

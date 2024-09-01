@@ -6,7 +6,7 @@ pub struct Desc(pub String);
 impl Atom for Desc {
     const KIND: FourCC = FourCC::new(b"desc");
 
-    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         Ok(Desc(buf.decode()?))
     }
 

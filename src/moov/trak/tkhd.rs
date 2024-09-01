@@ -32,7 +32,7 @@ impl AtomExt for Tkhd {
 
     type Ext = TkhdExt;
 
-    fn decode_atom_ext<B: Buf>(buf: &mut B, ext: TkhdExt) -> Result<Self> {
+    fn decode_atom_ext(buf: &mut Bytes, ext: TkhdExt) -> Result<Self> {
         let (creation_time, modification_time, track_id, _, duration) = match ext.version {
             TkhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -114,7 +114,7 @@ pub struct Matrix {
 }
 
 impl Decode for Matrix {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         Ok(Self {
             a: buf.decode()?,
             b: buf.decode()?,

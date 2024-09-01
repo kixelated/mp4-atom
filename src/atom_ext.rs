@@ -15,13 +15,13 @@ pub(crate) trait AtomExt: Sized {
     type Ext: Ext;
 
     fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<Self::Ext>;
-    fn decode_atom_ext<B: Buf>(buf: &mut B, ext: Self::Ext) -> Result<Self>;
+    fn decode_atom_ext(buf: &mut Bytes, ext: Self::Ext) -> Result<Self>;
 }
 
 impl<T: AtomExt> Atom for T {
     const KIND: FourCC = Self::KIND_EXT;
 
-    fn decode_atom<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
         let ext = Ext::decode(u32::decode(buf)?)?;
         AtomExt::decode_atom_ext(buf, ext)
     }
@@ -146,10 +146,10 @@ macro_rules! ext {
 			// Helper when there are no flags
 			impl From<[<$name Version>]> for [<$name Ext>] {
 				fn from(version: [<$name Version>]) -> Self {
-					Self {
-						version,
-						..Default::default()
-					}
+					// Not using ..Default::default() to avoid Clippy
+					let mut ext = Self::default();
+					ext.version = version;
+					ext
 				}
 			}
 		}

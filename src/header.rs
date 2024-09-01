@@ -64,7 +64,7 @@ impl Encode for FourCC {
 }
 
 impl Decode for FourCC {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         Ok(FourCC(buf.decode()?))
     }
 }
@@ -101,7 +101,7 @@ impl Encode for Header {
 }
 
 impl Decode for Header {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
         let size = u32::decode(buf)?;
         let kind = FourCC::decode(buf)?;
 
@@ -143,15 +143,15 @@ impl ReadFrom for Option<Header> {
 
         r.read_exact(&mut buf[n..])?;
 
-        let size = u32::decode(&mut &buf[..4])?;
-        let kind = FourCC::decode(&mut &buf[4..])?;
+        let size = u32::from_be_bytes(buf[0..4].try_into().unwrap());
+        let kind = u32::from_be_bytes(buf[4..8].try_into().unwrap()).into();
 
         let size = match size {
             0 => None,
             1 => {
                 // Read another 8 bytes
                 r.read_exact(&mut buf)?;
-                let size = u64::decode(&mut &buf[..8])?;
+                let size = u64::from_be_bytes(buf);
                 let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
 
                 Some(size as usize)

@@ -148,7 +148,7 @@ fn test_bbb() {
         0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x70,
     ];
 
-    let mut buf = Bytes::from_static(&ENCODED);
+    let mut buf = Bytes::from_static(ENCODED);
     let ftyp = Ftyp::decode(&mut buf).expect("failed to decode ftyp");
     let moov = Moov::decode(&mut buf).expect("failed to decode moov");
 
@@ -160,8 +160,6 @@ fn test_bbb() {
             compatible_brands: vec![b"iso6".into(), b"cmfc".into(), b"mp41".into()],
         }
     );
-
-    println!("{:#?}", moov);
 
     assert_eq!(
         moov,
@@ -205,7 +203,6 @@ fn test_bbb() {
                     hdlr: Hdlr {
                         handler_type: b"vide".into(),
                         name: "(C) 2007 Google Inc. v08.13.2007.".into(),
-                        ..Default::default()
                     },
                     minf: Minf {
                         smhd: None,
@@ -216,7 +213,7 @@ fn test_bbb() {
                         dinf: Dinf {
                             dref: Dref {
                                 urls: vec![Url {
-                                    location: "".try_into().unwrap(),
+                                    location: "".into(),
                                 }],
                             },
                         },
@@ -284,7 +281,7 @@ fn test_bbb() {
                         dinf: Dinf {
                             dref: Dref {
                                 urls: vec![Url {
-                                    location: "".try_into().unwrap(),
+                                    location: "".into(),
                                 }],
                             },
                         },
@@ -296,21 +293,21 @@ fn test_bbb() {
                                     samplesize: 16,
                                     samplerate: 44100.into(),
                                     esds: Some(Esds {
-                                        es_desc: ESDescriptor {
+                                        es_desc: esds::EsDescriptor {
                                             es_id: 2,
-                                            dec_config: DecoderConfigDescriptor {
+                                            dec_config: esds::DecoderConfig{
                                                 object_type_indication: 64,
                                                 stream_type: 5,
                                                 max_bitrate: 125587,
                                                 avg_bitrate: 125587,
-                                                dec_specific: DecoderSpecificDescriptor {
+                                                dec_specific: esds::DecoderSpecific {
                                                     profile: 2,
                                                     freq_index: 4,
                                                     chan_conf: 2,
                                                 },
                                                 ..Default::default()
                                             },
-                                            sl_config: SLConfigDescriptor{},
+                                            sl_config: esds::SLConfig{},
                                         },
                                     }),
                                 }),
