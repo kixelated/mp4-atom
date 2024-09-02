@@ -16,7 +16,7 @@ ext! {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Trun {
     pub data_offset: Option<i32>,
-    pub entires: Vec<TrunEntry>,
+    pub entries: Vec<TrunEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -45,7 +45,7 @@ impl AtomExt for Trun {
             false => None,
         };
 
-        let mut entires = Vec::new();
+        let mut entries = Vec::new();
 
         // TODO this is undoubtedly wrong
         for _ in 0..sample_count {
@@ -66,7 +66,7 @@ impl AtomExt for Trun {
                 false => None,
             };
 
-            entires.push(TrunEntry {
+            entries.push(TrunEntry {
                 duration,
                 size,
                 flags: sample_flags,
@@ -76,7 +76,7 @@ impl AtomExt for Trun {
 
         Ok(Trun {
             data_offset,
-            entires,
+            entries,
         })
     }
 
@@ -87,18 +87,18 @@ impl AtomExt for Trun {
             first_sample_flags: false,
 
             // TODO error if these are not all the same
-            sample_duration: self.entires.iter().all(|s| s.duration.is_some()),
-            sample_size: self.entires.iter().all(|s| s.size.is_some()),
-            sample_flags: self.entires.iter().all(|s| s.flags.is_some()),
-            sample_cts: self.entires.iter().all(|s| s.cts.is_some()),
+            sample_duration: self.entries.iter().all(|s| s.duration.is_some()),
+            sample_size: self.entries.iter().all(|s| s.size.is_some()),
+            sample_flags: self.entries.iter().all(|s| s.flags.is_some()),
+            sample_cts: self.entries.iter().all(|s| s.cts.is_some()),
         };
 
-        (self.entires.len() as u32).encode(buf)?;
+        (self.entries.len() as u32).encode(buf)?;
 
         self.data_offset.encode(buf)?;
         0u32.encode(buf)?; // TODO first sample flags
 
-        for entry in &self.entires {
+        for entry in &self.entries {
             ext.sample_duration.then_some(entry.duration).encode(buf)?;
             ext.sample_size.then_some(entry.size).encode(buf)?;
             ext.sample_flags.then_some(entry.flags).encode(buf)?;

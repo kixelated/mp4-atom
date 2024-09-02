@@ -36,7 +36,6 @@ impl<T: Atom> Decode for T {
     #[tracing::instrument(skip_all, fields(?kind = Self::KIND))]
     fn decode(buf: &mut Bytes) -> Result<Self> {
         let header = Header::decode(buf)?;
-        println!("header: {:?}", header);
 
         let size = header.size.unwrap_or(buf.remaining());
         let buf = &mut buf.decode_exact(size)?;
