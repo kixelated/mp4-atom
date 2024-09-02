@@ -9,6 +9,8 @@ pub use num::rational::Ratio;
 
 use crate::{Error, Result};
 
+/// A trait to decode a type from a buffer.
+//
 // Why not Buf?
 // I did try it, but it prevents the DecodeFrom trait because of a weird recursion bug.
 // It's easier in general to just use Bytes to avoid traits anyway, even if it's less flexible.
@@ -31,29 +33,37 @@ pub trait Decode: Sized {
     }
 }
 
+/// A helper that lets you call `buf.decode()` for any type that implements Decode.
+/// This will automatically infer T from the context, reducing boilerplate significantly.
 pub trait DecodeFrom {
     fn decode<T: Decode>(&mut self) -> Result<T>;
     fn decode_exact<T: Decode>(&mut self, size: usize) -> Result<T>;
 }
 
+/// A trait to encode a type to a buffer.
+//
 // Why not BufMut?
 // Well it's because we need to write the size of each atom.
 // If we use BufMut, we can't seek backwards so we have to calculate it upfront.
-// If we use Vec, then we can write 0 for the size, then write the atom, then go back and fix the size.
+// If we use BytesMut or Vec, then we can write 0 for the size, then write the atom, then go back and fix the size.
 pub trait Encode {
     fn encode(&self, buf: &mut BytesMut) -> Result<()>;
 }
 
+/// A helper that lets you call `buf.encode(&value)` for any type that implements Encode.
 pub trait EncodeTo {
     fn encode<T: Encode>(&mut self, v: &T) -> Result<()>;
 }
 
+/// A trait to read a type from a reader.
+///
 // What about AsyncReadFrom?
 // One day, but async traits kinda suck so I'm putting it off.
 pub trait ReadFrom: Sized {
     fn read_from<R: Read>(r: &mut R) -> Result<Self>;
 }
 
+/// A trait to write a type to a writer.
 pub trait WriteTo {
     fn write_to<W: Write>(&self, w: &mut W) -> Result<()>;
 }

@@ -2,6 +2,7 @@ use std::{fmt, io::Read};
 
 use crate::*;
 
+/// A FourCC is a four-character code used to identify atoms.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct FourCC([u8; 4]);
 
@@ -69,12 +70,14 @@ impl Decode for FourCC {
     }
 }
 
+/// A atom header, which contains the atom's kind and size.
 #[derive(Debug, Clone, Copy)]
 pub struct Header {
     /// The name of the atom, always 4 bytes.
     pub kind: FourCC,
 
-    // The size of the atom, **excluding** the header.
+    /// The size of the atom, **excluding** the header.
+    /// This is optional when the atom extends to the end of the file.
     pub size: Option<usize>,
 }
 
@@ -160,5 +163,29 @@ impl ReadFrom for Option<Header> {
         };
 
         Ok(Some(Header { kind, size }))
+    }
+}
+
+impl Header {
+    pub fn decode_any(&self, buf: &mut Bytes) -> Result<Any> {
+        Any::decode_atom(self, buf)
+    }
+
+    pub fn decode_atom<T: Atom>(&self, buf: &mut Bytes) -> Result<T> {
+        let size = self.size.unwrap_or(buf.remaining());
+        let buf = &mut buf.decode_exact(size)?;
+
+        let atom = match T::decode_atom(buf) {
+            Ok(atom) => atom,
+            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
+            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
+            Err(err) => return Err(err),
+        };
+
+        if buf.has_remaining() {
+            return Err(Error::UnderDecode(T::KIND));
+        }
+
+        Ok(atom)
     }
 }

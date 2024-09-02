@@ -5,6 +5,7 @@ use std::io::Read;
 
 macro_rules! any {
     ($($kind:ident,)*) => {
+        /// Any of the supported atoms.
         #[derive(Clone, PartialEq)]
         pub enum Any {
             $($kind($kind),)*
@@ -12,6 +13,7 @@ macro_rules! any {
         }
 
         impl Any {
+            /// Get the kind of the atom.
             pub fn kind(&self) -> FourCC {
                 match self {
                     $(Any::$kind(_) => $kind::KIND,)*
@@ -19,7 +21,8 @@ macro_rules! any {
                 }
             }
 
-            pub fn decode_atom(header: Header, buf: &mut Bytes) -> Result<Self> {
+            /// Decode the atom from a header and buffer.
+            pub fn decode_atom(header: &Header, buf: &mut Bytes) -> Result<Self> {
                 let size = header.size.unwrap_or(buf.remaining());
                 let mut buf = buf.decode_exact(size)?;
 
@@ -46,7 +49,7 @@ macro_rules! any {
 		impl Decode for Any {
             fn decode(buf: &mut Bytes) -> Result<Self> {
 				let header = buf.decode()?;
-                Self::decode_atom(header, buf)
+                Self::decode_atom(&header, buf)
             }
 		}
 
@@ -107,7 +110,7 @@ macro_rules! any {
 
 
                 let mut buf = buf.into_inner().freeze();
-                Ok(Some(Any::decode_atom(header, &mut buf)?))
+                Ok(Some(Any::decode_atom(&header, &mut buf)?))
             }
         }
 
@@ -119,6 +122,12 @@ macro_rules! any {
                 }
             }
         }
+
+        $(impl From<$kind> for Any {
+            fn from(inner: $kind) -> Self {
+                Any::$kind(inner)
+            }
+        })*
     };
 }
 

@@ -1,3 +1,6 @@
+//! A simple command-line MP4 parser.
+//!
+//! cargo run -- -i <input_file> info
 use std::{
     fs::File,
     io::{stdin, Read},
@@ -19,10 +22,7 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    Info {
-        #[arg(short, long)]
-        verbose: bool,
-    },
+    Info,
 }
 
 fn main() -> anyhow::Result<()> {

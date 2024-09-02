@@ -2,7 +2,7 @@ use std::io::Read;
 
 use crate::*;
 
-// A helper to encode/decode a known atom type.
+/// A helper to encode/decode a known atom type.
 pub trait Atom: Sized {
     const KIND: FourCC;
 

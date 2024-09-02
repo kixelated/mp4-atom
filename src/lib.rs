@@ -1,60 +1,84 @@
-//! All ISO-MP4 boxes (atoms) and operations.
+//! # MP4 / ISO Base Media File Format
 //!
-//! * [ISO/IEC 14496-12](https://en.wikipedia.org/wiki/MPEG-4_Part_14) - ISO Base Media File Format (QuickTime, MPEG-4, etc)
-//! * [ISO/IEC 14496-14](https://en.wikipedia.org/wiki/MPEG-4_Part_14) - MP4 file format
-//! * ISO/IEC 14496-17 - Streaming text format
-//! * [ISO 23009-1](https://www.iso.org/standard/79329.html) -Dynamic adaptive streaming over HTTP (DASH)
+//! This library provides encoding for the ISO Base Media File Format (ISO/IEC 14496-12).
+//! It's meant to be low level, performing encoding/decoding of the binary format without
+//! validation or interpretation of the data. You have to know what boxes to expect!
 //!
-//! http://developer.apple.com/documentation/QuickTime/QTFF/index.html
-//! http://www.adobe.com/devnet/video/articles/mp4_movie_atom.html
-//! http://mp4ra.org/#/atoms
+//! You use the [Encode], [Decode], [ReadFrom], and [WriteTo] traits to encode and decode atoms.
+//! The simplest way to use this library is with the [Any] enum, representing one of the supported atoms.
 //!
-//! Supported Atoms:
-//! ftyp
-//! moov
-//!     mvhd
-//!     udta
-//!         meta
-//!             ilst
-//!                 data
-//!     trak
-//!         tkhd
-//!         mdia
-//!             mdhd
-//!             hdlr
-//!             minf
-//!                 stbl
-//!                     stsd
-//!                         avc1
-//!                         hev1
-//!                         mp4a
-//!                         tx3g
-//!                     stts
-//!                     stsc
-//!                     stsz
-//!                     stss
-//!                     stco
-//!                     co64
-//!                     ctts
-//!                 dinf
-//!                     dref
-//!                 smhd
-//!                 vmhd
-//!         edts
-//!             elst
-//!     mvex
-//!         mehd
-//!         trex
-//! emsg
-//! moof
-//!     mfhd
-//!     traf
-//!         tfhd
-//!         tfdt
-//!         trun
-//! mdat
-//! free
+//! ```rust
+//! use bytes::Bytes;
+//! use mp4_atom::{Any, Decode, Ftyp};
 //!
+//!  // A simple ftyp atom
+//! let mut input = Bytes::from_static(b"\x00\x00\x00\x14ftyp\x00\x00\x00\x00mp41");
+//! let atom = Any::decode(&mut input).unwrap();
+//!
+//! // Make sure we got the right atom
+//! assert_eq!(atom, Ftyp {
+//! 	major_brand: b"mp41".into(),
+//! 	minor_version: 0,
+//! 	compatible_brands: vec![],
+//! }.into());
+//!
+//! // Encode it back
+//! let mut output = BytesMut::new();
+//! atom.encode(&mut output).unwrap();
+//!
+//! assert_eq!(input, output.freeze());
+//! ```
+//!
+//! If you know the type of atom you're expecting, you can use the specific atom type directly.
+//!
+//! ```rust
+//! use bytes::Bytes;
+//! use mp4_atom::{Any, Decode, Ftyp};
+//!
+//! let mut input = Bytes::from_static(b"\x00\x00\x00\x14ftyp\x00\x00\x00\x00mp41");
+//! let atom = Ftyp::decode(&mut input).unwrap();
+//!
+//! // Make sure we got the right atom
+//! assert_eq!(atom, Ftyp {
+//! 	major_brand: b"mp41".into(),
+//! 	minor_version: 0,
+//! 	compatible_brands: vec![],
+//! });
+//!
+//! // Encode it back
+//! let mut output = BytesMut::new();
+//! atom.encode(&mut output).unwrap();
+//!
+//! assert_eq!(input, output.freeze());
+//! ```
+//!
+//! And finally, if you're working with a Reader/Writer, you can use the [ReadFrom] and [WriteTo] traits.
+//!
+//! ```rust
+//! use bytes::Bytes;
+//! use mp4_atom::{Any, ReadFrom, WriteTo};
+//!
+//! let mut input = Bytes::from_static(b"\x00\x00\x00\x14ftyp\x00\x00\x00\x00mp41").reader();
+//! let atom = Any::read_from(&mut input).unwrap();
+//!
+//! // Make sure we got the right atom
+//! assert_eq!(atom, Ftyp {
+//! 	major_brand: b"mp41".into(),
+//! 	minor_version: 0,
+//! 	compatible_brands: vec![],
+//! });
+//!
+//! // Encode it back to a writer
+//! let mut output = BytesMut::new().writer();
+//! atom.write_to(&mut output).unwrap();
+//!
+//! assert_eq!(input, output.into_inner().freeze());
+//! ```
+//!
+//! However, be aware that reading a [Mdat] atom will read the entire contents into memory.
+//! If you're working with large files, you may want to call [Header::read_from] first and check the [Header::kind]:
+//! - If it's an [Mdat::KIND], then you can read the next [Header::size] bytes manually.
+//! - If it's something else, you can use [Header::decode_atom] or [Header::decode_any] like normal.
 
 mod any;
 mod atom;
