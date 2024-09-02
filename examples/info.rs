@@ -1,35 +1,19 @@
 //! A simple command-line MP4 parser.
 //!
-//! cargo run -- -i <input_file> info
+//! This example reads an MP4 file from stdin or a file and prints the atoms it finds.
+//!
+//! cargo run --example info  -- <input_file>
 use std::{
     fs::File,
     io::{stdin, Read},
-    path::PathBuf,
 };
 
-use clap::{Parser, Subcommand};
 use mp4_atom::ReadFrom;
-
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    #[command(subcommand)]
-    command: Option<Commands>,
-
-    #[arg(short, long, help = "Path to the input file; default is stdin")]
-    input: Option<PathBuf>,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    Info,
-}
 
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
-    let args = Args::parse();
 
-    match args.input {
+    match std::env::args().nth(1) {
         Some(path) => {
             let mut file = File::open(path)?;
             info(&mut file)

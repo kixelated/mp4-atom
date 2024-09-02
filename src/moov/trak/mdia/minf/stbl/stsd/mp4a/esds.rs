@@ -256,12 +256,11 @@ impl Decode for DecoderSpecific {
             profile = 32 + ((byte_a & 7) | (byte_b >> 5));
         }
 
-        let freq_index;
-        if profile > 31 {
-            freq_index = (byte_b >> 1) & 0x0F;
+        let freq_index = if profile > 31 {
+            (byte_b >> 1) & 0x0F
         } else {
-            freq_index = ((byte_a & 0x07) << 1) + (byte_b >> 7);
-        }
+            ((byte_a & 0x07) << 1) + (byte_b >> 7)
+        };
 
         let chan_conf;
         if freq_index == 15 {

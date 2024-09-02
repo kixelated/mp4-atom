@@ -68,6 +68,15 @@ pub trait WriteTo {
     fn write_to<W: Write>(&self, w: &mut W) -> Result<()>;
 }
 
+impl<T: Encode> WriteTo for T {
+    fn write_to<W: Write>(&self, w: &mut W) -> Result<()> {
+        // TODO We should avoid allocating a buffer here.
+        let mut buf = BytesMut::new();
+        self.encode(&mut buf)?;
+        Ok(w.write_all(&buf)?)
+    }
+}
+
 impl Decode for u8 {
     fn decode(buf: &mut Bytes) -> Result<Self> {
         if !buf.has_remaining() {
