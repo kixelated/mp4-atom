@@ -1,5 +1,7 @@
 use crate::*;
 
+/// A media data atom.
+///
 /// I would not recommend using this for large files, as it reads the entire file into memory.
 /// Instead, use [ReadFrom] to read the [Header] first followed by the mdat data.
 #[derive(Debug, Clone, PartialEq)]

@@ -2,7 +2,7 @@ use std::{fmt, io::Read};
 
 use crate::*;
 
-/// A FourCC is a four-character code used to identify atoms.
+/// A four-character code used to identify atoms.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct FourCC([u8; 4]);
 
