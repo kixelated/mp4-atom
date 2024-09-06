@@ -32,7 +32,7 @@ impl AtomExt for Tkhd {
 
     type Ext = TkhdExt;
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: TkhdExt) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, ext: TkhdExt) -> Result<Self> {
         let (creation_time, modification_time, track_id, _, duration) = match ext.version {
             TkhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -75,7 +75,7 @@ impl AtomExt for Tkhd {
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<TkhdExt> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<TkhdExt> {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.track_id.encode(buf)?;

@@ -6,8 +6,8 @@ use crate::*;
 pub trait Atom: Sized {
     const KIND: FourCC;
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self>;
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()>;
+    fn decode_body(buf: &mut Bytes) -> Result<Self>;
+    fn encode_body(&self, buf: &mut BytesMut) -> Result<()>;
 }
 
 impl<T: Atom> Encode for T {
@@ -18,7 +18,7 @@ impl<T: Atom> Encode for T {
         // Encode a 0 for the size, we'll come back to it later
         0u32.encode(buf)?;
         Self::KIND.encode(buf)?;
-        self.encode_atom(buf)?;
+        self.encode_body(buf)?;
 
         // Update the size field
         // TODO support sizes larger than u32 (4GB)
@@ -40,7 +40,7 @@ impl<T: Atom> Decode for T {
         let size = header.size.unwrap_or(buf.remaining());
         let buf = &mut buf.decode_exact(size)?;
 
-        let atom = match Self::decode_atom(buf) {
+        let atom = match Self::decode_body(buf) {
             Ok(atom) => atom,
             Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
             Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
@@ -57,44 +57,20 @@ impl<T: Atom> Decode for T {
 
 impl<T: Atom> ReadFrom for T {
     fn read_from<R: Read>(r: &mut R) -> Result<Self> {
-        Option::<T>::read_from(r)?.ok_or(Error::MissingBox(T::KIND))
+        <Option<T> as ReadFrom>::read_from(r)?.ok_or(Error::MissingBox(T::KIND))
     }
 }
 
 impl<T: Atom> ReadFrom for Option<T> {
     fn read_from<R: Read>(r: &mut R) -> Result<Self> {
-        let header = match Option::<Header>::read_from(r)? {
+        let header = match <Option<Header> as ReadFrom>::read_from(r)? {
             Some(header) => header,
             None => return Ok(None),
         };
 
-        // TODO This allocates on the heap.
-        // Ideally, we should use ReadFrom instead of Decode to avoid this.
+        let mut buf = header.read_body(r)?;
 
-        // Don't use `with_capacity` on an untrusted size
-        // We allocate at most 4096 bytes upfront and grow as needed
-        let cap = header
-            .size
-            .map(|size| std::cmp::max(size, 4096))
-            .unwrap_or(0);
-
-        let mut buf = BytesMut::with_capacity(cap).writer();
-
-        match header.size {
-            Some(size) => {
-                let n = std::io::copy(&mut r.take(size as _), &mut buf)? as _;
-                if size != n {
-                    return Err(Error::OutOfBounds);
-                }
-            }
-            None => {
-                std::io::copy(r, &mut buf)?;
-            }
-        };
-
-        let buf = &mut buf.into_inner().freeze();
-
-        let atom = match T::decode_atom(buf) {
+        let atom = match T::decode_body(&mut buf) {
             Ok(atom) => atom,
             Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
             Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
@@ -106,6 +82,90 @@ impl<T: Atom> ReadFrom for Option<T> {
         }
 
         Ok(Some(atom))
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl<T: Atom> AsyncReadFrom for T {
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+        <Option<T> as AsyncReadFrom>::read_from(r)
+            .await?
+            .ok_or(Error::MissingBox(T::KIND))
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl<T: Atom> AsyncReadFrom for Option<T> {
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+        let header = match <Option<Header> as AsyncReadFrom>::read_from(r).await? {
+            Some(header) => header,
+            None => return Ok(None),
+        };
+
+        let mut buf = header.read_body_tokio(r).await?;
+
+        let atom = match T::decode_body(&mut buf) {
+            Ok(atom) => atom,
+            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
+            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
+            Err(err) => return Err(err),
+        };
+
+        if buf.has_remaining() {
+            return Err(Error::UnderDecode(T::KIND));
+        }
+
+        Ok(Some(atom))
+    }
+}
+
+impl<T: Atom> DecodeAtom for T {
+    fn decode_atom(header: &Header, buf: &mut Bytes) -> Result<T> {
+        if header.kind != T::KIND {
+            return Err(Error::UnexpectedBox(header.kind));
+        }
+
+        let size = header.size.unwrap_or(buf.remaining());
+        let buf = &mut buf.decode_exact(size)?;
+
+        let atom = match T::decode_body(buf) {
+            Ok(atom) => atom,
+            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
+            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
+            Err(err) => return Err(err),
+        };
+
+        if buf.has_remaining() {
+            return Err(Error::UnderDecode(T::KIND));
+        }
+
+        Ok(atom)
+    }
+}
+
+impl<T: Atom> ReadAtom for T {
+    fn read_atom<R: Read>(header: &Header, r: &mut R) -> Result<Self> {
+        if header.kind != T::KIND {
+            return Err(Error::UnexpectedBox(header.kind));
+        }
+
+        let mut buf = header.read_body(r)?;
+        Self::decode_atom(header, &mut buf)
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl<T: Atom> AsyncReadAtom for T {
+    async fn read_atom<R: tokio::io::AsyncRead + Unpin>(
+        header: &Header,
+        r: &mut R,
+    ) -> Result<Self> {
+        if header.kind != T::KIND {
+            return Err(Error::UnexpectedBox(header.kind));
+        }
+
+        let mut buf = header.read_body_tokio(r).await?;
+        Self::decode_atom(header, &mut buf)
     }
 }
 
@@ -121,7 +181,7 @@ nested! {
 macro_rules! nested {
     (required: [$($required:ident),*$(,)?], optional: [$($optional:ident),*$(,)?], multiple: [$($multiple:ident),*$(,)?],) => {
         paste::paste! {
-            fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+            fn decode_body(buf: &mut Bytes) -> Result<Self> {
                 $( let mut [<$required:lower>] = None;)*
                 $( let mut [<$optional:lower>] = None;)*
                 $( let mut [<$multiple:lower>] = Vec::new();)*
@@ -157,7 +217,7 @@ macro_rules! nested {
                 })
             }
 
-            fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+            fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
                 $( self.[<$required:lower>].encode(buf)?; )*
                 $( self.[<$optional:lower>].encode(buf)?; )*
                 $( self.[<$multiple:lower>].encode(buf)?; )*

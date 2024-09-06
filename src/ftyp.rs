@@ -10,7 +10,7 @@ pub struct Ftyp {
 impl Atom for Ftyp {
     const KIND: FourCC = FourCC::new(b"ftyp");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body(buf: &mut Bytes) -> Result<Self> {
         Ok(Ftyp {
             major_brand: buf.decode()?,
             minor_version: buf.decode()?,
@@ -18,7 +18,7 @@ impl Atom for Ftyp {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
         self.major_brand.encode(buf)?;
         self.minor_version.encode(buf)?;
         self.compatible_brands.encode(buf)?;

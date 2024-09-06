@@ -24,7 +24,7 @@ impl AtomExt for Vpcc {
 
     type Ext = VpccExt;
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: VpccExt) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: VpccExt) -> Result<Self> {
         let profile = buf.decode()?;
         let level = buf.decode()?;
         let (bit_depth, chroma_subsampling, video_full_range_flag) = {
@@ -49,7 +49,7 @@ impl AtomExt for Vpcc {
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<VpccExt> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<VpccExt> {
         self.profile.encode(buf)?;
         self.level.encode(buf)?;
         ((self.bit_depth << 4)

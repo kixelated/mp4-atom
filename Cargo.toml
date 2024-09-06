@@ -18,6 +18,11 @@ bytes = "1"
 num = "0.4"
 tracing = "0.1"
 
+tokio = { version = "1", features = ["io-util"], optional = true }
+
+[features]
+tokio = ["dep:tokio"]
+
 [dev-dependencies]
 anyhow = "1"
 tracing-subscriber = "0.3"

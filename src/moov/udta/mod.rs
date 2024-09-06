@@ -1,6 +1,7 @@
 mod meta;
 pub use meta::*;
 
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Udta {
@@ -10,12 +11,12 @@ pub struct Udta {
 impl Atom for Udta {
     const KIND: FourCC = FourCC::new(b"udta");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body(buf: &mut Bytes) -> Result<Self> {
         let meta = buf.decode()?;
         Ok(Udta { meta })
     }
 
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
         self.meta.encode(buf)?;
         Ok(())
     }
@@ -24,7 +25,6 @@ impl Atom for Udta {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_udta_empty() {

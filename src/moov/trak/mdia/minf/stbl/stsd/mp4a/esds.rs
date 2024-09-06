@@ -10,7 +10,7 @@ impl AtomExt for Esds {
 
     const KIND_EXT: FourCC = FourCC::new(b"esds");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let mut es_desc = None;
 
         while let Some(desc) = Option::<Descriptor>::decode(buf)? {
@@ -28,7 +28,7 @@ impl AtomExt for Esds {
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         Descriptor::from(self.es_desc).encode(buf)
     }
 }

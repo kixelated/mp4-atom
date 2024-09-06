@@ -8,6 +8,7 @@ pub use smhd::*;
 pub use stbl::*;
 pub use vmhd::*;
 
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Minf {

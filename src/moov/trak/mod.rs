@@ -6,6 +6,8 @@ pub use edts::*;
 pub use mdia::*;
 pub use tkhd::*;
 
+use crate::*;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Trak {
     pub tkhd: Tkhd,

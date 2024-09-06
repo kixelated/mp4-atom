@@ -28,7 +28,7 @@ impl Default for Mp4a {
 impl Atom for Mp4a {
     const KIND: FourCC = FourCC::new(b"mp4a");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body(buf: &mut Bytes) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
@@ -65,7 +65,7 @@ impl Atom for Mp4a {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
         0u32.encode(buf)?; // reserved
         0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;

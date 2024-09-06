@@ -1,74 +1,6 @@
-use std::{fmt, io::Read};
+use std::io::Read;
 
 use crate::*;
-
-/// A FourCC is a four-character code used to identify atoms.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct FourCC([u8; 4]);
-
-impl FourCC {
-    // Helper function to create a FourCC from a string literal
-    // ex. FourCC::new(b"abcd")
-    pub const fn new(value: &[u8; 4]) -> Self {
-        FourCC(*value)
-    }
-}
-
-impl From<u32> for FourCC {
-    fn from(value: u32) -> Self {
-        FourCC(value.to_be_bytes())
-    }
-}
-
-impl From<FourCC> for u32 {
-    fn from(cc: FourCC) -> Self {
-        u32::from_be_bytes(cc.0)
-    }
-}
-
-impl From<[u8; 4]> for FourCC {
-    fn from(value: [u8; 4]) -> Self {
-        FourCC(value)
-    }
-}
-
-impl From<FourCC> for [u8; 4] {
-    fn from(cc: FourCC) -> Self {
-        cc.0
-    }
-}
-
-impl From<&[u8; 4]> for FourCC {
-    fn from(value: &[u8; 4]) -> Self {
-        FourCC(*value)
-    }
-}
-
-impl fmt::Display for FourCC {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = String::from_utf8_lossy(&self.0);
-        write!(f, "{}", s)
-    }
-}
-
-impl fmt::Debug for FourCC {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = String::from_utf8_lossy(&self.0);
-        write!(f, "{}", s)
-    }
-}
-
-impl Encode for FourCC {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
-        self.0.encode(buf)
-    }
-}
-
-impl Decode for FourCC {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        Ok(FourCC(buf.decode()?))
-    }
-}
 
 /// A atom header, which contains the atom's kind and size.
 #[derive(Debug, Clone, Copy)]
@@ -108,31 +40,23 @@ impl Decode for Header {
         let size = u32::decode(buf)?;
         let kind = FourCC::decode(buf)?;
 
-        Ok(match size {
-            0 => Self { kind, size: None },
+        let size = match size {
+            0 => None,
             1 => {
+                // Read another 8 bytes
                 let size = u64::decode(buf)?;
-                let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
+                Some(size.checked_sub(16).ok_or(Error::InvalidSize)? as usize)
+            }
+            _ => Some(size.checked_sub(8).ok_or(Error::InvalidSize)? as usize),
+        };
 
-                Self {
-                    kind,
-                    size: Some(size as usize),
-                }
-            }
-            _ => {
-                let size = size.checked_sub(8).ok_or(Error::InvalidSize)?;
-                Self {
-                    kind,
-                    size: Some(size as usize),
-                }
-            }
-        })
+        Ok(Self { kind, size })
     }
 }
 
 impl ReadFrom for Header {
     fn read_from<R: Read>(r: &mut R) -> Result<Self> {
-        Option::<Header>::read_from(r)?.ok_or(Error::UnexpectedEof)
+        <Option<Header> as ReadFrom>::read_from(r)?.ok_or(Error::UnexpectedEof)
     }
 }
 
@@ -166,26 +90,101 @@ impl ReadFrom for Option<Header> {
     }
 }
 
-impl Header {
-    pub fn decode_any(&self, buf: &mut Bytes) -> Result<Any> {
-        Any::decode_atom(self, buf)
+#[cfg(feature = "tokio")]
+impl AsyncReadFrom for Header {
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+        <Option<Header> as AsyncReadFrom>::read_from(r)
+            .await?
+            .ok_or(Error::UnexpectedEof)
     }
+}
 
-    pub fn decode_atom<T: Atom>(&self, buf: &mut Bytes) -> Result<T> {
-        let size = self.size.unwrap_or(buf.remaining());
-        let buf = &mut buf.decode_exact(size)?;
+#[cfg(feature = "tokio")]
+impl AsyncReadFrom for Option<Header> {
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+        use tokio::io::AsyncReadExt;
 
-        let atom = match T::decode_atom(buf) {
-            Ok(atom) => atom,
-            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
-            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
-            Err(err) => return Err(err),
-        };
-
-        if buf.has_remaining() {
-            return Err(Error::UnderDecode(T::KIND));
+        let mut buf = [0u8; 8];
+        let n = r.read(&mut buf).await?;
+        if n == 0 {
+            return Ok(None);
         }
 
-        Ok(atom)
+        r.read_exact(&mut buf[n..]).await?;
+
+        let size = u32::from_be_bytes(buf[0..4].try_into().unwrap());
+        let kind = u32::from_be_bytes(buf[4..8].try_into().unwrap()).into();
+
+        let size = match size {
+            0 => None,
+            1 => {
+                // Read another 8 bytes
+                r.read_exact(&mut buf).await?;
+                let size = u64::from_be_bytes(buf);
+                let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
+
+                Some(size as usize)
+            }
+            _ => Some(size.checked_sub(8).ok_or(Error::InvalidSize)? as usize),
+        };
+
+        Ok(Some(Header { kind, size }))
+    }
+}
+
+// Utility methods
+impl Header {
+    pub(crate) fn read_body<R: Read>(&self, r: &mut R) -> Result<Bytes> {
+        // TODO This allocates on the heap.
+        // Ideally, we should use ReadFrom instead of Decode to avoid this.
+
+        // Don't use `with_capacity` on an untrusted size
+        // We allocate at most 4096 bytes upfront and grow as needed
+        let cap = self.size.unwrap_or(0).max(4096);
+        let mut buf = BytesMut::with_capacity(cap).writer();
+
+        match self.size {
+            Some(size) => {
+                let n = std::io::copy(&mut r.take(size as _), &mut buf)? as _;
+                if size != n {
+                    return Err(Error::OutOfBounds);
+                }
+            }
+            None => {
+                std::io::copy(r, &mut buf)?;
+            }
+        };
+
+        Ok(buf.into_inner().freeze())
+    }
+
+    #[cfg(feature = "tokio")]
+    pub(crate) async fn read_body_tokio<R: tokio::io::AsyncRead + Unpin>(
+        &self,
+        r: &mut R,
+    ) -> Result<Bytes> {
+        use tokio::io::AsyncReadExt;
+
+        // TODO This allocates on the heap.
+        // Ideally, we should use ReadFrom instead of Decode to avoid this.
+
+        // Don't use `with_capacity` on an untrusted size
+        // We allocate at most 4096 bytes upfront and grow as needed
+        let cap = self.size.unwrap_or(0).max(4096);
+        let mut buf = Vec::with_capacity(cap);
+
+        match self.size {
+            Some(size) => {
+                let n = tokio::io::copy(&mut r.take(size as _), &mut buf).await? as _;
+                if size != n {
+                    return Err(Error::OutOfBounds);
+                }
+            }
+            None => {
+                tokio::io::copy(r, &mut buf).await?;
+            }
+        };
+
+        Ok(buf.into())
     }
 }

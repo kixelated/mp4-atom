@@ -18,7 +18,7 @@ impl AtomExt for Vmhd {
 
     const KIND_EXT: FourCC = FourCC::new(b"vmhd");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let graphics_mode = buf.decode()?;
         let op_color = RgbColor {
             red: buf.decode()?,
@@ -32,7 +32,7 @@ impl AtomExt for Vmhd {
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         self.graphics_mode.encode(buf)?;
         self.op_color.red.encode(buf)?;
         self.op_color.green.encode(buf)?;
