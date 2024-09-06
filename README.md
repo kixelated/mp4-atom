@@ -100,4 +100,4 @@ match header.kind {
 
 ### Asynchronous IO
 Enable using the `tokio` feature.
-It's the same as the above two but using [AsyncReadFrom], [AsyncWriteTo], and [AsyncReadAtom] instead.
+It's the same as the above two but using the `AsyncReadFrom`, `AsyncWriteTo`, and `AsyncReadAtom` traits instead.
