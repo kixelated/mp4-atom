@@ -2,7 +2,7 @@
 [![docs.rs](https://img.shields.io/docsrs/mp4-atom)](https://docs.rs/mp4-atom)
 [![discord](https://img.shields.io/discord/1124083992740761730)](https://discord.gg/FCYF3p99mr)
 
-# MP4 / ISO Base Media File Format
+# mp4-atom
 This library provides encoding for the ISO Base Media File Format (ISO/IEC 14496-12).
 It's meant to be low level, performing encoding/decoding of the binary format without
 validation or interpretation of the data. You have to know what boxes to expect!
@@ -64,7 +64,7 @@ atom.write_to(&mut writer)?;
 ```
 
 ### Handling large atoms
-To avoid reading large files into memory, you may want to call `Header::read_from` manually:
+To avoid reading large files into memory, you can call `Header::read_from` manually:
 
 ```rust
 use mp4_atom::{Atom, Any, Header, ReadFrom, ReadAtom, WriteTo, Ftyp, Moov};
@@ -99,6 +99,5 @@ match header.kind {
 ```
 
 ### Asynchronous IO
-**(feature = "tokio")**
-
-Same as the above two but use [AsyncReadFrom], [AsyncWriteTo], and [AsyncReadAtom].
+Enable using the `tokio` feature.
+It's the same as the above two but using [AsyncReadFrom], [AsyncWriteTo], and [AsyncReadAtom] instead.

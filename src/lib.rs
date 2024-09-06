@@ -1,4 +1,4 @@
-//! # MP4 / ISO Base Media File Format
+//! # mp4-atom
 //!
 //! This library provides encoding for the ISO Base Media File Format (ISO/IEC 14496-12).
 //! It's meant to be low level, performing encoding/decoding of the binary format without
@@ -93,7 +93,7 @@
 //! ```
 //!
 //! ### Handling large atoms
-//! To avoid reading large files into memory, you may want to call [Header::read_from] manually:
+//! To avoid reading large files into memory, you can call [Header::read_from] manually:
 //!
 //! ```rust
 //! # use bytes::{Buf, BufMut, Bytes, BytesMut};
@@ -135,9 +135,8 @@
 //! ```
 //!
 //! ### Asynchronous IO
-//! **(feature = "tokio")**
-//!
-//! Same as the above two but use [AsyncReadFrom], [AsyncWriteTo], and [AsyncReadAtom].
+//! Enable using the `tokio` feature.
+//! It's the same as the above two but using [AsyncReadFrom], [AsyncWriteTo], and [AsyncReadAtom] instead.
 //!
 
 mod any;
