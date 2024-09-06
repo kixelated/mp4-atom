@@ -10,7 +10,7 @@ impl AtomExt for Stco {
 
     const KIND_EXT: FourCC = FourCC::new(b"stco");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let count = u32::decode(buf)?;
         let mut entries = Vec::new();
 
@@ -22,7 +22,7 @@ impl AtomExt for Stco {
         Ok(Stco { entries })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         (self.entries.len() as u32).encode(buf)?;
         for chunk_offset in self.entries.iter() {
             (chunk_offset).encode(buf)?;
@@ -35,7 +35,6 @@ impl AtomExt for Stco {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_stco() {

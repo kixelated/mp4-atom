@@ -15,13 +15,13 @@ impl AtomExt for Mfhd {
     type Ext = ();
     const KIND_EXT: FourCC = FourCC::new(b"mfhd");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         Ok(Mfhd {
             sequence_number: buf.decode()?,
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         self.sequence_number.encode(buf)?;
         Ok(())
     }

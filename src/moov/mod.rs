@@ -8,6 +8,8 @@ pub use mvhd::*;
 pub use trak::*;
 pub use udta::*;
 
+use crate::*;
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Moov {
     pub mvhd: Mvhd,

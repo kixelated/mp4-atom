@@ -1,6 +1,7 @@
 mod dref;
 pub use dref::*;
 
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Dinf {

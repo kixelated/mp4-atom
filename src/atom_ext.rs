@@ -14,25 +14,25 @@ pub(crate) trait AtomExt: Sized {
     // One day default associated types will be a thing, then this can be ()
     type Ext: Ext;
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<Self::Ext>;
-    fn decode_atom_ext(buf: &mut Bytes, ext: Self::Ext) -> Result<Self>;
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<Self::Ext>;
+    fn decode_body_ext(buf: &mut Bytes, ext: Self::Ext) -> Result<Self>;
 }
 
 impl<T: AtomExt> Atom for T {
     const KIND: FourCC = Self::KIND_EXT;
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body(buf: &mut Bytes) -> Result<Self> {
         let ext = Ext::decode(u32::decode(buf)?)?;
-        AtomExt::decode_atom_ext(buf, ext)
+        AtomExt::decode_body_ext(buf, ext)
     }
 
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
         // Here's the magic, we reserve space for the version/flags first
         let start = buf.len();
         0u32.encode(buf)?;
 
         // That way we can return them as part of the trait, avoiding boilerplate
-        let ext = self.encode_atom_ext(buf)?;
+        let ext = self.encode_body_ext(buf)?;
 
         // Go back and update the version/flags
         let header = ext.encode()?;

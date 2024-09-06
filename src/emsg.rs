@@ -28,7 +28,7 @@ impl AtomExt for Emsg {
 
     type Ext = EmsgExt;
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: EmsgExt) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, ext: EmsgExt) -> Result<Self> {
         Ok(match ext.version {
             EmsgVersion::V0 => Emsg {
                 scheme_id_uri: buf.decode()?,
@@ -51,7 +51,7 @@ impl AtomExt for Emsg {
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<EmsgExt> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<EmsgExt> {
         Ok(match self.presentation_time {
             EmsgTimestamp::Absolute(presentation_time) => {
                 self.timescale.encode(buf)?;

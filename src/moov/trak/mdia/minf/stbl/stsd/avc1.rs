@@ -32,7 +32,7 @@ impl Default for Avc1 {
 impl Atom for Avc1 {
     const KIND: FourCC = FourCC::new(b"avc1");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body(buf: &mut Bytes) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
@@ -71,7 +71,7 @@ impl Atom for Avc1 {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
         0u32.encode(buf)?; // reserved
         0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;
@@ -123,7 +123,7 @@ impl Avcc {
 impl Atom for Avcc {
     const KIND: FourCC = FourCC::new(b"avcC");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body(buf: &mut Bytes) -> Result<Self> {
         let configuration_version = u8::decode(buf)?;
         let avc_profile_indication = u8::decode(buf)?;
         let profile_compatibility = u8::decode(buf)?;
@@ -157,7 +157,7 @@ impl Atom for Avcc {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
         self.configuration_version.encode(buf)?;
         self.avc_profile_indication.encode(buf)?;
         self.profile_compatibility.encode(buf)?;

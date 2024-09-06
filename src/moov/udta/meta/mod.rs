@@ -1,6 +1,8 @@
 mod ilst;
 pub use ilst::*;
 
+use crate::*;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Meta {
     Mdir { ilst: Option<Ilst> },
@@ -18,7 +20,7 @@ impl AtomExt for Meta {
     type Ext = ();
     const KIND_EXT: FourCC = FourCC::new(b"meta");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
 
         match hdlr.handler_type {
@@ -30,7 +32,7 @@ impl AtomExt for Meta {
         }
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         let hldr = match self {
             Self::Mdir { .. } => Hdlr {
                 handler_type: MDIR,

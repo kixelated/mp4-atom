@@ -16,7 +16,7 @@ impl AtomExt for Tfdt {
 
     type Ext = TfdtExt;
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: TfdtExt) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, ext: TfdtExt) -> Result<Self> {
         let base_media_decode_time = match ext.version {
             TfdtVersion::V1 => u64::decode(buf)?,
             TfdtVersion::V0 => u32::decode(buf)? as u64,
@@ -27,7 +27,7 @@ impl AtomExt for Tfdt {
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<TfdtExt> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<TfdtExt> {
         self.base_media_decode_time.encode(buf)?;
         Ok(TfdtVersion::V1.into())
     }

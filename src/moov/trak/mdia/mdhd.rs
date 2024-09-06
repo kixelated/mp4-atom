@@ -20,7 +20,7 @@ impl AtomExt for Mdhd {
 
     const KIND_EXT: FourCC = FourCC::new(b"mdhd");
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: MdhdExt) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, ext: MdhdExt) -> Result<Self> {
         let (creation_time, modification_time, timescale, duration) = match ext.version {
             MdhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -50,7 +50,7 @@ impl AtomExt for Mdhd {
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<MdhdExt> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<MdhdExt> {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.timescale.encode(buf)?;

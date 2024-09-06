@@ -14,7 +14,7 @@ impl AtomExt for Trex {
 
     const KIND_EXT: FourCC = FourCC::new(b"trex");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         Ok(Trex {
             track_id: buf.decode()?,
             default_sample_description_index: buf.decode()?,
@@ -24,7 +24,7 @@ impl AtomExt for Trex {
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         self.track_id.encode(buf)?;
         self.default_sample_description_index.encode(buf)?;
         self.default_sample_duration.encode(buf)?;
@@ -38,7 +38,6 @@ impl AtomExt for Trex {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_trex() {
