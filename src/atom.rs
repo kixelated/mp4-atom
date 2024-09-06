@@ -57,13 +57,13 @@ impl<T: Atom> Decode for T {
 
 impl<T: Atom> ReadFrom for T {
     fn read_from<R: Read>(r: &mut R) -> Result<Self> {
-        Option::<T>::read_from(r)?.ok_or(Error::MissingBox(T::KIND))
+        <Option<T> as ReadFrom>::read_from(r)?.ok_or(Error::MissingBox(T::KIND))
     }
 }
 
 impl<T: Atom> ReadFrom for Option<T> {
     fn read_from<R: Read>(r: &mut R) -> Result<Self> {
-        let header = match Option::<Header>::read_from(r)? {
+        let header = match <Option<Header> as ReadFrom>::read_from(r)? {
             Some(header) => header,
             None => return Ok(None),
         };
@@ -93,6 +93,66 @@ impl<T: Atom> ReadFrom for Option<T> {
         };
 
         let buf = &mut buf.into_inner().freeze();
+
+        let atom = match T::decode_atom(buf) {
+            Ok(atom) => atom,
+            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
+            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
+            Err(err) => return Err(err),
+        };
+
+        if buf.has_remaining() {
+            return Err(Error::UnderDecode(T::KIND));
+        }
+
+        Ok(Some(atom))
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl<T: Atom> AsyncReadFrom for T {
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+        <Option<T> as AsyncReadFrom>::read_from(r)
+            .await?
+            .ok_or(Error::MissingBox(T::KIND))
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl<T: Atom> AsyncReadFrom for Option<T> {
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+        use tokio::io::AsyncReadExt;
+
+        let header = match <Option<Header> as AsyncReadFrom>::read_from(r).await? {
+            Some(header) => header,
+            None => return Ok(None),
+        };
+
+        // TODO This allocates on the heap.
+        // Ideally, we should use ReadFrom instead of Decode to avoid this.
+
+        // Don't use `with_capacity` on an untrusted size
+        // We allocate at most 4096 bytes upfront and grow as needed
+        let cap = header
+            .size
+            .map(|size| std::cmp::max(size, 4096))
+            .unwrap_or(0);
+
+        let mut buf = Vec::with_capacity(cap);
+
+        match header.size {
+            Some(size) => {
+                let n = tokio::io::copy(&mut r.take(size as _), &mut buf).await? as _;
+                if size != n {
+                    return Err(Error::OutOfBounds);
+                }
+            }
+            None => {
+                tokio::io::copy(r, &mut buf).await?;
+            }
+        };
+
+        let buf = &mut buf.into();
 
         let atom = match T::decode_atom(buf) {
             Ok(atom) => atom,

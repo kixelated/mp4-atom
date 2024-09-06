@@ -71,49 +71,6 @@ macro_rules! any {
             }
         }
 
-        impl ReadFrom for Any {
-            fn read_from<R: Read>(r: &mut R) -> Result<Self> {
-                Option::<Any>::read_from(r)?.ok_or(Error::UnexpectedEof)
-            }
-        }
-
-        impl ReadFrom for Option<Any> {
-            fn read_from<R: Read>(r: &mut R) -> Result<Self> {
-                let header = match Option::<Header>::read_from(r)? {
-                    Some(header) => header,
-                    None => return Ok(None),
-                };
-
-                // TODO This allocates on the heap.
-                // Ideally, we should use ReadFrom instead of Decode to avoid this.
-
-                // Don't use `with_capacity` on an untrusted size
-                // We allocate at most 4096 bytes upfront and grow as needed
-                let cap = header
-                    .size
-                    .map(|size| std::cmp::max(size, 4096))
-                    .unwrap_or(0);
-
-                let mut buf = BytesMut::with_capacity(cap).writer();
-
-                match header.size {
-                    Some(size) => {
-                        let n = std::io::copy(&mut r.take(size as _), &mut buf)? as _;
-                        if size != n {
-                            return Err(Error::OutOfBounds);
-                        }
-                    }
-                    None => {
-                        std::io::copy(r, &mut buf)?;
-                    }
-                };
-
-
-                let mut buf = buf.into_inner().freeze();
-                Ok(Some(Any::decode_atom(&header, &mut buf)?))
-            }
-        }
-
         impl fmt::Debug for Any {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 match self {
@@ -183,4 +140,94 @@ any! {
             Trun,
     Mdat,
     Free,
+}
+
+impl ReadFrom for Any {
+    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+        <Option<Any> as ReadFrom>::read_from(r)?.ok_or(Error::UnexpectedEof)
+    }
+}
+
+impl ReadFrom for Option<Any> {
+    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+        let header = match <Option<Header> as ReadFrom>::read_from(r)? {
+            Some(header) => header,
+            None => return Ok(None),
+        };
+
+        // TODO This allocates on the heap.
+        // Ideally, we should use ReadFrom instead of Decode to avoid this.
+
+        // Don't use `with_capacity` on an untrusted size
+        // We allocate at most 4096 bytes upfront and grow as needed
+        let cap = header
+            .size
+            .map(|size| std::cmp::max(size, 4096))
+            .unwrap_or(0);
+
+        let mut buf = BytesMut::with_capacity(cap).writer();
+
+        match header.size {
+            Some(size) => {
+                let n = std::io::copy(&mut r.take(size as _), &mut buf)? as _;
+                if size != n {
+                    return Err(Error::OutOfBounds);
+                }
+            }
+            None => {
+                std::io::copy(r, &mut buf)?;
+            }
+        };
+
+        let mut buf = buf.into_inner().freeze();
+        Ok(Some(Any::decode_atom(&header, &mut buf)?))
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl AsyncReadFrom for Any {
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+        <Option<Any> as AsyncReadFrom>::read_from(r)
+            .await?
+            .ok_or(Error::UnexpectedEof)
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl AsyncReadFrom for Option<Any> {
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+        use tokio::io::AsyncReadExt;
+
+        let header = match <Option<Header> as AsyncReadFrom>::read_from(r).await? {
+            Some(header) => header,
+            None => return Ok(None),
+        };
+
+        // TODO This allocates on the heap.
+        // Ideally, we should use ReadFrom instead of Decode to avoid this.
+
+        // Don't use `with_capacity` on an untrusted size
+        // We allocate at most 4096 bytes upfront and grow as needed
+        let cap = header
+            .size
+            .map(|size| std::cmp::max(size, 4096))
+            .unwrap_or(0);
+
+        let mut buf = Vec::with_capacity(cap);
+
+        match header.size {
+            Some(size) => {
+                let n = tokio::io::copy(&mut r.take(size as _), &mut buf).await? as _;
+                if size != n {
+                    return Err(Error::OutOfBounds);
+                }
+            }
+            None => {
+                tokio::io::copy(r, &mut buf).await?;
+            }
+        };
+
+        let mut buf = buf.into();
+        Ok(Some(Any::decode_atom(&header, &mut buf)?))
+    }
 }

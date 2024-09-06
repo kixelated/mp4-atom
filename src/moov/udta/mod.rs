@@ -1,6 +1,7 @@
 mod meta;
 pub use meta::*;
 
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Udta {
@@ -24,7 +25,6 @@ impl Atom for Udta {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_udta_empty() {

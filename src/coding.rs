@@ -56,9 +56,6 @@ pub trait EncodeTo {
 }
 
 /// A trait to read a type from a reader.
-///
-// What about AsyncReadFrom?
-// One day, but async traits kinda suck so I'm putting it off.
 pub trait ReadFrom: Sized {
     fn read_from<R: Read>(r: &mut R) -> Result<Self>;
 }
@@ -74,6 +71,30 @@ impl<T: Encode> WriteTo for T {
         let mut buf = BytesMut::new();
         self.encode(&mut buf)?;
         Ok(w.write_all(&buf)?)
+    }
+}
+
+#[cfg(feature = "tokio")]
+pub trait AsyncReadFrom: Sized {
+    #[allow(async_fn_in_trait)]
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self>;
+}
+
+#[cfg(feature = "tokio")]
+pub trait AsyncWriteTo {
+    #[allow(async_fn_in_trait)]
+    async fn write_to<W: tokio::io::AsyncWrite + Unpin>(&self, w: &mut W) -> Result<()>;
+}
+
+#[cfg(feature = "tokio")]
+impl<T: Encode> AsyncWriteTo for T {
+    async fn write_to<W: tokio::io::AsyncWrite + Unpin>(&self, w: &mut W) -> Result<()> {
+        use tokio::io::AsyncWriteExt;
+
+        // TODO We should avoid allocating a buffer here.
+        let mut buf = BytesMut::new();
+        self.encode(&mut buf)?;
+        Ok(w.write_all(&buf).await?)
     }
 }
 

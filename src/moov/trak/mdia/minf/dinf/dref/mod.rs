@@ -1,6 +1,7 @@
 mod url;
 pub use url::*;
 
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Dref {

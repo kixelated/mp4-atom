@@ -2,73 +2,6 @@ use std::{fmt, io::Read};
 
 use crate::*;
 
-/// A four-character code used to identify atoms.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct FourCC([u8; 4]);
-
-impl FourCC {
-    // Helper function to create a FourCC from a string literal
-    // ex. FourCC::new(b"abcd")
-    pub const fn new(value: &[u8; 4]) -> Self {
-        FourCC(*value)
-    }
-}
-
-impl From<u32> for FourCC {
-    fn from(value: u32) -> Self {
-        FourCC(value.to_be_bytes())
-    }
-}
-
-impl From<FourCC> for u32 {
-    fn from(cc: FourCC) -> Self {
-        u32::from_be_bytes(cc.0)
-    }
-}
-
-impl From<[u8; 4]> for FourCC {
-    fn from(value: [u8; 4]) -> Self {
-        FourCC(value)
-    }
-}
-
-impl From<FourCC> for [u8; 4] {
-    fn from(cc: FourCC) -> Self {
-        cc.0
-    }
-}
-
-impl From<&[u8; 4]> for FourCC {
-    fn from(value: &[u8; 4]) -> Self {
-        FourCC(*value)
-    }
-}
-
-impl fmt::Display for FourCC {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = String::from_utf8_lossy(&self.0);
-        write!(f, "{}", s)
-    }
-}
-
-impl fmt::Debug for FourCC {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = String::from_utf8_lossy(&self.0);
-        write!(f, "{}", s)
-    }
-}
-
-impl Encode for FourCC {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
-        self.0.encode(buf)
-    }
-}
-
-impl Decode for FourCC {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        Ok(FourCC(buf.decode()?))
-    }
-}
 
 /// A atom header, which contains the atom's kind and size.
 #[derive(Debug, Clone, Copy)]
@@ -132,7 +65,7 @@ impl Decode for Header {
 
 impl ReadFrom for Header {
     fn read_from<R: Read>(r: &mut R) -> Result<Self> {
-        Option::<Header>::read_from(r)?.ok_or(Error::UnexpectedEof)
+        <Option<Header> as ReadFrom>::read_from(r)?.ok_or(Error::UnexpectedEof)
     }
 }
 
@@ -154,6 +87,48 @@ impl ReadFrom for Option<Header> {
             1 => {
                 // Read another 8 bytes
                 r.read_exact(&mut buf)?;
+                let size = u64::from_be_bytes(buf);
+                let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
+
+                Some(size as usize)
+            }
+            _ => Some(size.checked_sub(8).ok_or(Error::InvalidSize)? as usize),
+        };
+
+        Ok(Some(Header { kind, size }))
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl AsyncReadFrom for Header {
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+        <Option<Header> as AsyncReadFrom>::read_from(r)
+            .await?
+            .ok_or(Error::UnexpectedEof)
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl AsyncReadFrom for Option<Header> {
+    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+        use tokio::io::AsyncReadExt;
+
+        let mut buf = [0u8; 8];
+        let n = r.read(&mut buf).await?;
+        if n == 0 {
+            return Ok(None);
+        }
+
+        r.read_exact(&mut buf[n..]).await?;
+
+        let size = u32::from_be_bytes(buf[0..4].try_into().unwrap());
+        let kind = u32::from_be_bytes(buf[4..8].try_into().unwrap()).into();
+
+        let size = match size {
+            0 => None,
+            1 => {
+                // Read another 8 bytes
+                r.read_exact(&mut buf).await?;
                 let size = u64::from_be_bytes(buf);
                 let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
 

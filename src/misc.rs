@@ -2,6 +2,80 @@ use std::fmt;
 
 use crate::*;
 
+/// A four-character code used to identify atoms.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct FourCC([u8; 4]);
+
+impl FourCC {
+    // Helper function to create a FourCC from a string literal
+    // ex. FourCC::new(b"abcd")
+    pub const fn new(value: &[u8; 4]) -> Self {
+        FourCC(*value)
+    }
+}
+
+impl From<u32> for FourCC {
+    fn from(value: u32) -> Self {
+        FourCC(value.to_be_bytes())
+    }
+}
+
+impl From<FourCC> for u32 {
+    fn from(cc: FourCC) -> Self {
+        u32::from_be_bytes(cc.0)
+    }
+}
+
+impl From<[u8; 4]> for FourCC {
+    fn from(value: [u8; 4]) -> Self {
+        FourCC(value)
+    }
+}
+
+impl From<FourCC> for [u8; 4] {
+    fn from(cc: FourCC) -> Self {
+        cc.0
+    }
+}
+
+impl From<&[u8; 4]> for FourCC {
+    fn from(value: &[u8; 4]) -> Self {
+        FourCC(*value)
+    }
+}
+
+impl fmt::Display for FourCC {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = String::from_utf8_lossy(&self.0);
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Debug for FourCC {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = String::from_utf8_lossy(&self.0);
+        write!(f, "{}", s)
+    }
+}
+
+impl Encode for FourCC {
+    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+        self.0.encode(buf)
+    }
+}
+
+impl Decode for FourCC {
+    fn decode(buf: &mut Bytes) -> Result<Self> {
+        Ok(FourCC(buf.decode()?))
+    }
+}
+
+impl AsRef<[u8; 4]> for FourCC {
+    fn as_ref(&self) -> &[u8; 4] {
+        &self.0
+    }
+}
+
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub struct u24([u8; 3]);

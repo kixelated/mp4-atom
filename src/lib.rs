@@ -98,9 +98,9 @@ mod free;
 mod ftyp;
 mod header;
 mod mdat;
+mod misc;
 mod moof;
 mod moov;
-mod types;
 
 pub use any::*;
 pub use atom::*;
@@ -112,9 +112,9 @@ pub use free::*;
 pub use ftyp::*;
 pub use header::*;
 pub use mdat::*;
+pub use misc::*;
 pub use moof::*;
 pub use moov::*;
-pub use types::*;
 
 #[cfg(test)]
 mod test;

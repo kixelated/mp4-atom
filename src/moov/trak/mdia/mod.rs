@@ -6,6 +6,7 @@ pub use hdlr::*;
 pub use mdhd::*;
 pub use minf::*;
 
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Mdia {
