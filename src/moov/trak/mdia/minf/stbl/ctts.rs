@@ -46,7 +46,6 @@ impl AtomExt for Ctts {
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_ctts() {
         let expected = Ctts {

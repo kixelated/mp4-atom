@@ -39,7 +39,6 @@ impl AtomExt for Trex {
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_trex() {
         let expected = Trex {

@@ -36,7 +36,6 @@ impl AtomExt for Stss {
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_stss() {
         let expected = Stss {

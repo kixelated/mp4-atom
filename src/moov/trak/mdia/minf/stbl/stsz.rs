@@ -56,7 +56,6 @@ impl AtomExt for Stsz {
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_stsz_same_size() {
         let expected = Stsz {

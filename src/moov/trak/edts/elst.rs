@@ -64,7 +64,6 @@ impl AtomExt for Elst {
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_elst32() {
         let expected = Elst {

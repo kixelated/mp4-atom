@@ -35,7 +35,6 @@ impl AtomExt for Co64 {
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_co64() {
         let expected = Co64 {
