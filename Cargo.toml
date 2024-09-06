@@ -22,7 +22,6 @@ tokio = { version = "1", features = ["io-util"], optional = true }
 
 [features]
 tokio = ["dep:tokio"]
-default = ["tokio"]
 
 [dev-dependencies]
 anyhow = "1"
