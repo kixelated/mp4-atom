@@ -32,7 +32,7 @@ impl Default for Hev1 {
 impl Atom for Hev1 {
     const KIND: FourCC = FourCC::new(b"hev1");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body(buf: &mut Bytes) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
         let data_reference_index = buf.decode()?;
@@ -65,7 +65,7 @@ impl Atom for Hev1 {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
         0u32.encode(buf)?; // reserved
         0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;
@@ -136,7 +136,7 @@ pub struct HvcCArray {
 impl Atom for Hvcc {
     const KIND: FourCC = FourCC::new(b"hvcC");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body(buf: &mut Bytes) -> Result<Self> {
         let configuration_version = u8::decode(buf)?;
         let params = u8::decode(buf)?;
         let general_profile_space = params & 0b11000000 >> 6;
@@ -202,7 +202,7 @@ impl Atom for Hvcc {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
         self.configuration_version.encode(buf)?;
         let general_profile_space = (self.general_profile_space & 0b11) << 6;
         let general_tier_flag = u8::from(self.general_tier_flag) << 5;

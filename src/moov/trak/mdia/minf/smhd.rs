@@ -10,14 +10,14 @@ impl AtomExt for Smhd {
 
     const KIND_EXT: FourCC = FourCC::new(b"smhd");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let balance = buf.decode()?;
         u16::decode(buf)?; // reserved?
 
         Ok(Smhd { balance })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         self.balance.encode(buf)?;
         0u16.encode(buf)?; // reserved
 
@@ -28,7 +28,6 @@ impl AtomExt for Smhd {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_smhd() {

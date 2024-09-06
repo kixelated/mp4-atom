@@ -2,6 +2,9 @@ use std::fmt;
 
 use crate::*;
 
+// Re-export this common types.
+pub use num::rational::Ratio;
+
 /// A four-character code used to identify atoms.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct FourCC([u8; 4]);

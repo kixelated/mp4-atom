@@ -13,7 +13,7 @@ impl AtomExt for Dref {
 
     const KIND_EXT: FourCC = FourCC::new(b"dref");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
         let mut urls = Vec::new();
 
@@ -25,7 +25,7 @@ impl AtomExt for Dref {
         Ok(Dref { urls })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         (self.urls.len() as u32).encode(buf)?;
 
         for url in &self.urls {

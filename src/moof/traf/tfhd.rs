@@ -29,7 +29,7 @@ impl AtomExt for Tfhd {
 
     type Ext = TfhdExt;
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: TfhdExt) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, ext: TfhdExt) -> Result<Self> {
         let track_id = buf.decode()?;
 
         let base_data_offset = match ext.base_data_offset {
@@ -67,7 +67,7 @@ impl AtomExt for Tfhd {
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<TfhdExt> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<TfhdExt> {
         let ext = TfhdExt {
             base_data_offset: self.base_data_offset.is_some(),
             sample_description_index: self.sample_description_index.is_some(),

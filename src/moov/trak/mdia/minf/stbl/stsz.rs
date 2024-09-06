@@ -11,7 +11,7 @@ impl AtomExt for Stsz {
 
     const KIND_EXT: FourCC = FourCC::new(b"stsz");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let sample_size = u32::decode(buf)?;
         let sample_count = u32::decode(buf)?;
 
@@ -28,7 +28,7 @@ impl AtomExt for Stsz {
         Ok(Stsz { sample_sizes })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         if self.sample_sizes.is_empty() {
             0u32.encode(buf)?;
             0u32.encode(buf)?;

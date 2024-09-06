@@ -10,7 +10,7 @@ impl AtomExt for Co64 {
 
     const KIND_EXT: FourCC = FourCC::new(b"co64");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
         let mut entries = Vec::new();
         for _ in 0..entry_count {
@@ -21,7 +21,7 @@ impl AtomExt for Co64 {
         Ok(Co64 { entries })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         (self.entries.len() as u32).encode(buf)?;
         for chunk_offset in self.entries.iter() {
             (chunk_offset).encode(buf)?;

@@ -10,7 +10,7 @@ impl AtomExt for Stss {
 
     const KIND_EXT: FourCC = FourCC::new(b"stss");
 
-    fn decode_atom_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
 
         let mut entries = Vec::new();
@@ -22,7 +22,7 @@ impl AtomExt for Stss {
         Ok(Stss { entries })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
         (self.entries.len() as u32).encode(buf)?;
         for sample_number in self.entries.iter() {
             sample_number.encode(buf)?;

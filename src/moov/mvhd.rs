@@ -25,7 +25,7 @@ impl AtomExt for Mvhd {
 
     type Ext = MvhdExt;
 
-    fn decode_atom_ext(buf: &mut Bytes, ext: MvhdExt) -> Result<Self> {
+    fn decode_body_ext(buf: &mut Bytes, ext: MvhdExt) -> Result<Self> {
         let (creation_time, modification_time, timescale, duration) = match ext.version {
             MvhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -65,7 +65,7 @@ impl AtomExt for Mvhd {
         })
     }
 
-    fn encode_atom_ext(&self, buf: &mut BytesMut) -> Result<MvhdExt> {
+    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<MvhdExt> {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.timescale.encode(buf)?;

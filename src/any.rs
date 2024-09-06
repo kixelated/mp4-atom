@@ -20,30 +20,6 @@ macro_rules! any {
 					Any::Unknown(kind, _) => *kind,
                 }
             }
-
-            /// Decode the atom from a header and buffer.
-            pub fn decode_atom(header: &Header, buf: &mut Bytes) -> Result<Self> {
-                let size = header.size.unwrap_or(buf.remaining());
-                let mut buf = buf.decode_exact(size)?;
-
-                let atom = match header.kind {
-                    $(_ if header.kind == $kind::KIND => {
-                        Any::$kind(match $kind::decode_atom(&mut buf) {
-                            Ok(atom) => atom,
-                            Err(Error::OutOfBounds) => return Err(Error::OverDecode($kind::KIND)),
-                            Err(Error::ShortRead) => return Err(Error::UnderDecode($kind::KIND)),
-                            Err(err) => return Err(err),
-                        })
-                    },)*
-                    _ => return Ok(Any::Unknown(header.kind, buf.decode()?)),
-                };
-
-                if buf.has_remaining() {
-                    return Err(Error::UnderDecode(header.kind));
-                }
-
-                Ok(atom)
-            }
 		}
 
 		impl Decode for Any {
@@ -60,7 +36,7 @@ macro_rules! any {
 				self.kind().encode(buf)?;
 
 				match self {
-					$(Any::$kind(inner) => Atom::encode_atom(inner, buf),)*
+					$(Any::$kind(inner) => Atom::encode_body(inner, buf),)*
 					Any::Unknown(_, data) => data.encode(buf),
 				}?;
 
@@ -68,6 +44,32 @@ macro_rules! any {
 				buf[start..start + 4].copy_from_slice(&size.to_be_bytes());
 
 				Ok(())
+            }
+        }
+
+        impl DecodeAtom for Any {
+            /// Decode the atom from a header and payload.
+            fn decode_atom(header: &Header, buf: &mut Bytes) -> Result<Self> {
+                let size = header.size.unwrap_or(buf.remaining());
+                let mut buf: Bytes = buf.decode_exact(size)?;
+
+                let atom = match header.kind {
+                    $(_ if header.kind == $kind::KIND => {
+                        Any::$kind(match $kind::decode_body(&mut buf) {
+                            Ok(atom) => atom,
+                            Err(Error::OutOfBounds) => return Err(Error::OverDecode($kind::KIND)),
+                            Err(Error::ShortRead) => return Err(Error::UnderDecode($kind::KIND)),
+                            Err(err) => return Err(err),
+                        })
+                    },)*
+                    _ => return Ok(Any::Unknown(header.kind, buf.decode()?)),
+                };
+
+                if buf.has_remaining() {
+                    return Err(Error::UnderDecode(header.kind));
+                }
+
+                Ok(atom)
             }
         }
 
@@ -155,32 +157,15 @@ impl ReadFrom for Option<Any> {
             None => return Ok(None),
         };
 
-        // TODO This allocates on the heap.
-        // Ideally, we should use ReadFrom instead of Decode to avoid this.
-
-        // Don't use `with_capacity` on an untrusted size
-        // We allocate at most 4096 bytes upfront and grow as needed
-        let cap = header
-            .size
-            .map(|size| std::cmp::max(size, 4096))
-            .unwrap_or(0);
-
-        let mut buf = BytesMut::with_capacity(cap).writer();
-
-        match header.size {
-            Some(size) => {
-                let n = std::io::copy(&mut r.take(size as _), &mut buf)? as _;
-                if size != n {
-                    return Err(Error::OutOfBounds);
-                }
-            }
-            None => {
-                std::io::copy(r, &mut buf)?;
-            }
-        };
-
-        let mut buf = buf.into_inner().freeze();
+        let mut buf = header.read_body(r)?;
         Ok(Some(Any::decode_atom(&header, &mut buf)?))
+    }
+}
+
+impl ReadAtom for Any {
+    fn read_atom<R: Read>(header: &Header, r: &mut R) -> Result<Self> {
+        let mut buf = header.read_body(r)?;
+        Any::decode_atom(header, &mut buf)
     }
 }
 
@@ -196,38 +181,22 @@ impl AsyncReadFrom for Any {
 #[cfg(feature = "tokio")]
 impl AsyncReadFrom for Option<Any> {
     async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
-        use tokio::io::AsyncReadExt;
-
         let header = match <Option<Header> as AsyncReadFrom>::read_from(r).await? {
             Some(header) => header,
             None => return Ok(None),
         };
-
-        // TODO This allocates on the heap.
-        // Ideally, we should use ReadFrom instead of Decode to avoid this.
-
-        // Don't use `with_capacity` on an untrusted size
-        // We allocate at most 4096 bytes upfront and grow as needed
-        let cap = header
-            .size
-            .map(|size| std::cmp::max(size, 4096))
-            .unwrap_or(0);
-
-        let mut buf = Vec::with_capacity(cap);
-
-        match header.size {
-            Some(size) => {
-                let n = tokio::io::copy(&mut r.take(size as _), &mut buf).await? as _;
-                if size != n {
-                    return Err(Error::OutOfBounds);
-                }
-            }
-            None => {
-                tokio::io::copy(r, &mut buf).await?;
-            }
-        };
-
-        let mut buf = buf.into();
+        let mut buf = header.read_body_tokio(r).await?;
         Ok(Some(Any::decode_atom(&header, &mut buf)?))
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl AsyncReadAtom for Any {
+    async fn read_atom<R: tokio::io::AsyncRead + Unpin>(
+        header: &Header,
+        r: &mut R,
+    ) -> Result<Self> {
+        let mut buf = header.read_body_tokio(r).await?;
+        Any::decode_atom(header, &mut buf)
     }
 }

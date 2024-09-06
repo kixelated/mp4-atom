@@ -21,7 +21,7 @@ pub struct Ilst {
 impl Atom for Ilst {
     const KIND: FourCC = FourCC::new(b"ilst");
 
-    fn decode_atom(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body(buf: &mut Bytes) -> Result<Self> {
         let mut name = None;
         let mut year = None;
         let mut covr = None;
@@ -46,7 +46,7 @@ impl Atom for Ilst {
         })
     }
 
-    fn encode_atom(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
         self.name.encode(buf)?;
         self.year.encode(buf)?;
         self.covr.encode(buf)?;
