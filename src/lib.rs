@@ -168,5 +168,11 @@ pub use moov::*;
 pub use traits::*;
 pub use types::*;
 
+#[cfg(feature = "tokio")]
+mod tokio;
+
+#[cfg(feature = "tokio")]
+pub use self::tokio::*;
+
 #[cfg(test)]
 mod test;

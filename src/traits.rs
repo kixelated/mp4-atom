@@ -69,28 +69,14 @@ pub trait ReadAtom: Sized {
     fn read_atom<R: Read>(header: &Header, r: &mut R) -> Result<Self>;
 }
 
+/// Keep discarding atoms until the desired atom is found.
+pub trait ReadUntil: Sized {
+    fn read_until<R: Read>(r: &mut R) -> Result<Self>;
+}
+
 /// Write a type to a writer.
 pub trait WriteTo {
     fn write_to<W: Write>(&self, w: &mut W) -> Result<()>;
-}
-
-#[cfg(feature = "tokio")]
-pub trait AsyncReadFrom: Sized {
-    #[allow(async_fn_in_trait)]
-    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self>;
-}
-
-#[cfg(feature = "tokio")]
-pub trait AsyncWriteTo {
-    #[allow(async_fn_in_trait)]
-    async fn write_to<W: tokio::io::AsyncWrite + Unpin>(&self, w: &mut W) -> Result<()>;
-}
-
-#[cfg(feature = "tokio")]
-pub trait AsyncReadAtom: Sized {
-    #[allow(async_fn_in_trait)]
-    async fn read_atom<R: tokio::io::AsyncRead + Unpin>(header: &Header, r: &mut R)
-        -> Result<Self>;
 }
 
 impl<T: Encode> WriteTo for T {
@@ -99,17 +85,5 @@ impl<T: Encode> WriteTo for T {
         let mut buf = BytesMut::new();
         self.encode(&mut buf)?;
         Ok(w.write_all(&buf)?)
-    }
-}
-
-#[cfg(feature = "tokio")]
-impl<T: Encode> AsyncWriteTo for T {
-    async fn write_to<W: tokio::io::AsyncWrite + Unpin>(&self, w: &mut W) -> Result<()> {
-        use tokio::io::AsyncWriteExt;
-
-        // TODO We should avoid allocating a buffer here.
-        let mut buf = BytesMut::new();
-        self.encode(&mut buf)?;
-        Ok(w.write_all(&buf).await?)
     }
 }
