@@ -85,37 +85,22 @@ impl<T: Atom> ReadFrom for Option<T> {
     }
 }
 
-#[cfg(feature = "tokio")]
-impl<T: Atom> AsyncReadFrom for T {
-    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
-        <Option<T> as AsyncReadFrom>::read_from(r)
-            .await?
-            .ok_or(Error::MissingBox(T::KIND))
+impl<T: Atom> ReadUntil for T {
+    fn read_until<R: Read>(r: &mut R) -> Result<Self> {
+        <Option<T> as ReadUntil>::read_until(r)?.ok_or(Error::MissingBox(T::KIND))
     }
 }
 
-#[cfg(feature = "tokio")]
-impl<T: Atom> AsyncReadFrom for Option<T> {
-    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
-        let header = match <Option<Header> as AsyncReadFrom>::read_from(r).await? {
-            Some(header) => header,
-            None => return Ok(None),
-        };
-
-        let mut buf = header.read_body_tokio(r).await?;
-
-        let atom = match T::decode_body(&mut buf) {
-            Ok(atom) => atom,
-            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
-            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
-            Err(err) => return Err(err),
-        };
-
-        if buf.has_remaining() {
-            return Err(Error::UnderDecode(T::KIND));
+impl<T: Atom> ReadUntil for Option<T> {
+    fn read_until<R: Read>(r: &mut R) -> Result<Self> {
+        while let Some(header) = <Option<Header> as ReadFrom>::read_from(r)? {
+            if header.kind == T::KIND {
+                let mut buf = header.read_body(r)?;
+                return Ok(Some(T::decode_atom(&header, &mut buf)?));
+            }
         }
 
-        Ok(Some(atom))
+        Ok(None)
     }
 }
 
@@ -150,21 +135,6 @@ impl<T: Atom> ReadAtom for T {
         }
 
         let mut buf = header.read_body(r)?;
-        Self::decode_atom(header, &mut buf)
-    }
-}
-
-#[cfg(feature = "tokio")]
-impl<T: Atom> AsyncReadAtom for T {
-    async fn read_atom<R: tokio::io::AsyncRead + Unpin>(
-        header: &Header,
-        r: &mut R,
-    ) -> Result<Self> {
-        if header.kind != T::KIND {
-            return Err(Error::UnexpectedBox(header.kind));
-        }
-
-        let mut buf = header.read_body_tokio(r).await?;
         Self::decode_atom(header, &mut buf)
     }
 }

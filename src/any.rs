@@ -168,35 +168,3 @@ impl ReadAtom for Any {
         Any::decode_atom(header, &mut buf)
     }
 }
-
-#[cfg(feature = "tokio")]
-impl AsyncReadFrom for Any {
-    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
-        <Option<Any> as AsyncReadFrom>::read_from(r)
-            .await?
-            .ok_or(Error::UnexpectedEof)
-    }
-}
-
-#[cfg(feature = "tokio")]
-impl AsyncReadFrom for Option<Any> {
-    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
-        let header = match <Option<Header> as AsyncReadFrom>::read_from(r).await? {
-            Some(header) => header,
-            None => return Ok(None),
-        };
-        let mut buf = header.read_body_tokio(r).await?;
-        Ok(Some(Any::decode_atom(&header, &mut buf)?))
-    }
-}
-
-#[cfg(feature = "tokio")]
-impl AsyncReadAtom for Any {
-    async fn read_atom<R: tokio::io::AsyncRead + Unpin>(
-        header: &Header,
-        r: &mut R,
-    ) -> Result<Self> {
-        let mut buf = header.read_body_tokio(r).await?;
-        Any::decode_atom(header, &mut buf)
-    }
-}

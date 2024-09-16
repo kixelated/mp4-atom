@@ -90,48 +90,6 @@ impl ReadFrom for Option<Header> {
     }
 }
 
-#[cfg(feature = "tokio")]
-impl AsyncReadFrom for Header {
-    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
-        <Option<Header> as AsyncReadFrom>::read_from(r)
-            .await?
-            .ok_or(Error::UnexpectedEof)
-    }
-}
-
-#[cfg(feature = "tokio")]
-impl AsyncReadFrom for Option<Header> {
-    async fn read_from<R: tokio::io::AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
-        use tokio::io::AsyncReadExt;
-
-        let mut buf = [0u8; 8];
-        let n = r.read(&mut buf).await?;
-        if n == 0 {
-            return Ok(None);
-        }
-
-        r.read_exact(&mut buf[n..]).await?;
-
-        let size = u32::from_be_bytes(buf[0..4].try_into().unwrap());
-        let kind = u32::from_be_bytes(buf[4..8].try_into().unwrap()).into();
-
-        let size = match size {
-            0 => None,
-            1 => {
-                // Read another 8 bytes
-                r.read_exact(&mut buf).await?;
-                let size = u64::from_be_bytes(buf);
-                let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
-
-                Some(size as usize)
-            }
-            _ => Some(size.checked_sub(8).ok_or(Error::InvalidSize)? as usize),
-        };
-
-        Ok(Some(Header { kind, size }))
-    }
-}
-
 // Utility methods
 impl Header {
     pub(crate) fn read_body<R: Read>(&self, r: &mut R) -> Result<Bytes> {
@@ -159,11 +117,11 @@ impl Header {
     }
 
     #[cfg(feature = "tokio")]
-    pub(crate) async fn read_body_tokio<R: tokio::io::AsyncRead + Unpin>(
+    pub(crate) async fn read_body_tokio<R: ::tokio::io::AsyncRead + Unpin>(
         &self,
         r: &mut R,
     ) -> Result<Bytes> {
-        use tokio::io::AsyncReadExt;
+        use ::tokio::io::AsyncReadExt;
 
         // TODO This allocates on the heap.
         // Ideally, we should use ReadFrom instead of Decode to avoid this.
@@ -175,13 +133,13 @@ impl Header {
 
         match self.size {
             Some(size) => {
-                let n = tokio::io::copy(&mut r.take(size as _), &mut buf).await? as _;
+                let n = ::tokio::io::copy(&mut r.take(size as _), &mut buf).await? as _;
                 if size != n {
                     return Err(Error::OutOfBounds);
                 }
             }
             None => {
-                tokio::io::copy(r, &mut buf).await?;
+                ::tokio::io::copy(r, &mut buf).await?;
             }
         };
 
