@@ -15,6 +15,7 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tfhd {
     pub track_id: u32,
     pub base_data_offset: Option<u64>,

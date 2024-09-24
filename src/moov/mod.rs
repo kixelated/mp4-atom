@@ -11,6 +11,7 @@ pub use udta::*;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Moov {
     pub mvhd: Mvhd,
     pub meta: Option<Meta>,

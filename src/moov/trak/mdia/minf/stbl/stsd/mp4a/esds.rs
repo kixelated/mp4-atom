@@ -1,6 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Esds {
     pub es_desc: EsDescriptor,
 }
@@ -126,6 +127,7 @@ descriptors! {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EsDescriptor {
     pub es_id: u16,
 
@@ -175,6 +177,7 @@ impl Encode for EsDescriptor {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DecoderConfig {
     pub object_type_indication: u8,
     pub stream_type: u8,
@@ -236,6 +239,7 @@ impl Encode for DecoderConfig {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DecoderSpecific {
     pub profile: u8,
     pub freq_index: u8,
@@ -293,6 +297,7 @@ impl Encode for DecoderSpecific {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SLConfig {}
 
 impl SLConfig {

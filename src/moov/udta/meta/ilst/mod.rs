@@ -11,6 +11,7 @@ pub use year::*;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ilst {
     pub name: Option<Name>,
     pub year: Option<Year>, // Called day in the spec

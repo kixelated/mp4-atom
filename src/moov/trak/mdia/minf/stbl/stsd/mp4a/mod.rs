@@ -5,6 +5,7 @@ pub mod esds;
 pub use esds::Esds;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mp4a {
     pub data_reference_index: u16,
     pub channelcount: u16,

@@ -7,6 +7,7 @@ macro_rules! any {
     ($($kind:ident,)*) => {
         /// Any of the supported atoms.
         #[derive(Clone, PartialEq)]
+        #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         pub enum Any {
             $($kind($kind),)*
 			Unknown(FourCC, Bytes),
