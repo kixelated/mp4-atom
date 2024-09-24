@@ -39,8 +39,7 @@ impl AtomExt for Trun {
             false => None,
         };
 
-        // TODO
-        let _first_sample_flags = match ext.first_sample_flags {
+        let mut first_sample_flags = match ext.first_sample_flags {
             true => u32::decode(buf)?.into(),
             false => None,
         };
@@ -57,9 +56,12 @@ impl AtomExt for Trun {
                 true => u32::decode(buf)?.into(),
                 false => None,
             };
-            let sample_flags = match ext.sample_flags {
-                true => u32::decode(buf)?.into(),
-                false => None,
+            let sample_flags = match first_sample_flags.take() {
+                Some(flags) => Some(flags),
+                None => match ext.sample_flags {
+                    true => u32::decode(buf)?.into(),
+                    false => None,
+                },
             };
             let cts = match ext.sample_cts {
                 true => i32::decode(buf)?.into(),
