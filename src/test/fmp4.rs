@@ -383,7 +383,10 @@ fn test_bbb() {
                 }),
                 trun: Some(Trun {
                     data_offset: 116.into(),
-                    entries: vec![Default::default()],
+                    entries: vec![TrunEntry {
+                        flags: Some(33554432),
+                        ..Default::default()
+                    }],
                 }),
             }],
         },
