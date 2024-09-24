@@ -7,6 +7,7 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mvhd {
     pub creation_time: u64,
     pub modification_time: u64,

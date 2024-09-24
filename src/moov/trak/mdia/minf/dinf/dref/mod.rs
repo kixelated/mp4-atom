@@ -4,6 +4,7 @@ pub use url::*;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Dref {
     pub urls: Vec<Url>,
 }

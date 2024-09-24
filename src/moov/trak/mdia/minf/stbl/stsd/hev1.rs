@@ -1,6 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hev1 {
     pub data_reference_index: u16,
     pub width: u16,
@@ -90,6 +91,7 @@ impl Atom for Hev1 {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hvcc {
     pub configuration_version: u8,
     pub general_profile_space: u8,
@@ -121,12 +123,14 @@ impl Hvcc {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HvcCArrayNalu {
     pub size: usize,
     pub data: Bytes,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HvcCArray {
     pub completeness: bool,
     pub nal_unit_type: u8,

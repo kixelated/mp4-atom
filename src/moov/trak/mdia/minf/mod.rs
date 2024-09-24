@@ -11,6 +11,7 @@ pub use vmhd::*;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Minf {
     pub vmhd: Option<Vmhd>,
     pub smhd: Option<Smhd>,

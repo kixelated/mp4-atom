@@ -11,6 +11,7 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tkhd {
     pub creation_time: u64,
     pub modification_time: u64,
@@ -101,6 +102,7 @@ impl AtomExt for Tkhd {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Matrix {
     pub a: i32,
     pub b: i32,
