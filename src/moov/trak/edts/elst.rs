@@ -26,7 +26,7 @@ impl AtomExt for Elst {
 
     const KIND_EXT: FourCC = FourCC::new(b"elst");
 
-    fn decode_body_ext(buf: &mut Bytes, ext: ElstExt) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, ext: ElstExt) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
 
         let mut entries = Vec::new();
@@ -39,8 +39,8 @@ impl AtomExt for Elst {
             let entry = ElstEntry {
                 segment_duration,
                 media_time,
-                media_rate: buf.decode()?,
-                media_rate_fraction: buf.decode()?,
+                media_rate: u16::decode(buf)?,
+                media_rate_fraction: u16::decode(buf)?,
             };
             entries.push(entry);
         }
@@ -48,7 +48,7 @@ impl AtomExt for Elst {
         Ok(Elst { entries })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<ElstExt> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<ElstExt> {
         (self.entries.len() as u32).encode(buf)?;
 
         for entry in self.entries.iter() {
@@ -76,10 +76,10 @@ mod tests {
                 media_rate_fraction: 0,
             }],
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Elst::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -94,10 +94,10 @@ mod tests {
                 media_rate_fraction: 0,
             }],
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Elst::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

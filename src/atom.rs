@@ -6,13 +6,13 @@ use crate::*;
 pub trait Atom: Sized {
     const KIND: FourCC;
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self>;
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()>;
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self>;
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()>;
 }
 
 impl<T: Atom> Encode for T {
-    #[tracing::instrument(skip_all, fields(?kind = Self::KIND))]
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+    #[tracing::instrument(skip_all, fields(?atom = Self::KIND))]
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         let start = buf.len();
 
         // Encode a 0 for the size, we'll come back to it later
@@ -26,30 +26,36 @@ impl<T: Atom> Encode for T {
             .try_into()
             .map_err(|_| Error::TooLarge(T::KIND))?;
 
-        buf[start..start + 4].copy_from_slice(&size.to_be_bytes());
+        buf.set_slice(start, &size.to_be_bytes());
 
         Ok(())
     }
 }
 
 impl<T: Atom> Decode for T {
-    #[tracing::instrument(skip_all, fields(?kind = Self::KIND))]
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    #[tracing::instrument(skip_all, fields(?atom = Self::KIND))]
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let header = Header::decode(buf)?;
 
         let size = header.size.unwrap_or(buf.remaining());
-        let buf = &mut buf.decode_exact(size)?;
+        if size > buf.remaining() {
+            return Err(Error::OutOfBounds);
+        }
 
-        let atom = match Self::decode_body(buf) {
+        let body = &mut buf.slice(size);
+
+        let atom = match Self::decode_body(body) {
             Ok(atom) => atom,
             Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
             Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
             Err(err) => return Err(err),
         };
 
-        if buf.has_remaining() {
+        if body.has_remaining() {
             return Err(Error::UnderDecode(T::KIND));
         }
+
+        buf.advance(size);
 
         Ok(atom)
     }
@@ -68,16 +74,16 @@ impl<T: Atom> ReadFrom for Option<T> {
             None => return Ok(None),
         };
 
-        let mut buf = header.read_body(r)?;
+        let body = &mut header.read_body(r)?;
 
-        let atom = match T::decode_body(&mut buf) {
+        let atom = match T::decode_body(body) {
             Ok(atom) => atom,
             Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
             Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
             Err(err) => return Err(err),
         };
 
-        if buf.has_remaining() {
+        if body.has_remaining() {
             return Err(Error::UnderDecode(T::KIND));
         }
 
@@ -95,8 +101,8 @@ impl<T: Atom> ReadUntil for Option<T> {
     fn read_until<R: Read>(r: &mut R) -> Result<Self> {
         while let Some(header) = <Option<Header> as ReadFrom>::read_from(r)? {
             if header.kind == T::KIND {
-                let mut buf = header.read_body(r)?;
-                return Ok(Some(T::decode_atom(&header, &mut buf)?));
+                let body = &mut header.read_body(r)?;
+                return Ok(Some(T::decode_atom(&header, body)?));
             }
         }
 
@@ -105,24 +111,30 @@ impl<T: Atom> ReadUntil for Option<T> {
 }
 
 impl<T: Atom> DecodeAtom for T {
-    fn decode_atom(header: &Header, buf: &mut Bytes) -> Result<T> {
+    fn decode_atom<B: Buf>(header: &Header, buf: &mut B) -> Result<T> {
         if header.kind != T::KIND {
             return Err(Error::UnexpectedBox(header.kind));
         }
 
         let size = header.size.unwrap_or(buf.remaining());
-        let buf = &mut buf.decode_exact(size)?;
+        if size > buf.remaining() {
+            return Err(Error::OutOfBounds);
+        }
 
-        let atom = match T::decode_body(buf) {
+        let body = &mut buf.slice(size);
+
+        let atom = match T::decode_body(body) {
             Ok(atom) => atom,
             Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
             Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
             Err(err) => return Err(err),
         };
 
-        if buf.has_remaining() {
+        if body.has_remaining() {
             return Err(Error::UnderDecode(T::KIND));
         }
+
+        buf.advance(size);
 
         Ok(atom)
     }
@@ -134,8 +146,8 @@ impl<T: Atom> ReadAtom for T {
             return Err(Error::UnexpectedBox(header.kind));
         }
 
-        let mut buf = header.read_body(r)?;
-        Self::decode_atom(header, &mut buf)
+        let body = &mut header.read_body(r)?;
+        Self::decode_atom(header, body)
     }
 }
 
@@ -151,12 +163,12 @@ nested! {
 macro_rules! nested {
     (required: [$($required:ident),*$(,)?], optional: [$($optional:ident),*$(,)?], multiple: [$($multiple:ident),*$(,)?],) => {
         paste::paste! {
-            fn decode_body(buf: &mut Bytes) -> Result<Self> {
+            fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
                 $( let mut [<$required:lower>] = None;)*
                 $( let mut [<$optional:lower>] = None;)*
                 $( let mut [<$multiple:lower>] = Vec::new();)*
 
-                while let Some(atom) = buf.decode()? {
+                while let Some(atom) = Option::<Any>::decode(buf)? {
                     match atom {
                         $(Any::$required(atom) => {
                             if [<$required:lower>].is_some() {
@@ -187,7 +199,7 @@ macro_rules! nested {
                 })
             }
 
-            fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
+            fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
                 $( self.[<$required:lower>].encode(buf)?; )*
                 $( self.[<$optional:lower>].encode(buf)?; )*
                 $( self.[<$multiple:lower>].encode(buf)?; )*

@@ -43,10 +43,10 @@ impl Default for Tx3g {
 impl Atom for Tx3g {
     const KIND: FourCC = FourCC::new(b"tx3g");
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
-        let data_reference_index = buf.decode()?;
+        let data_reference_index = u16::decode(buf)?;
 
         let display_flags = u32::decode(buf)?;
         let horizontal_justification = i8::decode(buf)?;
@@ -76,7 +76,7 @@ impl Atom for Tx3g {
         })
     }
 
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         0u32.encode(buf)?; // reserved
         0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;
@@ -118,10 +118,10 @@ mod tests {
             box_record: [0, 0, 0, 0],
             style_record: [0, 0, 0, 0, 0, 1, 0, 16, 255, 255, 255, 255],
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Tx3g::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

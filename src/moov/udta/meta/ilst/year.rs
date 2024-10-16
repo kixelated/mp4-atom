@@ -7,11 +7,11 @@ pub struct Year(pub String);
 impl Atom for Year {
     const KIND: FourCC = FourCC::new(b"day ");
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self> {
-        Ok(Self(buf.decode()?))
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        Ok(Self(String::decode(buf)?))
     }
 
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.0.as_str().encode(buf)
     }
 }

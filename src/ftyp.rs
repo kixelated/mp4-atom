@@ -11,15 +11,15 @@ pub struct Ftyp {
 impl Atom for Ftyp {
     const KIND: FourCC = FourCC::new(b"ftyp");
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Ftyp {
-            major_brand: buf.decode()?,
-            minor_version: buf.decode()?,
-            compatible_brands: buf.decode()?,
+            major_brand: FourCC::decode(buf)?,
+            minor_version: u32::decode(buf)?,
+            compatible_brands: Vec::<FourCC>::decode(buf)?,
         })
     }
 
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.major_brand.encode(buf)?;
         self.minor_version.encode(buf)?;
         self.compatible_brands.encode(buf)?;
@@ -45,11 +45,10 @@ mod tests {
             ],
         };
 
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         decoded.encode(&mut buf).expect("failed to encode");
 
-        let mut buf = buf.freeze();
-        let result = Ftyp::decode(&mut buf).expect("failed to decode");
+        let result = Ftyp::decode(&mut buf.as_slice()).expect("failed to decode");
         assert_eq!(decoded, result);
     }
 }

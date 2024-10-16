@@ -19,9 +19,10 @@ const MDIR: FourCC = FourCC::new(b"mdir");
 
 impl AtomExt for Meta {
     type Ext = ();
+
     const KIND_EXT: FourCC = FourCC::new(b"meta");
 
-    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
 
         match hdlr.handler_type {
@@ -33,7 +34,7 @@ impl AtomExt for Meta {
         }
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         let hldr = match self {
             Self::Mdir { .. } => Hdlr {
                 handler_type: MDIR,
@@ -61,10 +62,10 @@ mod tests {
     fn test_meta_mdir_empty() {
         let expected = Meta::Mdir { ilst: None };
 
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let output = Meta::decode(&mut buf).unwrap();
         assert_eq!(output, expected);
     }
@@ -75,10 +76,10 @@ mod tests {
             ilst: Some(Ilst::default()),
         };
 
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let output = Meta::decode(&mut buf).unwrap();
         assert_eq!(output, expected);
     }

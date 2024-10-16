@@ -34,7 +34,7 @@ impl AtomExt for Trun {
 
     type Ext = TrunExt;
 
-    fn decode_body_ext(buf: &mut Bytes, ext: TrunExt) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, ext: TrunExt) -> Result<Self> {
         let sample_count = u32::decode(buf)?;
         let data_offset = match ext.data_offset {
             true => i32::decode(buf)?.into(),
@@ -84,7 +84,7 @@ impl AtomExt for Trun {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<TrunExt> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<TrunExt> {
         let ext = TrunExt {
             version: TrunVersion::V1,
             data_offset: self.data_offset.is_some(),

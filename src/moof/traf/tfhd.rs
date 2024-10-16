@@ -30,8 +30,8 @@ impl AtomExt for Tfhd {
 
     type Ext = TfhdExt;
 
-    fn decode_body_ext(buf: &mut Bytes, ext: TfhdExt) -> Result<Self> {
-        let track_id = buf.decode()?;
+    fn decode_body_ext<B: Buf>(buf: &mut B, ext: TfhdExt) -> Result<Self> {
+        let track_id = u32::decode(buf)?;
 
         let base_data_offset = match ext.base_data_offset {
             true => u64::decode(buf)?.into(),
@@ -68,7 +68,7 @@ impl AtomExt for Tfhd {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<TfhdExt> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<TfhdExt> {
         let ext = TfhdExt {
             base_data_offset: self.base_data_offset.is_some(),
             sample_description_index: self.sample_description_index.is_some(),
@@ -103,10 +103,10 @@ mod tests {
             default_sample_size: None,
             default_sample_flags: None,
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Tfhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -121,10 +121,10 @@ mod tests {
             default_sample_size: None,
             default_sample_flags: Some(0x1010000),
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Tfhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

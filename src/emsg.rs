@@ -22,7 +22,7 @@ pub struct Emsg {
     pub id: u32,
     pub scheme_id_uri: String,
     pub value: String,
-    pub message_data: Bytes,
+    pub message_data: Vec<u8>,
 }
 
 impl AtomExt for Emsg {
@@ -30,30 +30,30 @@ impl AtomExt for Emsg {
 
     type Ext = EmsgExt;
 
-    fn decode_body_ext(buf: &mut Bytes, ext: EmsgExt) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, ext: EmsgExt) -> Result<Self> {
         Ok(match ext.version {
             EmsgVersion::V0 => Emsg {
-                scheme_id_uri: buf.decode()?,
-                value: buf.decode()?,
-                timescale: buf.decode()?,
-                presentation_time: EmsgTimestamp::Relative(buf.decode()?),
-                event_duration: buf.decode()?,
-                id: buf.decode()?,
-                message_data: buf.decode()?,
+                scheme_id_uri: String::decode(buf)?,
+                value: String::decode(buf)?,
+                timescale: u32::decode(buf)?,
+                presentation_time: EmsgTimestamp::Relative(u32::decode(buf)?),
+                event_duration: u32::decode(buf)?,
+                id: u32::decode(buf)?,
+                message_data: Vec::decode(buf)?,
             },
             EmsgVersion::V1 => Emsg {
-                timescale: buf.decode()?,
-                presentation_time: EmsgTimestamp::Absolute(buf.decode()?),
-                event_duration: buf.decode()?,
-                id: buf.decode()?,
-                scheme_id_uri: buf.decode()?,
-                value: buf.decode()?,
-                message_data: buf.decode()?,
+                timescale: u32::decode(buf)?,
+                presentation_time: EmsgTimestamp::Absolute(u64::decode(buf)?),
+                event_duration: u32::decode(buf)?,
+                id: u32::decode(buf)?,
+                scheme_id_uri: String::decode(buf)?,
+                value: String::decode(buf)?,
+                message_data: Vec::decode(buf)?,
             },
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<EmsgExt> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<EmsgExt> {
         Ok(match self.presentation_time {
             EmsgTimestamp::Absolute(presentation_time) => {
                 self.timescale.encode(buf)?;
@@ -94,15 +94,13 @@ mod tests {
             id: 8,
             scheme_id_uri: String::from("foo"),
             value: String::from("foo"),
-            message_data: Bytes::from_static(&[1, 2, 3]),
+            message_data: [1, 2, 3].into(),
         };
 
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         decoded.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
-        let output = buf.decode().unwrap();
-
+        let output = Emsg::decode(&mut buf.as_slice()).unwrap();
         assert_eq!(decoded, output);
     }
 
@@ -115,14 +113,13 @@ mod tests {
             id: 8,
             scheme_id_uri: String::from("foo"),
             value: String::from("foo"),
-            message_data: Bytes::from_static(&[3, 2, 1]),
+            message_data: [3, 2, 1].into(),
         };
 
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         decoded.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
-        let output = buf.decode().unwrap();
+        let output = Emsg::decode(&mut buf.as_slice()).unwrap();
         assert_eq!(decoded, output);
     }
 }

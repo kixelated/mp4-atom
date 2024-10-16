@@ -39,20 +39,20 @@ impl AtomExt for Vp09 {
 
     const KIND_EXT: FourCC = FourCC::new(b"vp09");
 
-    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
-        let start_code = buf.decode()?;
-        let data_reference_index = buf.decode()?;
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
+        let start_code = u16::decode(buf)?;
+        let data_reference_index = u16::decode(buf)?;
         <[u8; 16]>::decode(buf)?;
-        let width = buf.decode()?;
-        let height = buf.decode()?;
-        let horizresolution = buf.decode()?;
-        let vertresolution = buf.decode()?;
+        let width = u16::decode(buf)?;
+        let height = u16::decode(buf)?;
+        let horizresolution = FixedPoint::decode(buf)?;
+        let vertresolution = FixedPoint::decode(buf)?;
         <[u8; 4]>::decode(buf)?;
-        let frame_count = buf.decode()?;
+        let frame_count = u16::decode(buf)?;
 
-        let compressor = buf.decode()?;
-        let depth = buf.decode()?;
-        let end_code = buf.decode()?;
+        let compressor = Compressor::decode(buf)?;
+        let depth = u16::decode(buf)?;
+        let end_code = u16::decode(buf)?;
 
         let vpcc = Vpcc::decode(buf)?;
 
@@ -71,7 +71,7 @@ impl AtomExt for Vp09 {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.start_code.encode(buf)?;
         self.data_reference_index.encode(buf)?;
         [0u8; 16].encode(buf)?;
@@ -102,10 +102,10 @@ mod tests {
             height: 1080,
             ..Default::default()
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Vp09::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

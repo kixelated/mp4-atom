@@ -20,12 +20,12 @@ impl AtomExt for Vmhd {
 
     const KIND_EXT: FourCC = FourCC::new(b"vmhd");
 
-    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
-        let graphics_mode = buf.decode()?;
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
+        let graphics_mode = u16::decode(buf)?;
         let op_color = RgbColor {
-            red: buf.decode()?,
-            green: buf.decode()?,
-            blue: buf.decode()?,
+            red: u16::decode(buf)?,
+            green: u16::decode(buf)?,
+            blue: u16::decode(buf)?,
         };
 
         Ok(Vmhd {
@@ -34,7 +34,7 @@ impl AtomExt for Vmhd {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.graphics_mode.encode(buf)?;
         self.op_color.red.encode(buf)?;
         self.op_color.green.encode(buf)?;
@@ -58,10 +58,10 @@ mod tests {
                 blue: 0,
             },
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Vmhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

@@ -25,17 +25,17 @@ impl AtomExt for Vpcc {
 
     type Ext = VpccExt;
 
-    fn decode_body_ext(buf: &mut Bytes, _ext: VpccExt) -> Result<Self> {
-        let profile = buf.decode()?;
-        let level = buf.decode()?;
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: VpccExt) -> Result<Self> {
+        let profile = u8::decode(buf)?;
+        let level = u8::decode(buf)?;
         let (bit_depth, chroma_subsampling, video_full_range_flag) = {
             let b = u8::decode(buf)?;
             (b >> 4, (b >> 1) & 0x01, b & 0x01 == 1)
         };
-        let color_primaries = buf.decode()?;
-        let transfer_characteristics = buf.decode()?;
-        let matrix_coefficients = buf.decode()?;
-        let codec_initialization_data_size = buf.decode()?;
+        let color_primaries = u8::decode(buf)?;
+        let transfer_characteristics = u8::decode(buf)?;
+        let matrix_coefficients = u8::decode(buf)?;
+        let codec_initialization_data_size = u16::decode(buf)?;
 
         Ok(Self {
             profile,
@@ -50,7 +50,7 @@ impl AtomExt for Vpcc {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<VpccExt> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<VpccExt> {
         self.profile.encode(buf)?;
         self.level.encode(buf)?;
         ((self.bit_depth << 4)
@@ -83,10 +83,10 @@ mod tests {
             matrix_coefficients: 0,
             codec_initialization_data_size: 0,
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Vpcc::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

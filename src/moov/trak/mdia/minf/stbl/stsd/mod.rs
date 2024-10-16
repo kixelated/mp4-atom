@@ -29,7 +29,7 @@ impl AtomExt for Stsd {
 
     const KIND_EXT: FourCC = FourCC::new(b"stsd");
 
-    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let entries = u32::decode(buf)?;
 
         let mut avc1 = None;
@@ -60,7 +60,7 @@ impl AtomExt for Stsd {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         (self.avc1.is_some() as u32
             + self.hev1.is_some() as u32
             + self.vp09.is_some() as u32

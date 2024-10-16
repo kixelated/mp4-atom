@@ -64,14 +64,14 @@ impl fmt::Debug for FourCC {
 }
 
 impl Encode for FourCC {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.0.encode(buf)
     }
 }
 
 impl Decode for FourCC {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        Ok(FourCC(buf.decode()?))
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        Ok(FourCC(<[u8; 4]>::decode(buf)?))
     }
 }
 
@@ -87,14 +87,14 @@ impl AsRef<[u8; 4]> for FourCC {
 pub struct u24([u8; 3]);
 
 impl Decode for u24 {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        Ok(Self(buf.decode()?))
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        Ok(Self(<[u8; 3]>::decode(buf)?))
     }
 }
 
 impl Encode for u24 {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
-        buf.encode(&self.0)
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        self.0.encode(buf)
     }
 }
 
@@ -118,14 +118,14 @@ impl TryFrom<u32> for u24 {
 pub struct u48([u8; 6]);
 
 impl Decode for u48 {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        Ok(Self(buf.decode()?))
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        Ok(Self(<[u8; 6]>::decode(buf)?))
     }
 }
 
 impl Encode for u48 {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
-        buf.encode(&self.0)
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        self.0.encode(buf)
     }
 }
 
@@ -169,7 +169,7 @@ impl<T: Copy> FixedPoint<T> {
 }
 
 impl<T: Decode> Decode for FixedPoint<T> {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self {
             int: T::decode(buf)?,
             dec: T::decode(buf)?,
@@ -178,9 +178,9 @@ impl<T: Decode> Decode for FixedPoint<T> {
 }
 
 impl<T: Encode> Encode for FixedPoint<T> {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
-        buf.encode(&self.int)?;
-        buf.encode(&self.dec)
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        self.int.encode(buf)?;
+        self.dec.encode(buf)
     }
 }
 
@@ -237,27 +237,58 @@ impl AsRef<str> for Compressor {
 }
 
 impl Encode for Compressor {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         let name = self.0.as_bytes();
         let max = name.len().min(31);
-        buf.put_slice(&name[..max]);
-        for _ in max..32 {
-            buf.put_u8(0);
-        }
+        (&name[..max]).encode(buf)?;
 
-        Ok(())
+        let zero = [0u8; 32];
+        (&zero[..32 - max]).encode(buf)
     }
 }
 
 impl Decode for Compressor {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        let mut name = [0; 32];
-        buf.copy_to_slice(&mut name);
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        let name = <[u8; 32]>::decode(buf)?;
 
         let name = String::from_utf8_lossy(&name)
             .trim_end_matches('\0')
             .to_string();
 
         Ok(Self(name))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Zeroed {
+    pub size: usize,
+}
+
+impl Zeroed {
+    pub fn new(size: usize) -> Self {
+        Self { size }
+    }
+}
+
+impl Encode for Zeroed {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        let zero = [0u8; 32];
+        let mut size = self.size;
+
+        while size > 0 {
+            let len = zero.len().min(size);
+            (&zero[..len]).encode(buf)?;
+            size -= len;
+        }
+
+        Ok(())
+    }
+}
+
+impl Decode for Zeroed {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        let size = buf.remaining();
+        buf.advance(size);
+        Ok(Self { size })
     }
 }

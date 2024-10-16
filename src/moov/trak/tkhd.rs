@@ -33,7 +33,7 @@ impl AtomExt for Tkhd {
 
     type Ext = TkhdExt;
 
-    fn decode_body_ext(buf: &mut Bytes, ext: TkhdExt) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, ext: TkhdExt) -> Result<Self> {
         let (creation_time, modification_time, track_id, _, duration) = match ext.version {
             TkhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -52,14 +52,14 @@ impl AtomExt for Tkhd {
         };
 
         u64::decode(buf)?; // reserved
-        let layer = buf.decode()?;
-        let alternate_group = buf.decode()?;
-        let volume = buf.decode()?;
+        let layer = u16::decode(buf)?;
+        let alternate_group = u16::decode(buf)?;
+        let volume = FixedPoint::decode(buf)?;
 
         u16::decode(buf)?; // reserved
         let matrix = Matrix::decode(buf)?;
-        let width = buf.decode()?;
-        let height = buf.decode()?;
+        let width = FixedPoint::decode(buf)?;
+        let height = FixedPoint::decode(buf)?;
 
         Ok(Tkhd {
             creation_time,
@@ -76,7 +76,7 @@ impl AtomExt for Tkhd {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<TkhdExt> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<TkhdExt> {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.track_id.encode(buf)?;
@@ -116,23 +116,23 @@ pub struct Matrix {
 }
 
 impl Decode for Matrix {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self {
-            a: buf.decode()?,
-            b: buf.decode()?,
-            u: buf.decode()?,
-            c: buf.decode()?,
-            d: buf.decode()?,
-            v: buf.decode()?,
-            x: buf.decode()?,
-            y: buf.decode()?,
-            w: buf.decode()?,
+            a: i32::decode(buf)?,
+            b: i32::decode(buf)?,
+            u: i32::decode(buf)?,
+            c: i32::decode(buf)?,
+            d: i32::decode(buf)?,
+            v: i32::decode(buf)?,
+            x: i32::decode(buf)?,
+            y: i32::decode(buf)?,
+            w: i32::decode(buf)?,
         })
     }
 }
 
 impl Encode for Matrix {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.a.encode(buf)?;
         self.b.encode(buf)?;
         self.u.encode(buf)?;
@@ -191,10 +191,10 @@ mod tests {
             height: 288.into(),
             enabled: true,
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Tkhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -214,10 +214,10 @@ mod tests {
             height: 288.into(),
             enabled: true,
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Tkhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

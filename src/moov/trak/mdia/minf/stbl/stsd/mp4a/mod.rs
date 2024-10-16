@@ -29,17 +29,17 @@ impl Default for Mp4a {
 impl Atom for Mp4a {
     const KIND: FourCC = FourCC::new(b"mp4a");
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
-        let data_reference_index = buf.decode()?;
+        let data_reference_index = u16::decode(buf)?;
         let version = u16::decode(buf)?;
         u16::decode(buf)?; // reserved
         u32::decode(buf)?; // reserved
-        let channelcount = buf.decode()?;
-        let samplesize = buf.decode()?;
+        let channelcount = u16::decode(buf)?;
+        let samplesize = u16::decode(buf)?;
         u32::decode(buf)?; // pre-defined, reserved
-        let samplerate = buf.decode()?;
+        let samplerate = FixedPoint::decode(buf)?;
 
         if version == 1 {
             // Skip QTFF
@@ -50,7 +50,7 @@ impl Atom for Mp4a {
         let mut esds = None;
 
         // Find esds in mp4a or wave
-        while let Some(atom) = buf.decode()? {
+        while let Some(atom) = Option::decode(buf)? {
             match atom {
                 Any::Esds(atom) => esds = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),
@@ -66,7 +66,7 @@ impl Atom for Mp4a {
         })
     }
 
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         0u32.encode(buf)?; // reserved
         0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;
@@ -115,10 +115,10 @@ mod tests {
                 },
             }),
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Mp4a::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -132,10 +132,10 @@ mod tests {
             samplerate: 48000.into(),
             esds: None,
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Mp4a::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

@@ -26,7 +26,7 @@ impl AtomExt for Mvhd {
 
     type Ext = MvhdExt;
 
-    fn decode_body_ext(buf: &mut Bytes, ext: MvhdExt) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, ext: MvhdExt) -> Result<Self> {
         let (creation_time, modification_time, timescale, duration) = match ext.version {
             MvhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -42,17 +42,17 @@ impl AtomExt for Mvhd {
             ),
         };
 
-        let rate = buf.decode()?;
-        let volume = buf.decode()?;
+        let rate = FixedPoint::decode(buf)?;
+        let volume = FixedPoint::decode(buf)?;
 
         u16::decode(buf)?; // reserved
         u64::decode(buf)?; // reserved
 
-        let matrix = buf.decode()?;
+        let matrix = Matrix::decode(buf)?;
 
         <[u8; 24]>::decode(buf)?; // pre_defined = 0
 
-        let next_track_id = buf.decode()?;
+        let next_track_id = u32::decode(buf)?;
 
         Ok(Mvhd {
             creation_time,
@@ -66,7 +66,7 @@ impl AtomExt for Mvhd {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<MvhdExt> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<MvhdExt> {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.timescale.encode(buf)?;
@@ -120,10 +120,10 @@ mod tests {
             next_track_id: 1,
         };
 
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Mvhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -141,10 +141,10 @@ mod tests {
             next_track_id: 1,
         };
 
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let output = Mvhd::decode(&mut buf).unwrap();
         assert_eq!(output, expected);
     }
