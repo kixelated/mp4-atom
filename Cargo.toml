@@ -14,14 +14,15 @@ categories = ["multimedia::encoding"]
 [dependencies]
 paste = "1"
 thiserror = "1"
-bytes = "1"
 num = "0.4"
 tracing = "0.1"
 
+bytes = { version = "1", optional = true }
 tokio = { version = "1", features = ["io-util"], optional = true }
 
 [features]
 tokio = ["dep:tokio"]
+bytes = ["dep:bytes"]
 
 [dev-dependencies]
 anyhow = "1"

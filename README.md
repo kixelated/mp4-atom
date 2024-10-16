@@ -20,7 +20,7 @@ See the [documentation](https://docs.rs/mp4-atom).
 ## Examples
 ### Decoding/encoding a byte buffer
 ```rust
-use bytes::{Bytes, BytesMut};
+use bytes::{Bytes, BufMut};
 use mp4_atom::{Any, Encode, Decode, Ftyp};
 
  // A simple ftyp atom
@@ -35,7 +35,7 @@ assert_eq!(atom, Ftyp {
 }.into());
 
 // Encode it back
-let mut output = BytesMut::new();
+let mut output = BufMut::new();
 atom.encode(&mut output)?;
 
 assert_eq!(input, output.freeze());
@@ -101,3 +101,5 @@ match header.kind {
 ### Asynchronous IO
 Enable using the `tokio` feature.
 It's the same as the above two but using the `AsyncReadFrom`, `AsyncWriteTo`, and `AsyncReadAtom` traits instead.
+
+There's also the `bytes` features which enables encoding for `Bytes` and `BytesMut` from the `bytes` crate, often used with tokio.

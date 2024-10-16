@@ -11,7 +11,7 @@ impl AtomExt for Stsz {
 
     const KIND_EXT: FourCC = FourCC::new(b"stsz");
 
-    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let sample_size = u32::decode(buf)?;
         let sample_count = u32::decode(buf)?;
 
@@ -28,7 +28,7 @@ impl AtomExt for Stsz {
         Ok(Stsz { sample_sizes })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         if self.sample_sizes.is_empty() {
             0u32.encode(buf)?;
             0u32.encode(buf)?;
@@ -61,10 +61,10 @@ mod tests {
         let expected = Stsz {
             sample_sizes: vec![1165, 1165, 1165, 1165],
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Stsz::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -74,10 +74,10 @@ mod tests {
         let expected = Stsz {
             sample_sizes: vec![1165, 11, 11, 8545, 10126, 10866, 9643, 9351, 7730],
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Stsz::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

@@ -20,7 +20,7 @@ impl AtomExt for Mdhd {
 
     const KIND_EXT: FourCC = FourCC::new(b"mdhd");
 
-    fn decode_body_ext(buf: &mut Bytes, ext: MdhdExt) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, ext: MdhdExt) -> Result<Self> {
         let (creation_time, modification_time, timescale, duration) = match ext.version {
             MdhdVersion::V1 => (
                 u64::decode(buf)?,
@@ -50,7 +50,7 @@ impl AtomExt for Mdhd {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<MdhdExt> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<MdhdExt> {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.timescale.encode(buf)?;
@@ -109,10 +109,10 @@ mod tests {
             duration: 30439936,
             language: String::from("und"),
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Mdhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -126,10 +126,10 @@ mod tests {
             duration: 30439936,
             language: String::from("eng"),
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Mdhd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

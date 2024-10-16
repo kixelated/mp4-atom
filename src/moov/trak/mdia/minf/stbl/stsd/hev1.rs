@@ -32,22 +32,22 @@ impl Default for Hev1 {
 impl Atom for Hev1 {
     const KIND: FourCC = FourCC::new(b"hev1");
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
-        let data_reference_index = buf.decode()?;
+        let data_reference_index = u16::decode(buf)?;
 
         u32::decode(buf)?; // pre-defined, reserved
         u64::decode(buf)?; // pre-defined
         u32::decode(buf)?; // pre-defined
-        let width = buf.decode()?;
-        let height = buf.decode()?;
-        let horizresolution = buf.decode()?;
-        let vertresolution = buf.decode()?;
+        let width = u16::decode(buf)?;
+        let height = u16::decode(buf)?;
+        let horizresolution = FixedPoint::decode(buf)?;
+        let vertresolution = FixedPoint::decode(buf)?;
         u32::decode(buf)?; // reserved
-        let frame_count = buf.decode()?;
-        let compressor = buf.decode()?;
-        let depth = buf.decode()?;
+        let frame_count = u16::decode(buf)?;
+        let compressor = Compressor::decode(buf)?;
+        let depth = u16::decode(buf)?;
         i16::decode(buf)?; // pre-defined
 
         let hvcc = Hvcc::decode(buf)?;
@@ -65,7 +65,7 @@ impl Atom for Hev1 {
         })
     }
 
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         0u32.encode(buf)?; // reserved
         0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;
@@ -123,7 +123,7 @@ impl Hvcc {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct HvcCArrayNalu {
     pub size: usize,
-    pub data: Bytes,
+    pub data: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -136,7 +136,7 @@ pub struct HvcCArray {
 impl Atom for Hvcc {
     const KIND: FourCC = FourCC::new(b"hvcC");
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         let configuration_version = u8::decode(buf)?;
         let params = u8::decode(buf)?;
         let general_profile_space = params & 0b11000000 >> 6;
@@ -151,7 +151,7 @@ impl Atom for Hvcc {
         let chroma_format_idc = u8::decode(buf)? & 0b11;
         let bit_depth_luma_minus8 = u8::decode(buf)? & 0b111;
         let bit_depth_chroma_minus8 = u8::decode(buf)? & 0b111;
-        let avg_frame_rate = buf.decode()?;
+        let avg_frame_rate = u16::decode(buf)?;
 
         let params = u8::decode(buf)?;
         let constant_frame_rate = params & 0b11000000 >> 6;
@@ -169,7 +169,7 @@ impl Atom for Hvcc {
 
             for _ in 0..num_nalus {
                 let size = u16::decode(buf)? as usize;
-                let data = buf.decode_exact(size)?;
+                let data = Vec::decode_exact(buf, size)?;
                 nalus.push(HvcCArrayNalu { size, data })
             }
 
@@ -202,7 +202,7 @@ impl Atom for Hvcc {
         })
     }
 
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.configuration_version.encode(buf)?;
         let general_profile_space = (self.general_profile_space & 0b11) << 6;
         let general_tier_flag = u8::from(self.general_tier_flag) << 5;
@@ -261,10 +261,10 @@ mod tests {
                 ..Default::default()
             },
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Hev1::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

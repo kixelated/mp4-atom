@@ -16,7 +16,7 @@ impl AtomExt for Ctts {
 
     const KIND_EXT: FourCC = FourCC::new(b"ctts");
 
-    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let entry_count = u32::decode(buf)?;
 
         let mut entries = Vec::new();
@@ -31,7 +31,7 @@ impl AtomExt for Ctts {
         Ok(Ctts { entries })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         (self.entries.len() as u32).encode(buf)?;
         for entry in self.entries.iter() {
             (entry.sample_count).encode(buf)?;
@@ -60,10 +60,10 @@ mod tests {
                 },
             ],
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Ctts::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

@@ -9,7 +9,7 @@ macro_rules! any {
         #[derive(Clone, PartialEq)]
         pub enum Any {
             $($kind($kind),)*
-			Unknown(FourCC, Bytes),
+			Unknown(FourCC, Vec<u8>),
         }
 
         impl Any {
@@ -23,14 +23,14 @@ macro_rules! any {
 		}
 
 		impl Decode for Any {
-            fn decode(buf: &mut Bytes) -> Result<Self> {
-				let header = buf.decode()?;
+            fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+				let header = Header::decode(buf)?;
                 Self::decode_atom(&header, buf)
             }
 		}
 
 		impl Encode for Any {
-            fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+            fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
 				let start = buf.len();
 				0u32.encode(buf)?;
 				self.kind().encode(buf)?;
@@ -41,7 +41,7 @@ macro_rules! any {
 				}?;
 
 				let size: u32 = (buf.len() - start).try_into().map_err(|_| Error::TooLarge(self.kind()))?;
-				buf[start..start + 4].copy_from_slice(&size.to_be_bytes());
+                buf.set_slice(start, &size.to_be_bytes());
 
 				Ok(())
             }
@@ -49,25 +49,34 @@ macro_rules! any {
 
         impl DecodeAtom for Any {
             /// Decode the atom from a header and payload.
-            fn decode_atom(header: &Header, buf: &mut Bytes) -> Result<Self> {
+            fn decode_atom<B: Buf>(header: &Header, buf: &mut B) -> Result<Self> {
                 let size = header.size.unwrap_or(buf.remaining());
-                let mut buf: Bytes = buf.decode_exact(size)?;
+                if size > buf.remaining() {
+                    return Err(Error::OutOfBounds);
+                }
+
+                let mut body = &mut buf.slice(size);
 
                 let atom = match header.kind {
                     $(_ if header.kind == $kind::KIND => {
-                        Any::$kind(match $kind::decode_body(&mut buf) {
+                        Any::$kind(match $kind::decode_body(&mut body) {
                             Ok(atom) => atom,
                             Err(Error::OutOfBounds) => return Err(Error::OverDecode($kind::KIND)),
                             Err(Error::ShortRead) => return Err(Error::UnderDecode($kind::KIND)),
                             Err(err) => return Err(err),
                         })
                     },)*
-                    _ => return Ok(Any::Unknown(header.kind, buf.decode()?)),
+                    _ => {
+                        let body = Vec::decode(body)?;
+                        Any::Unknown(header.kind, body)
+                    },
                 };
 
-                if buf.has_remaining() {
+                if body.has_remaining() {
                     return Err(Error::UnderDecode(header.kind));
                 }
+
+                buf.advance(size);
 
                 Ok(atom)
             }
@@ -76,7 +85,7 @@ macro_rules! any {
         impl fmt::Debug for Any {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 match self {
-                    $(Any::$kind(inner) => write!(f, "{:?}", inner),)*
+                    $(Any::$kind(inner) => inner.fmt(f),)*
                     Any::Unknown(kind, body) => write!(f, "Unknown {{ kind: {:?}, size: {:?} }}", kind, body.len()),
                 }
             }
@@ -157,14 +166,14 @@ impl ReadFrom for Option<Any> {
             None => return Ok(None),
         };
 
-        let mut buf = header.read_body(r)?;
-        Ok(Some(Any::decode_atom(&header, &mut buf)?))
+        let body = &mut header.read_body(r)?;
+        Ok(Some(Any::decode_atom(&header, body)?))
     }
 }
 
 impl ReadAtom for Any {
     fn read_atom<R: Read>(header: &Header, r: &mut R) -> Result<Self> {
-        let mut buf = header.read_body(r)?;
-        Any::decode_atom(header, &mut buf)
+        let body = &mut header.read_body(r)?;
+        Any::decode_atom(header, body)
     }
 }

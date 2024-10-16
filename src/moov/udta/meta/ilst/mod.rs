@@ -21,13 +21,13 @@ pub struct Ilst {
 impl Atom for Ilst {
     const KIND: FourCC = FourCC::new(b"ilst");
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         let mut name = None;
         let mut year = None;
         let mut covr = None;
         let mut desc = None;
 
-        while let Some(atom) = buf.decode()? {
+        while let Some(atom) = Option::decode(buf)? {
             match atom {
                 Any::Name(atom) => name = atom.into(),
                 Any::Year(atom) => year = atom.into(),
@@ -46,7 +46,7 @@ impl Atom for Ilst {
         })
     }
 
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.name.encode(buf)?;
         self.year.encode(buf)?;
         self.covr.encode(buf)?;
@@ -66,10 +66,10 @@ mod tests {
             ..Default::default()
         };
 
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Ilst::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -77,10 +77,10 @@ mod tests {
     #[test]
     fn test_ilst_empty() {
         let expected = Ilst::default();
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Ilst::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

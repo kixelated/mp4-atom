@@ -32,31 +32,41 @@ impl Default for Avc1 {
 impl Atom for Avc1 {
     const KIND: FourCC = FourCC::new(b"avc1");
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        println!("Avc1::decode_body: {:?}", buf.slice(buf.remaining()));
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
-        let data_reference_index = buf.decode()?;
+        let data_reference_index = u16::decode(buf)?;
 
         u32::decode(buf)?; // pre-defined, reserved
         u64::decode(buf)?; // pre-defined
         u32::decode(buf)?; // pre-defined
-        let width = buf.decode()?;
-        let height = buf.decode()?;
-        let horizresolution = buf.decode()?;
-        let vertresolution = buf.decode()?;
+        let width = u16::decode(buf)?;
+        let height = u16::decode(buf)?;
+        let horizresolution = FixedPoint::decode(buf)?;
+        let vertresolution = FixedPoint::decode(buf)?;
         u32::decode(buf)?; // reserved
-        let frame_count = buf.decode()?;
-        let compressor = buf.decode()?;
-        let depth = buf.decode()?;
+        let frame_count = u16::decode(buf)?;
+        let compressor = Compressor::decode(buf)?;
+        let depth = u16::decode(buf)?;
         i16::decode(buf)?; // pre-defined
 
         let mut avcc = None;
-        while let Some(atom) = buf.decode()? {
+        //while let Some(atom) = Option::<Any>::decode(buf)? {
+        loop {
+            println!("loop: {:?}", buf.slice(buf.remaining()));
+            let atom = match Option::<Any>::decode(buf)? {
+                Some(atom) => atom,
+                None => break,
+            };
+
             match atom {
                 Any::Avcc(atom) => avcc = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),
             }
         }
+
+        println!("Avc1::decode_body done: {:?}", buf.slice(buf.remaining()));
 
         Ok(Avc1 {
             data_reference_index,
@@ -71,7 +81,7 @@ impl Atom for Avc1 {
         })
     }
 
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         0u32.encode(buf)?; // reserved
         0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;
@@ -102,8 +112,8 @@ pub struct Avcc {
     pub profile_compatibility: u8,
     pub avc_level_indication: u8,
     pub length_size_minus_one: u8,
-    pub sequence_parameter_sets: Vec<Bytes>,
-    pub picture_parameter_sets: Vec<Bytes>,
+    pub sequence_parameter_sets: Vec<Vec<u8>>,
+    pub picture_parameter_sets: Vec<Vec<u8>>,
 }
 
 impl Avcc {
@@ -114,8 +124,8 @@ impl Avcc {
             profile_compatibility: sps[2],
             avc_level_indication: sps[3],
             length_size_minus_one: 0xff, // length_size = 4
-            sequence_parameter_sets: vec![Bytes::copy_from_slice(sps)],
-            picture_parameter_sets: vec![Bytes::copy_from_slice(pps)],
+            sequence_parameter_sets: vec![sps.into()],
+            picture_parameter_sets: vec![pps.into()],
         }
     }
 }
@@ -123,7 +133,9 @@ impl Avcc {
 impl Atom for Avcc {
     const KIND: FourCC = FourCC::new(b"avcC");
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self> {
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        println!("Avcc::decode_body: {:?}", buf.slice(buf.remaining()));
+
         let configuration_version = u8::decode(buf)?;
         let avc_profile_indication = u8::decode(buf)?;
         let profile_compatibility = u8::decode(buf)?;
@@ -134,7 +146,7 @@ impl Atom for Avcc {
         let mut sequence_parameter_sets = Vec::with_capacity(num_of_spss as usize);
         for _ in 0..num_of_spss {
             let size = u16::decode(buf)? as usize;
-            let nal = buf.decode_exact(size)?;
+            let nal = Vec::decode_exact(buf, size)?;
             sequence_parameter_sets.push(nal);
         }
 
@@ -142,9 +154,11 @@ impl Atom for Avcc {
         let mut picture_parameter_sets = Vec::with_capacity(num_of_ppss as usize);
         for _ in 0..num_of_ppss {
             let size = u16::decode(buf)? as usize;
-            let nal = buf.decode_exact(size)?;
+            let nal = Vec::decode_exact(buf, size)?;
             picture_parameter_sets.push(nal);
         }
+
+        println!("Avcc::decode_body done: {:?}", buf.slice(buf.remaining()));
 
         Ok(Avcc {
             configuration_version,
@@ -157,7 +171,7 @@ impl Atom for Avcc {
         })
     }
 
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.configuration_version.encode(buf)?;
         self.avc_profile_indication.encode(buf)?;
         self.profile_compatibility.encode(buf)?;
@@ -200,19 +214,17 @@ mod tests {
                 profile_compatibility: 0,
                 avc_level_indication: 13,
                 length_size_minus_one: 3,
-                sequence_parameter_sets: vec![Bytes::from_static(&[
+                sequence_parameter_sets: vec![vec![
                     0x67, 0x64, 0x00, 0x0D, 0xAC, 0xD9, 0x41, 0x41, 0xFA, 0x10, 0x00, 0x00, 0x03,
                     0x00, 0x10, 0x00, 0x00, 0x03, 0x03, 0x20, 0xF1, 0x42, 0x99, 0x60,
-                ])],
-                picture_parameter_sets: vec![Bytes::from_static(&[
-                    0x68, 0xEB, 0xE3, 0xCB, 0x22, 0xC0,
-                ])],
+                ]],
+                picture_parameter_sets: vec![vec![0x68, 0xEB, 0xE3, 0xCB, 0x22, 0xC0]],
             },
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Avc1::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

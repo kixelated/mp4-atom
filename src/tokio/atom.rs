@@ -1,14 +1,13 @@
 use super::*;
 
-use crate::{Atom, DecodeAtom, Encode, Error, Header, Result};
+use crate::{Atom, Buf, DecodeAtom, Encode, Error, Header, Result};
 
-use bytes::{Buf, BytesMut};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
 impl<T: Encode> AsyncWriteTo for T {
     async fn write_to<W: AsyncWrite + Unpin>(&self, w: &mut W) -> Result<()> {
         // TODO We should avoid allocating a buffer here.
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         self.encode(&mut buf)?;
         Ok(w.write_all(&buf).await?)
     }

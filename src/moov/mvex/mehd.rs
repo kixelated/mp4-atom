@@ -16,7 +16,7 @@ impl AtomExt for Mehd {
 
     type Ext = MehdExt;
 
-    fn decode_body_ext(buf: &mut Bytes, ext: MehdExt) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, ext: MehdExt) -> Result<Self> {
         let fragment_duration = match ext.version {
             MehdVersion::V1 => u64::decode(buf)?,
             MehdVersion::V0 => u32::decode(buf)? as u64,
@@ -25,7 +25,7 @@ impl AtomExt for Mehd {
         Ok(Mehd { fragment_duration })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<MehdExt> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<MehdExt> {
         self.fragment_duration.encode(buf)?;
         Ok(MehdVersion::V1.into())
     }
@@ -40,10 +40,10 @@ mod tests {
         let expected = Mehd {
             fragment_duration: 32,
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Mehd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -53,10 +53,10 @@ mod tests {
         let expected = Mehd {
             fragment_duration: 30439936,
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Mehd::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

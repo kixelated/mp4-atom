@@ -23,6 +23,7 @@
 //! - [Decode] and [Encode] when using byte slices.
 //! - [ReadFrom] and [WriteTo] when using synchronous IO.
 //! - **(feature = "tokio")** [AsyncReadFrom] and [AsyncWriteTo] when using asynchronous IO.
+//! - [Buf] and [BufMut] for encoding/decoding contiguous byte slices.
 //!
 //! Additionally, there are some extra traits for decoding atoms given a header.
 //! This is useful to avoid decoding large [Mdat] atoms by first reading the header separately.
@@ -37,13 +38,13 @@
 //!
 //! ### Decoding/encoding a byte buffer
 //! ```rust
-//! use bytes::{Bytes, BytesMut};
-//! use mp4_atom::{Any, Encode, Decode, Ftyp};
+//! use std::io::Cursor;
+//! use mp4_atom::{Any, Encode, Decode, Ftyp, Buf};
 //!
 //! # fn main() -> anyhow::Result<()> {
 //!  // A simple ftyp atom
-//! let mut input = Bytes::from_static(b"\0\0\0\x14ftypiso6\0\0\x02\0mp41");
-//! let atom = Any::decode(&mut input.clone())?;
+//! let mut input = Cursor::new(b"\0\0\0\x14ftypiso6\0\0\x02\0mp41");
+//! let atom = Any::decode(&mut input)?;
 //!
 //! // Make sure we got the right atom
 //! assert_eq!(atom, Ftyp {
@@ -53,10 +54,10 @@
 //! }.into());
 //!
 //! // Encode it back
-//! let mut output = BytesMut::new();
+//! let mut output = Vec::new();
 //! atom.encode(&mut output)?;
 //!
-//! assert_eq!(input, output.freeze());
+//! assert_eq!(input.get_ref().as_slice(), output.as_slice());
 //! # Ok(()) }
 //! ```
 //!
@@ -65,16 +66,15 @@
 //! See the next example to avoid this.
 //!
 //! ```rust
-//! # use bytes::{Buf, BufMut, Bytes, BytesMut};
+//! # use std::io::Cursor;
 //! use mp4_atom::{Any, ReadFrom, WriteTo, Ftyp};
 //!
 //! # fn main() -> anyhow::Result<()> {
 //! let mut reader = std::io::stdin();
 //!
-//! # let mut input = Bytes::from_static(b"\0\0\0\x14ftypiso6\0\0\x02\0mp41");
-//! # let mut reader = input.clone().reader(); // Use your own Read type
+//! # let mut input = Cursor::new(b"\0\0\0\x14ftypiso6\0\0\x02\0mp41");
 //!
-//! let atom = Any::read_from(&mut reader)?;
+//! let atom = Any::read_from(&mut input)?;
 //!
 //! // Make sure we got the right atom
 //! assert_eq!(atom, Ftyp {
@@ -85,10 +85,10 @@
 //!
 //! // Encode it back to a Write type
 //! let writer = std::io::stdout();
-//! # let mut writer = BytesMut::new().writer();
+//! # let mut writer = Vec::new();
 //! atom.write_to(&mut writer)?;
 //!
-//! # assert_eq!(input, writer.into_inner().freeze());
+//! # assert_eq!(input.get_ref().as_slice(), writer.as_slice());
 //! # Ok(()) }
 //! ```
 //!
@@ -96,14 +96,12 @@
 //! To avoid reading large files into memory, you can call [Header::read_from] manually:
 //!
 //! ```rust
-//! # use bytes::{Buf, BufMut, Bytes, BytesMut};
+//! # use std::io::Cursor;
 //! use mp4_atom::{Atom, Any, Header, ReadFrom, ReadAtom, WriteTo, Ftyp, Moov};
 //!
 //! # fn main() -> anyhow::Result<()> {
 //! let mut reader = std::io::stdin();
-//!
-//! # let mut input = Bytes::from_static(b"\0\0\0\x14ftypiso6\0\0\x02\0mp41");
-//! # let mut reader = input.clone().reader(); // Use your own Read type
+//! # let mut reader = Cursor::new(b"\0\0\0\x14ftypiso6\0\0\x02\0mp41");
 //!
 //! let header = Header::read_from(&mut reader)?;
 //! match header.kind {
@@ -142,30 +140,33 @@
 mod any;
 mod atom;
 mod atom_ext;
+mod buf;
 mod coding;
 mod emsg;
 mod error;
 mod free;
 mod ftyp;
 mod header;
+mod io;
 mod mdat;
 mod moof;
 mod moov;
-mod traits;
 mod types;
 
 pub use any::*;
 pub use atom::*;
 pub(crate) use atom_ext::*;
+pub use buf::*;
+pub use coding::*;
 pub use emsg::*;
 pub use error::*;
 pub use free::*;
 pub use ftyp::*;
 pub use header::*;
+pub use io::*;
 pub use mdat::*;
 pub use moof::*;
 pub use moov::*;
-pub use traits::*;
 pub use types::*;
 
 #[cfg(feature = "tokio")]

@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{Cursor, Read};
 
 use crate::*;
 
@@ -14,7 +14,7 @@ pub struct Header {
 }
 
 impl Encode for Header {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         match self.size.map(|size| size + 8) {
             Some(size) if size > u32::MAX as usize => {
                 1u32.encode(buf)?;
@@ -36,7 +36,7 @@ impl Encode for Header {
 }
 
 impl Decode for Header {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let size = u32::decode(buf)?;
         let kind = FourCC::decode(buf)?;
 
@@ -92,14 +92,14 @@ impl ReadFrom for Option<Header> {
 
 // Utility methods
 impl Header {
-    pub(crate) fn read_body<R: Read>(&self, r: &mut R) -> Result<Bytes> {
+    pub(crate) fn read_body<R: Read>(&self, r: &mut R) -> Result<Cursor<Vec<u8>>> {
         // TODO This allocates on the heap.
         // Ideally, we should use ReadFrom instead of Decode to avoid this.
 
         // Don't use `with_capacity` on an untrusted size
         // We allocate at most 4096 bytes upfront and grow as needed
         let cap = self.size.unwrap_or(0).max(4096);
-        let mut buf = BytesMut::with_capacity(cap).writer();
+        let mut buf = Vec::with_capacity(cap);
 
         match self.size {
             Some(size) => {
@@ -113,14 +113,14 @@ impl Header {
             }
         };
 
-        Ok(buf.into_inner().freeze())
+        Ok(Cursor::new(buf))
     }
 
     #[cfg(feature = "tokio")]
     pub(crate) async fn read_body_tokio<R: ::tokio::io::AsyncRead + Unpin>(
         &self,
         r: &mut R,
-    ) -> Result<Bytes> {
+    ) -> Result<Cursor<Vec<u8>>> {
         use ::tokio::io::AsyncReadExt;
 
         // TODO This allocates on the heap.
@@ -143,6 +143,6 @@ impl Header {
             }
         };
 
-        Ok(buf.into())
+        Ok(Cursor::new(buf))
     }
 }

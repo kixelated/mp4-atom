@@ -19,7 +19,7 @@ impl AtomExt for Hdlr {
     type Ext = ();
     const KIND_EXT: FourCC = FourCC::new(b"hdlr");
 
-    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         u32::decode(buf)?; // pre-defined
         let handler = FourCC::decode(buf)?;
 
@@ -33,7 +33,7 @@ impl AtomExt for Hdlr {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         0u32.encode(buf)?; // pre-defined
         self.handler_type.encode(buf)?;
 
@@ -56,10 +56,10 @@ mod tests {
             handler_type: FourCC::new(b"vide"),
             name: String::from("VideoHandler"),
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Hdlr::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }
@@ -70,10 +70,10 @@ mod tests {
             handler_type: FourCC::new(b"vide"),
             name: String::new(),
         };
-        let mut buf = BytesMut::new();
+        let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
-        let mut buf = buf.freeze();
+        let mut buf = buf.as_ref();
         let decoded = Hdlr::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
     }

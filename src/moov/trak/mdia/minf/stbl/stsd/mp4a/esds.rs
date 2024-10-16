@@ -10,7 +10,7 @@ impl AtomExt for Esds {
 
     const KIND_EXT: FourCC = FourCC::new(b"esds");
 
-    fn decode_body_ext(buf: &mut Bytes, _ext: ()) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let mut es_desc = None;
 
         while let Some(desc) = Option::<Descriptor>::decode(buf)? {
@@ -28,7 +28,7 @@ impl AtomExt for Esds {
         })
     }
 
-    fn encode_body_ext(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         Descriptor::from(self.es_desc).encode(buf)
     }
 }
@@ -40,11 +40,11 @@ macro_rules! descriptors {
 			$(
 				$name($name),
 			)*
-			Unknown(u8, Bytes),
+			Unknown(u8, Vec<u8>),
 		}
 
 		impl Decode for Descriptor {
-			fn decode(buf: &mut Bytes) -> Result<Self> {
+			fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
 				let tag = u8::decode(buf)?;
 
 				let mut size: u32 = 0;
@@ -60,15 +60,15 @@ macro_rules! descriptors {
 					$(
 						$name::TAG => Ok($name::decode_exact(buf, size as _)?.into()),
 					)*
-					_ => Ok(Descriptor::Unknown(tag, buf.decode_exact(size as _)?)),
+					_ => Ok(Descriptor::Unknown(tag, Vec::decode_exact(buf, size as _)?)),
 				}
 			}
 		}
 
 		impl Encode for Descriptor {
-			fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+			fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
 				// TODO This is inefficient; we could compute the size upfront.
-				let mut tmp = BytesMut::new();
+				let mut tmp = Vec::new();
 
 				match self {
 					$(
@@ -93,7 +93,7 @@ macro_rules! descriptors {
 					b.encode(buf)?;
 				}
 
-				buf.encode(&tmp.freeze())
+				tmp.encode(buf)
 			}
 		}
 
@@ -138,8 +138,8 @@ impl EsDescriptor {
 }
 
 impl Decode for EsDescriptor {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
-        let es_id = buf.decode()?;
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        let es_id = u16::decode(buf)?;
         u8::decode(buf)?; // XXX flags must be 0
 
         let mut dec_config = None;
@@ -163,7 +163,7 @@ impl Decode for EsDescriptor {
 }
 
 impl Encode for EsDescriptor {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.es_id.encode(buf)?;
         0u8.encode(buf)?;
 
@@ -190,7 +190,7 @@ impl DecoderConfig {
 }
 
 impl Decode for DecoderConfig {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let object_type_indication = u8::decode(buf)?;
         let byte_a = u8::decode(buf)?;
         let stream_type = (byte_a & 0xFC) >> 2;
@@ -222,7 +222,7 @@ impl Decode for DecoderConfig {
 }
 
 impl Encode for DecoderConfig {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.object_type_indication.encode(buf)?;
         ((self.stream_type << 2) + (self.up_stream & 0x02) + 1).encode(buf)?; // 1 reserved
         self.buffer_size_db.encode(buf)?;
@@ -247,7 +247,7 @@ impl DecoderSpecific {
 }
 
 impl Decode for DecoderSpecific {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let byte_a = u8::decode(buf)?;
         let byte_b = u8::decode(buf)?;
 
@@ -284,7 +284,7 @@ impl Decode for DecoderSpecific {
 }
 
 impl Encode for DecoderSpecific {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         ((self.profile << 3) + (self.freq_index >> 1)).encode(buf)?;
         ((self.freq_index << 7) + (self.chan_conf << 3)).encode(buf)?;
 
@@ -300,14 +300,14 @@ impl SLConfig {
 }
 
 impl Decode for SLConfig {
-    fn decode(buf: &mut Bytes) -> Result<Self> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         u8::decode(buf)?; // pre-defined
         Ok(SLConfig {})
     }
 }
 
 impl Encode for SLConfig {
-    fn encode(&self, buf: &mut BytesMut) -> Result<()> {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         2u8.encode(buf)?; // pre-defined
         Ok(())
     }

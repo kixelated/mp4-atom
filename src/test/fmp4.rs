@@ -170,8 +170,9 @@ fn test_bbb() {
         0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x40, 0x41,
     ];
 
-    let mut buf = Bytes::from_static(ENCODED);
-    let ftyp = Ftyp::decode(&mut buf).expect("failed to decode ftyp");
+    let mut buf = &mut std::io::Cursor::new(&ENCODED);
+
+    let ftyp = Ftyp::decode(buf).expect("failed to decode ftyp");
 
     assert_eq!(
         ftyp,
@@ -182,7 +183,7 @@ fn test_bbb() {
         }
     );
 
-    let moov = Moov::decode(&mut buf).expect("failed to decode moov");
+    let moov = Moov::decode(buf).expect("failed to decode moov");
     assert_eq!(
         moov,
         Moov {
@@ -256,8 +257,8 @@ fn test_bbb() {
                                         profile_compatibility: 0,
                                         avc_level_indication: 31,
                                         length_size_minus_one: 3,
-                                        sequence_parameter_sets: vec![Bytes::from_static(b"gd\0\x1f\xac$\x84\x01@\x16\xec\x04@\0\0\x03\0@\0\0\x0c#\xc6\x0c\x92")],
-                                        picture_parameter_sets:  vec![Bytes::from_static(b"h\xee2\xc8\xb0")],
+                                        sequence_parameter_sets: vec![b"gd\0\x1f\xac$\x84\x01@\x16\xec\x04@\0\0\x03\0@\0\0\x0c#\xc6\x0c\x92".into()],
+                                        picture_parameter_sets:  vec![b"h\xee2\xc8\xb0".into()],
                                     },
                                 }),
                                 ..Default::default()
@@ -396,7 +397,7 @@ fn test_bbb() {
     assert_eq!(
         mdat,
         Mdat {
-            data: Bytes::from_static(&[
+            data: vec![
                 0x00, 0x00, 0x00, 0xD3, 0x65, 0x88, 0x80, 0x80, 0x03, 0x3F, 0xFE, 0xF5, 0xF8, 0x45,
                 0x4F, 0x32, 0xCB, 0x1B, 0xB4, 0x20, 0x3F, 0x85, 0x4D, 0xD6, 0x9B, 0xC2, 0xCA, 0x91,
                 0xB2, 0xBC, 0xE1, 0xFB, 0x35, 0x27, 0x44, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00,
@@ -413,7 +414,7 @@ fn test_bbb() {
                 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03,
                 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00,
                 0x03, 0x00, 0x00, 0x40, 0x41,
-            ]),
+            ],
         }
     );
 
@@ -446,7 +447,7 @@ fn test_bbb() {
     assert_eq!(
         mdat,
         Mdat {
-            data: Bytes::from_static(&[0x21, 0x00, 0x49, 0x90, 0x02, 0x19, 0x00, 0x23, 0x80,]),
+            data: vec![0x21, 0x00, 0x49, 0x90, 0x02, 0x19, 0x00, 0x23, 0x80],
         }
     );
 }

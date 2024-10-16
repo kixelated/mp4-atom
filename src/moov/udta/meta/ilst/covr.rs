@@ -1,16 +1,16 @@
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Covr(pub Bytes);
+pub struct Covr(pub Vec<u8>);
 
 impl Atom for Covr {
     const KIND: FourCC = FourCC::new(b"covr");
 
-    fn decode_body(buf: &mut Bytes) -> Result<Self> {
-        Ok(Covr(buf.decode()?))
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        Ok(Covr(Vec::decode(buf)?))
     }
 
-    fn encode_body(&self, buf: &mut BytesMut) -> Result<()> {
-        buf.encode(&self.0)
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        self.0.encode(buf)
     }
 }
