@@ -37,7 +37,7 @@ impl<T: AsRef<[u8]>> Buf for Cursor<T> {
     }
 
     fn advance(&mut self, n: usize) {
-        self.set_position((self.position() + n as u64) as u64);
+        self.set_position(self.position() + n as u64);
     }
 }
 
@@ -75,6 +75,10 @@ impl Buf for bytes::Bytes {
 pub trait BufMut {
     // Returns the current length.
     fn len(&self) -> usize;
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 
     // Append a slice to the buffer
     fn append_slice(&mut self, val: &[u8]);
