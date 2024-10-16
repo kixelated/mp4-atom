@@ -7,6 +7,7 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vpcc {
     pub profile: u8,
     pub level: u8,

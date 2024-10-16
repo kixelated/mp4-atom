@@ -15,6 +15,7 @@ pub use vpcc::*;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stsd {
     pub avc1: Option<Avc1>,
     pub hev1: Option<Hev1>,

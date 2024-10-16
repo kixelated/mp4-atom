@@ -4,6 +4,7 @@ pub use meta::*;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Udta {
     pub meta: Option<Meta>,
 }

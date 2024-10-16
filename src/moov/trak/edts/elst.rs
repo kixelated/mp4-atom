@@ -7,11 +7,13 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Elst {
     pub entries: Vec<ElstEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ElstEntry {
     pub segment_duration: u64,
     pub media_time: u64,

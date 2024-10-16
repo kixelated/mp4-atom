@@ -1,6 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vp09 {
     pub start_code: u16,
     pub data_reference_index: u16,

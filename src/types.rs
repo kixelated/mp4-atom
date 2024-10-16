@@ -7,6 +7,8 @@ pub use num::rational::Ratio;
 
 /// A four-character code used to identify atoms.
 #[derive(Clone, Copy, PartialEq, Eq)]
+// TODO serialize as a string
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FourCC([u8; 4]);
 
 impl FourCC {
@@ -81,6 +83,7 @@ impl AsRef<[u8; 4]> for FourCC {
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct u24([u8; 3]);
 
 impl Decode for u24 {
@@ -111,6 +114,7 @@ impl TryFrom<u32> for u24 {
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct u48([u8; 6]);
 
 impl Decode for u48 {
@@ -144,6 +148,7 @@ impl From<u48> for u64 {
 // The top N bits are the integer part, the bottom N bits are the fractional part.
 // Somebody who cares should implement some math stuff.
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FixedPoint<T> {
     int: T,
     dec: T,
@@ -204,6 +209,7 @@ where
 
 // 32 bytes max
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Compressor(String);
 
 impl From<&str> for Compressor {

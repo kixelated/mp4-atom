@@ -1,6 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tx3g {
     pub data_reference_index: u16,
     pub display_flags: u32,
@@ -12,6 +13,7 @@ pub struct Tx3g {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RgbaColor {
     pub red: u8,
     pub green: u8,

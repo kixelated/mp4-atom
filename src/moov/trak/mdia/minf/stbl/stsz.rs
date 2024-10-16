@@ -1,6 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stsz {
     // TODO maybe use an enum to be more efficient
     pub sample_sizes: Vec<u32>,

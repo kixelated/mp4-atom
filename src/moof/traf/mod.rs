@@ -9,6 +9,7 @@ pub use trun::*;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Traf {
     pub tfhd: Tfhd,
     pub tfdt: Option<Tfdt>,

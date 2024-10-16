@@ -1,11 +1,13 @@
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stsc {
     pub entries: Vec<StscEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct StscEntry {
     pub first_chunk: u32,
     pub samples_per_chunk: u32,

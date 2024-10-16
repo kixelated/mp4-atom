@@ -1,6 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Trex {
     pub track_id: u32,
     pub default_sample_description_index: u32,

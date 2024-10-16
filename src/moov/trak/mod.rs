@@ -9,6 +9,7 @@ pub use tkhd::*;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Trak {
     pub tkhd: Tkhd,
     pub edts: Option<Edts>,

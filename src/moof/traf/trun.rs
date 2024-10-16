@@ -14,12 +14,14 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Trun {
     pub data_offset: Option<i32>,
     pub entries: Vec<TrunEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TrunEntry {
     pub duration: Option<u32>,
     pub size: Option<u32>,

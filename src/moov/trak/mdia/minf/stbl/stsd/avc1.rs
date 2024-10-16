@@ -1,6 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Avc1 {
     pub data_reference_index: u16,
     pub width: u16,
@@ -106,6 +107,7 @@ impl Atom for Avc1 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Avcc {
     pub configuration_version: u8,
     pub avc_profile_indication: u8,
