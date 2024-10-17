@@ -34,7 +34,6 @@ impl Atom for Avc1 {
     const KIND: FourCC = FourCC::new(b"avc1");
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
-        println!("Avc1::decode_body: {:?}", buf.slice(buf.remaining()));
         u32::decode(buf)?; // reserved
         u16::decode(buf)?; // reserved
         let data_reference_index = u16::decode(buf)?;
@@ -55,7 +54,6 @@ impl Atom for Avc1 {
         let mut avcc = None;
         //while let Some(atom) = Option::<Any>::decode(buf)? {
         loop {
-            println!("loop: {:?}", buf.slice(buf.remaining()));
             let atom = match Option::<Any>::decode(buf)? {
                 Some(atom) => atom,
                 None => break,
@@ -66,8 +64,6 @@ impl Atom for Avc1 {
                 _ => tracing::warn!("unknown atom: {:?}", atom),
             }
         }
-
-        println!("Avc1::decode_body done: {:?}", buf.slice(buf.remaining()));
 
         Ok(Avc1 {
             data_reference_index,
@@ -136,8 +132,6 @@ impl Atom for Avcc {
     const KIND: FourCC = FourCC::new(b"avcC");
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
-        println!("Avcc::decode_body: {:?}", buf.slice(buf.remaining()));
-
         let configuration_version = u8::decode(buf)?;
         let avc_profile_indication = u8::decode(buf)?;
         let profile_compatibility = u8::decode(buf)?;
@@ -159,8 +153,6 @@ impl Atom for Avcc {
             let nal = Vec::decode_exact(buf, size)?;
             picture_parameter_sets.push(nal);
         }
-
-        println!("Avcc::decode_body done: {:?}", buf.slice(buf.remaining()));
 
         Ok(Avcc {
             configuration_version,

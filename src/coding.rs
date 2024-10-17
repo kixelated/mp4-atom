@@ -116,7 +116,7 @@ impl<T: Decode> Decode for Vec<T> {
 impl Decode for String {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let mut bytes = Vec::new();
-        loop {
+        while buf.has_remaining() {
             let byte = u8::decode(buf)?;
             if byte == 0 {
                 break;

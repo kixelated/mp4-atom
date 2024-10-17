@@ -111,6 +111,7 @@ any! {
                     Desc,
                     Name,
                     Year,
+            Skip,
         Trak,
             Tkhd,
             Mdia,
