@@ -88,72 +88,72 @@ struct TfdtExt {
 */
 
 macro_rules! ext {
-	(name: $name:ident, versions: [$($version:expr),*], flags: { $($flag:ident = $bit:expr,)* }) => {
-		paste::paste! {
-			#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-			pub(crate) enum [<$name Version>] {
-				$(
-					[<V $version>] = $version,
-				)*
-			}
+    (name: $name:ident, versions: [$($version:expr),*], flags: { $($flag:ident = $bit:expr,)* }) => {
+        paste::paste! {
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            pub(crate) enum [<$name Version>] {
+                $(
+                    [<V $version>] = $version,
+                )*
+            }
 
-			impl TryFrom<u8> for [<$name Version>] {
-				type Error = Error;
+            impl TryFrom<u8> for [<$name Version>] {
+                type Error = Error;
 
-				fn try_from(v: u8) -> Result<Self> {
-					match v {
-						$(
-							$version => Ok(Self::[<V $version>]),
-						)*
-						_ => Err(Error::UnknownVersion(v)),
-					}
-				}
-			}
+                fn try_from(v: u8) -> Result<Self> {
+                    match v {
+                        $(
+                            $version => Ok(Self::[<V $version>]),
+                        )*
+                        _ => Err(Error::UnknownVersion(v)),
+                    }
+                }
+            }
 
-			impl Default for [<$name Version>] {
-				// Hilarious way to return the first version in the list
-				#[allow(unreachable_code)]
-				fn default() -> Self {
-					$(
-						return Self::[<V $version>];
-					)*
-				}
-			}
+            impl Default for [<$name Version>] {
+                // Hilarious way to return the first version in the list
+                #[allow(unreachable_code)]
+                fn default() -> Self {
+                    $(
+                        return Self::[<V $version>];
+                    )*
+                }
+            }
 
-			#[derive(Debug, Clone, PartialEq, Eq, Default)]
-			pub(crate) struct [<$name Ext>] {
-				pub version: [<$name Version>],
-				$(
-					pub $flag: bool,
-				)*
-			}
+            #[derive(Debug, Clone, PartialEq, Eq, Default)]
+            pub(crate) struct [<$name Ext>] {
+                pub version: [<$name Version>],
+                $(
+                    pub $flag: bool,
+                )*
+            }
 
-			impl Ext for [<$name Ext>] {
-				fn encode(&self) -> Result<u32>{
-					Ok((self.version as u32) << 24 $(| (self.$flag as u32) << $bit)*)
-				}
+            impl Ext for [<$name Ext>] {
+                fn encode(&self) -> Result<u32>{
+                    Ok((self.version as u32) << 24 $(| (self.$flag as u32) << $bit)*)
+                }
 
-				fn decode(v: u32) -> Result<Self> {
-					Ok([<$name Ext>] {
-						version: [<$name Version>]::try_from((v >> 24) as u8)?,
-						$(
-							$flag: (v & (1 << $bit)) != 0,
-						)*
-					})
-				}
-			}
+                fn decode(v: u32) -> Result<Self> {
+                    Ok([<$name Ext>] {
+                        version: [<$name Version>]::try_from((v >> 24) as u8)?,
+                        $(
+                            $flag: (v & (1 << $bit)) != 0,
+                        )*
+                    })
+                }
+            }
 
-			// Helper when there are no flags
-			impl From<[<$name Version>]> for [<$name Ext>] {
-				fn from(version: [<$name Version>]) -> Self {
-					// Not using ..Default::default() to avoid Clippy
-					let mut ext = Self::default();
-					ext.version = version;
-					ext
-				}
-			}
-		}
-	};
+            // Helper when there are no flags
+            impl From<[<$name Version>]> for [<$name Ext>] {
+                fn from(version: [<$name Version>]) -> Self {
+                    // Not using ..Default::default() to avoid Clippy
+                    let mut ext = Self::default();
+                    ext.version = version;
+                    ext
+                }
+            }
+        }
+    };
 }
 
 pub(crate) use ext;

@@ -10,7 +10,7 @@ macro_rules! any {
         #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         pub enum Any {
             $($kind($kind),)*
-			Unknown(FourCC, Vec<u8>),
+            Unknown(FourCC, Vec<u8>),
         }
 
         impl Any {
@@ -18,10 +18,10 @@ macro_rules! any {
             pub fn kind(&self) -> FourCC {
                 match self {
                     $(Any::$kind(_) => $kind::KIND,)*
-					Any::Unknown(kind, _) => *kind,
+                    Any::Unknown(kind, _) => *kind,
                 }
             }
-		}
+        }
 
         impl Decode for Any {
             fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
@@ -32,9 +32,9 @@ macro_rules! any {
             }
         }
 
-		impl DecodeMaybe for Any {
+        impl DecodeMaybe for Any {
             fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>> {
-				let header = match Header::decode_maybe(buf)? {
+                let header = match Header::decode_maybe(buf)? {
                     Some(header) => header,
                     None => return Ok(None),
                 };
@@ -46,23 +46,23 @@ macro_rules! any {
 
                 Ok(Some(Self::decode_atom(&header, buf)?))
             }
-		}
+        }
 
-		impl Encode for Any {
+        impl Encode for Any {
             fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-				let start = buf.len();
-				0u32.encode(buf)?;
-				self.kind().encode(buf)?;
+                let start = buf.len();
+                0u32.encode(buf)?;
+                self.kind().encode(buf)?;
 
-				match self {
-					$(Any::$kind(inner) => Atom::encode_body(inner, buf),)*
-					Any::Unknown(_, data) => data.encode(buf),
-				}?;
+                match self {
+                    $(Any::$kind(inner) => Atom::encode_body(inner, buf),)*
+                    Any::Unknown(_, data) => data.encode(buf),
+                }?;
 
-				let size: u32 = (buf.len() - start).try_into().map_err(|_| Error::TooLarge(self.kind()))?;
+                let size: u32 = (buf.len() - start).try_into().map_err(|_| Error::TooLarge(self.kind()))?;
                 buf.set_slice(start, &size.to_be_bytes());
 
-				Ok(())
+                Ok(())
             }
         }
 

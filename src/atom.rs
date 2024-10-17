@@ -33,7 +33,7 @@ impl<T: Atom> Encode for T {
 
 impl<T: Atom> Decode for T {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
-        Ok(Self::decode_maybe(buf)?.ok_or(Error::OutOfBounds)?)
+        Self::decode_maybe(buf)?.ok_or(Error::OutOfBounds)
     }
 }
 
