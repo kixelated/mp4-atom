@@ -21,7 +21,6 @@ impl AtomExt for Hdlr {
     const KIND_EXT: FourCC = FourCC::new(b"hdlr");
 
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
-        println!("Hdlr::decode_body_ext: {:?}", buf.slice(buf.remaining()));
         u32::decode(buf)?; // pre-defined
         let handler = FourCC::decode(buf)?;
 

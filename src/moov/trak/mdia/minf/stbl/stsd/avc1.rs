@@ -52,13 +52,7 @@ impl Atom for Avc1 {
         i16::decode(buf)?; // pre-defined
 
         let mut avcc = None;
-        //while let Some(atom) = Option::<Any>::decode(buf)? {
-        loop {
-            let atom = match Option::<Any>::decode(buf)? {
-                Some(atom) => atom,
-                None => break,
-            };
-
+        while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Avcc(atom) => avcc = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),

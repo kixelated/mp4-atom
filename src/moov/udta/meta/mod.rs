@@ -28,7 +28,7 @@ impl AtomExt for Meta {
 
         match hdlr.handler {
             MDIR => {
-                let ilst = Option::<Ilst>::decode(buf)?;
+                let ilst = Ilst::decode_maybe(buf)?;
                 Ok(Meta::Mdir { ilst })
             }
             _ => {

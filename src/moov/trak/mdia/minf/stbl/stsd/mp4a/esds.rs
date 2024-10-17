@@ -14,7 +14,7 @@ impl AtomExt for Esds {
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let mut es_desc = None;
 
-        while let Some(desc) = Option::<Descriptor>::decode(buf)? {
+        while let Some(desc) = Descriptor::decode_maybe(buf)? {
             match desc {
                 Descriptor::EsDescriptor(desc) => es_desc = Some(desc),
                 Descriptor::Unknown(tag, _) => {
@@ -65,6 +65,15 @@ macro_rules! descriptors {
 				}
 			}
 		}
+
+        impl DecodeMaybe for Descriptor {
+            fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>> {
+                match buf.has_remaining() {
+                    true => Descriptor::decode(buf).map(Some),
+                    false => Ok(None),
+                }
+            }
+        }
 
 		impl Encode for Descriptor {
 			fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
@@ -147,7 +156,7 @@ impl Decode for EsDescriptor {
         let mut dec_config = None;
         let mut sl_config = None;
 
-        while let Some(desc) = Option::<Descriptor>::decode(buf)? {
+        while let Some(desc) = Descriptor::decode_maybe(buf)? {
             match desc {
                 Descriptor::DecoderConfig(desc) => dec_config = Some(desc),
                 Descriptor::SLConfig(desc) => sl_config = Some(desc),
@@ -204,7 +213,7 @@ impl Decode for DecoderConfig {
 
         let mut dec_specific = None;
 
-        while let Some(desc) = Option::<Descriptor>::decode(buf)? {
+        while let Some(desc) = Descriptor::decode_maybe(buf)? {
             match desc {
                 Descriptor::DecoderSpecific(desc) => dec_specific = Some(desc),
                 Descriptor::Unknown(tag, _) => tracing::warn!("unknown descriptor: {:02X}", tag),

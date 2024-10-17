@@ -23,10 +23,28 @@ macro_rules! any {
             }
 		}
 
-		impl Decode for Any {
+        impl Decode for Any {
             fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
-				let header = Header::decode(buf)?;
-                Self::decode_atom(&header, buf)
+                match Self::decode_maybe(buf)? {
+                    Some(any) => Ok(any),
+                    None => Err(Error::OutOfBounds),
+                }
+            }
+        }
+
+		impl DecodeMaybe for Any {
+            fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>> {
+				let header = match Header::decode_maybe(buf)? {
+                    Some(header) => header,
+                    None => return Ok(None),
+                };
+
+                let size = header.size.unwrap_or(buf.remaining());
+                if size > buf.remaining() {
+                    return Ok(None);
+                }
+
+                Ok(Some(Self::decode_atom(&header, buf)?))
             }
 		}
 
@@ -102,6 +120,7 @@ macro_rules! any {
 
 any! {
     Ftyp,
+    Styp,
     Moov,
         Mvhd,
         Udta,

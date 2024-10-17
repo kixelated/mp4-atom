@@ -4,8 +4,10 @@ use crate::*;
 
 /// Decode a type from a buffer.
 pub trait Decode: Sized {
+    /// Decode the type from the buffer.
     fn decode<B: Buf>(buf: &mut B) -> Result<Self>;
 
+    /// Helper: Decode exactly size bytes from the buffer.
     fn decode_exact<B: Buf>(buf: &mut B, size: usize) -> Result<Self> {
         if buf.remaining() < size {
             return Err(Error::OutOfBounds);
@@ -22,6 +24,11 @@ pub trait Decode: Sized {
 
         Ok(res)
     }
+}
+
+/// Decode a type from a buffer if we have enough data.
+pub trait DecodeMaybe: Sized {
+    fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>>;
 }
 
 /// Decode an atom using the provided header
@@ -128,16 +135,6 @@ impl Decode for String {
         let str = ffi::CString::new(bytes).map_err(|err| Error::InvalidString(err.to_string()))?;
         str.into_string()
             .map_err(|err| Error::InvalidString(err.to_string()))
-    }
-}
-
-impl<T: Decode> Decode for Option<T> {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
-        if buf.has_remaining() {
-            Ok(Some(T::decode(buf)?))
-        } else {
-            Ok(None)
-        }
     }
 }
 

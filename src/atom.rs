@@ -11,7 +11,6 @@ pub trait Atom: Sized {
 }
 
 impl<T: Atom> Encode for T {
-    #[tracing::instrument(skip_all, fields(?atom = Self::KIND))]
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         let start = buf.len();
 
@@ -33,13 +32,21 @@ impl<T: Atom> Encode for T {
 }
 
 impl<T: Atom> Decode for T {
-    #[tracing::instrument(skip_all, fields(?atom = Self::KIND))]
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
-        let header = Header::decode(buf)?;
+        Ok(Self::decode_maybe(buf)?.ok_or(Error::OutOfBounds)?)
+    }
+}
+
+impl<T: Atom> DecodeMaybe for T {
+    fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>> {
+        let header = match Header::decode_maybe(buf)? {
+            Some(header) => header,
+            None => return Ok(None),
+        };
 
         let size = header.size.unwrap_or(buf.remaining());
         if size > buf.remaining() {
-            return Err(Error::OutOfBounds);
+            return Ok(None);
         }
 
         let body = &mut buf.slice(size);
@@ -57,7 +64,7 @@ impl<T: Atom> Decode for T {
 
         buf.advance(size);
 
-        Ok(atom)
+        Ok(Some(atom))
     }
 }
 
@@ -168,7 +175,7 @@ macro_rules! nested {
                 $( let mut [<$optional:lower>] = None;)*
                 $( let mut [<$multiple:lower>] = Vec::new();)*
 
-                while let Some(atom) = Option::<Any>::decode(buf)? {
+                while let Some(atom) = Any::decode_maybe(buf)? {
                     match atom {
                         $(Any::$required(atom) => {
                             if [<$required:lower>].is_some() {

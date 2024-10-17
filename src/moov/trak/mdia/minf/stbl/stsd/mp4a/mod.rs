@@ -50,7 +50,7 @@ impl Atom for Mp4a {
         let mut esds = None;
 
         // Find esds in mp4a or wave
-        while let Some(atom) = Option::decode(buf)? {
+        while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Esds(atom) => esds = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),
