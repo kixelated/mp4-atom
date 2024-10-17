@@ -1,5 +1,8 @@
 mod meta;
+mod skip;
+
 pub use meta::*;
+pub use skip::*;
 
 use crate::*;
 
@@ -7,19 +10,16 @@ use crate::*;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Udta {
     pub meta: Option<Meta>,
+    pub skip: Option<Skip>,
 }
 
 impl Atom for Udta {
     const KIND: FourCC = FourCC::new(b"udta");
 
-    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
-        let meta = Option::decode(buf)?;
-        Ok(Udta { meta })
-    }
-
-    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        self.meta.encode(buf)?;
-        Ok(())
+    nested! {
+        required: [ ],
+        optional: [ Meta, Skip ],
+        multiple: [ ],
     }
 }
 
@@ -29,7 +29,10 @@ mod tests {
 
     #[test]
     fn test_udta_empty() {
-        let expected = Udta { meta: None };
+        let expected = Udta {
+            meta: None,
+            skip: None,
+        };
 
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -43,6 +46,7 @@ mod tests {
     fn test_udta() {
         let expected = Udta {
             meta: Some(Meta::default()),
+            skip: None,
         };
 
         let mut buf = Vec::new();

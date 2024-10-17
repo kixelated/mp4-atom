@@ -7,6 +7,7 @@ use crate::*;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Meta {
     Mdir { ilst: Option<Ilst> },
+    Unknown { hdlr: Hdlr, data: Vec<u8> },
 }
 
 impl Default for Meta {
@@ -25,28 +26,31 @@ impl AtomExt for Meta {
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
 
-        match hdlr.handler_type {
+        match hdlr.handler {
             MDIR => {
                 let ilst = Option::<Ilst>::decode(buf)?;
                 Ok(Meta::Mdir { ilst })
             }
-            _ => todo!("unsupported handler type: {:?}", hdlr.handler_type),
+            _ => {
+                let data = Vec::<u8>::decode(buf)?;
+                Ok(Meta::Unknown { hdlr, data })
+            }
         }
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        let hldr = match self {
-            Self::Mdir { .. } => Hdlr {
-                handler_type: MDIR,
-                ..Default::default()
-            },
-        };
-
-        hldr.encode(buf)?;
-
         match self {
             Self::Mdir { ilst } => {
+                Hdlr {
+                    handler: MDIR,
+                    ..Default::default()
+                }
+                .encode(buf)?;
                 ilst.encode(buf)?;
+            }
+            Self::Unknown { hdlr, data } => {
+                hdlr.encode(buf)?;
+                data.encode(buf)?;
             }
         }
 

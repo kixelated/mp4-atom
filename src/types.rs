@@ -259,7 +259,7 @@ impl Decode for Compressor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Zeroed {
     pub size: usize,
 }
@@ -290,5 +290,11 @@ impl Decode for Zeroed {
         let size = buf.remaining();
         buf.advance(size);
         Ok(Self { size })
+    }
+}
+
+impl From<usize> for Zeroed {
+    fn from(size: usize) -> Self {
+        Self { size }
     }
 }

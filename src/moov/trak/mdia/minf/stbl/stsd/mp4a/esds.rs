@@ -279,6 +279,11 @@ impl Decode for DecoderSpecific {
             chan_conf = (byte_b >> 3) & 0x0F;
         }
 
+        if buf.has_remaining() {
+            tracing::warn!("PLEASE FIX: failed to consume all bytes in DecoderSpecificDescriptor");
+            buf.advance(buf.remaining());
+        }
+
         Ok(DecoderSpecific {
             profile,
             freq_index,

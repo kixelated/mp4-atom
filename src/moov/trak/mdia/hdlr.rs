@@ -3,14 +3,14 @@ use crate::*;
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hdlr {
-    pub handler_type: FourCC,
+    pub handler: FourCC,
     pub name: String,
 }
 
 impl Default for Hdlr {
     fn default() -> Self {
         Hdlr {
-            handler_type: FourCC::new(b"none"),
+            handler: FourCC::new(b"none"),
             name: String::new(),
         }
     }
@@ -21,6 +21,7 @@ impl AtomExt for Hdlr {
     const KIND_EXT: FourCC = FourCC::new(b"hdlr");
 
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
+        println!("Hdlr::decode_body_ext: {:?}", buf.slice(buf.remaining()));
         u32::decode(buf)?; // pre-defined
         let handler = FourCC::decode(buf)?;
 
@@ -28,15 +29,15 @@ impl AtomExt for Hdlr {
 
         let name = String::decode(buf)?;
 
-        Ok(Hdlr {
-            handler_type: handler,
-            name,
-        })
+        // Skip any trailing padding
+        //buf.advance(buf.remaining());
+
+        Ok(Hdlr { handler, name })
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         0u32.encode(buf)?; // pre-defined
-        self.handler_type.encode(buf)?;
+        self.handler.encode(buf)?;
 
         // 12 bytes reserved
         [0u8; 12].encode(buf)?;
@@ -54,7 +55,7 @@ mod tests {
     #[test]
     fn test_hdlr() {
         let expected = Hdlr {
-            handler_type: FourCC::new(b"vide"),
+            handler: FourCC::new(b"vide"),
             name: String::from("VideoHandler"),
         };
         let mut buf = Vec::new();
@@ -68,7 +69,7 @@ mod tests {
     #[test]
     fn test_hdlr_empty() {
         let expected = Hdlr {
-            handler_type: FourCC::new(b"vide"),
+            handler: FourCC::new(b"vide"),
             name: String::new(),
         };
         let mut buf = Vec::new();
