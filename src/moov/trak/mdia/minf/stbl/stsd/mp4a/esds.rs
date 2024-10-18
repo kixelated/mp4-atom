@@ -14,7 +14,7 @@ impl AtomExt for Esds {
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let mut es_desc = None;
 
-        while let Some(desc) = Option::<Descriptor>::decode(buf)? {
+        while let Some(desc) = Descriptor::decode_maybe(buf)? {
             match desc {
                 Descriptor::EsDescriptor(desc) => es_desc = Some(desc),
                 Descriptor::Unknown(tag, _) => {
@@ -35,88 +35,97 @@ impl AtomExt for Esds {
 }
 
 macro_rules! descriptors {
-	($($name:ident,)*) => {
-		#[derive(Debug, Clone, PartialEq, Eq)]
-		pub enum Descriptor {
-			$(
-				$name($name),
-			)*
-			Unknown(u8, Vec<u8>),
-		}
+    ($($name:ident,)*) => {
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        pub enum Descriptor {
+            $(
+                $name($name),
+            )*
+            Unknown(u8, Vec<u8>),
+        }
 
-		impl Decode for Descriptor {
-			fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
-				let tag = u8::decode(buf)?;
+        impl Decode for Descriptor {
+            fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+                let tag = u8::decode(buf)?;
 
-				let mut size: u32 = 0;
-				for _ in 0..4 {
-					let b = u8::decode(buf)?;
-					size = (size << 7) | (b & 0x7F) as u32;
-					if b & 0x80 == 0 {
-						break;
-					}
-				}
+                let mut size: u32 = 0;
+                for _ in 0..4 {
+                    let b = u8::decode(buf)?;
+                    size = (size << 7) | (b & 0x7F) as u32;
+                    if b & 0x80 == 0 {
+                        break;
+                    }
+                }
 
-				match tag {
-					$(
-						$name::TAG => Ok($name::decode_exact(buf, size as _)?.into()),
-					)*
-					_ => Ok(Descriptor::Unknown(tag, Vec::decode_exact(buf, size as _)?)),
-				}
-			}
-		}
+                match tag {
+                    $(
+                        $name::TAG => Ok($name::decode_exact(buf, size as _)?.into()),
+                    )*
+                    _ => Ok(Descriptor::Unknown(tag, Vec::decode_exact(buf, size as _)?)),
+                }
+            }
+        }
 
-		impl Encode for Descriptor {
-			fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-				// TODO This is inefficient; we could compute the size upfront.
-				let mut tmp = Vec::new();
+        impl DecodeMaybe for Descriptor {
+            fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>> {
+                match buf.has_remaining() {
+                    true => Descriptor::decode(buf).map(Some),
+                    false => Ok(None),
+                }
+            }
+        }
 
-				match self {
-					$(
-						Descriptor::$name(t) => {
-							$name::TAG.encode(buf)?;
-							t.encode(&mut tmp)?;
-						},
-					)*
-					Descriptor::Unknown(tag, data) => {
-						tag.encode(buf)?;
-						data.encode(&mut tmp)?;
-					},
-				};
+        impl Encode for Descriptor {
+            fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+                // TODO This is inefficient; we could compute the size upfront.
+                let mut tmp = Vec::new();
 
-				let mut size = tmp.len() as u32;
-				while size > 0 {
-					let mut b = (size & 0x7F) as u8;
-					size >>= 7;
-					if size > 0 {
-						b |= 0x80;
-					}
-					b.encode(buf)?;
-				}
+                match self {
+                    $(
+                        Descriptor::$name(t) => {
+                            $name::TAG.encode(buf)?;
+                            t.encode(&mut tmp)?;
+                        },
+                    )*
+                    Descriptor::Unknown(tag, data) => {
+                        tag.encode(buf)?;
+                        data.encode(&mut tmp)?;
+                    },
+                };
 
-				tmp.encode(buf)
-			}
-		}
+                let mut size = tmp.len() as u32;
+                while size > 0 {
+                    let mut b = (size & 0x7F) as u8;
+                    size >>= 7;
+                    if size > 0 {
+                        b |= 0x80;
+                    }
+                    b.encode(buf)?;
+                }
 
-		impl Descriptor {
-			pub const fn tag(&self) -> u8 {
-				match self {
-					$(
-						Descriptor::$name(_) => $name::TAG,
-					)*
-					Descriptor::Unknown(tag, _) => *tag,
-				}
-			}
-		}
+                tmp.encode(buf)
+            }
+        }
 
-		$(
-			impl From<$name> for Descriptor {
-				fn from(desc: $name) -> Self {
-					Descriptor::$name(desc)
-				}
-			}
-		)*
-	};
+        impl Descriptor {
+            pub const fn tag(&self) -> u8 {
+                match self {
+                    $(
+                        Descriptor::$name(_) => $name::TAG,
+                    )*
+                    Descriptor::Unknown(tag, _) => *tag,
+                }
+            }
+        }
+
+        $(
+            impl From<$name> for Descriptor {
+                fn from(desc: $name) -> Self {
+                    Descriptor::$name(desc)
+                }
+            }
+        )*
+    };
 }
 
 descriptors! {
@@ -147,7 +156,7 @@ impl Decode for EsDescriptor {
         let mut dec_config = None;
         let mut sl_config = None;
 
-        while let Some(desc) = Option::<Descriptor>::decode(buf)? {
+        while let Some(desc) = Descriptor::decode_maybe(buf)? {
             match desc {
                 Descriptor::DecoderConfig(desc) => dec_config = Some(desc),
                 Descriptor::SLConfig(desc) => sl_config = Some(desc),
@@ -204,7 +213,7 @@ impl Decode for DecoderConfig {
 
         let mut dec_specific = None;
 
-        while let Some(desc) = Option::<Descriptor>::decode(buf)? {
+        while let Some(desc) = Descriptor::decode_maybe(buf)? {
             match desc {
                 Descriptor::DecoderSpecific(desc) => dec_specific = Some(desc),
                 Descriptor::Unknown(tag, _) => tracing::warn!("unknown descriptor: {:02X}", tag),

@@ -7,14 +7,12 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum EmsgTimestamp {
     Relative(u32),
     Absolute(u64),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Emsg {
     pub timescale: u32,
     pub presentation_time: EmsgTimestamp,

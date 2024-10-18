@@ -54,6 +54,21 @@ impl Decode for Header {
     }
 }
 
+impl DecodeMaybe for Header {
+    fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>> {
+        if buf.remaining() < 8 {
+            return Ok(None);
+        }
+
+        let size = u32::from_be_bytes(buf.slice(4).try_into().unwrap());
+        if size == 1 && buf.remaining() < 16 {
+            return Ok(None);
+        }
+
+        Ok(Some(Self::decode(buf)?))
+    }
+}
+
 impl ReadFrom for Header {
     fn read_from<R: Read>(r: &mut R) -> Result<Self> {
         <Option<Header> as ReadFrom>::read_from(r)?.ok_or(Error::UnexpectedEof)

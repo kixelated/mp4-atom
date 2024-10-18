@@ -28,7 +28,7 @@ impl Atom for Ilst {
         let mut covr = None;
         let mut desc = None;
 
-        while let Some(atom) = Option::decode(buf)? {
+        while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Name(atom) => name = atom.into(),
                 Any::Year(atom) => year = atom.into(),

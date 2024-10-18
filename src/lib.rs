@@ -151,6 +151,7 @@ mod io;
 mod mdat;
 mod moof;
 mod moov;
+mod styp;
 mod types;
 
 pub use any::*;
@@ -167,6 +168,7 @@ pub use io::*;
 pub use mdat::*;
 pub use moof::*;
 pub use moov::*;
+pub use styp::*;
 pub use types::*;
 
 #[cfg(feature = "tokio")]
