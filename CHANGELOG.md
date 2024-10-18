@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/kixelated/mp4-atom/compare/v0.2.1...v0.3.0) - 2024-10-18
+
+### Other
+
+- Add decode_maybe ([#12](https://github.com/kixelated/mp4-atom/pull/12))
+- Fix some user-provided MP4 files. ([#11](https://github.com/kixelated/mp4-atom/pull/11))
+- Zero copy ([#9](https://github.com/kixelated/mp4-atom/pull/9))
+
 ## [0.2.1](https://github.com/kixelated/mp4-atom/compare/v0.2.0...v0.2.1) - 2024-09-24
 
 ### Other
