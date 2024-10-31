@@ -113,7 +113,7 @@ impl Header {
 
         // Don't use `with_capacity` on an untrusted size
         // We allocate at most 4096 bytes upfront and grow as needed
-        let cap = self.size.unwrap_or(0).max(4096);
+        let cap = self.size.unwrap_or(0).min(4096);
         let mut buf = Vec::with_capacity(cap);
 
         match self.size {
@@ -143,7 +143,7 @@ impl Header {
 
         // Don't use `with_capacity` on an untrusted size
         // We allocate at most 4096 bytes upfront and grow as needed
-        let cap = self.size.unwrap_or(0).max(4096);
+        let cap = self.size.unwrap_or(0).min(4096);
         let mut buf = Vec::with_capacity(cap);
 
         match self.size {
