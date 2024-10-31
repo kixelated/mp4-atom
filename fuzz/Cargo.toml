@@ -1,0 +1,28 @@
+[package]
+name = "mp4-atom-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.mp4-atom]
+path = ".."
+
+[[bin]]
+name = "decode"
+path = "src/decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "read"
+path = "src/read.rs"
+test = false
+doc = false
+bench = false

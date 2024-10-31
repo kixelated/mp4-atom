@@ -47,6 +47,10 @@ pub enum Error {
     #[error("unexpected eof")]
     UnexpectedEof,
 
+    // Returned in the rare case when we can't represent a value in the desired type
+    #[error("out of memory")]
+    OutOfMemory,
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 }
