@@ -49,11 +49,11 @@ impl AtomExt for Trun {
         // Avoid a memory exhaustion attack.
         // If none of the flags are set, then the trun entry has zero size, then we'll allocate `sample_count` entries.
         // Rather than make the API worse, we just limit the number of (useless?) identical entries to 4096.
-        if !ext.sample_duration
-            && !ext.sample_duration
-            && !ext.sample_flags
-            && !ext.sample_cts
-            && sample_count > 4096
+        if !(ext.sample_duration
+            || ext.sample_size
+            || ext.sample_flags
+            || ext.sample_cts
+            || sample_count <= 4096)
         {
             return Err(Error::OutOfMemory);
         }
