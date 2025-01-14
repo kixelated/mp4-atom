@@ -199,7 +199,7 @@ mod test {
                                             avc_profile_indication: 100,
                                             profile_compatibility: 0,
                                             avc_level_indication: 40,
-                                            length_size_minus_one: 3,
+                                            length_size: 4,
                                             sequence_parameter_sets: vec![vec![
                                                 103, 100, 0, 40, 172, 217, 64, 120, 2, 39, 229,
                                                 132, 0, 0, 3, 0, 4, 0, 0, 3, 0, 240, 60, 96, 198,
@@ -207,7 +207,8 @@ mod test {
                                             ]],
                                             picture_parameter_sets: vec![vec![
                                                 104, 235, 236, 178, 44
-                                            ]]
+                                            ]],
+                                            ext: None,
                                         }
                                     }),
                                     ..Default::default()

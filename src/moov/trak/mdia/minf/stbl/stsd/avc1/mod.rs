@@ -1,3 +1,12 @@
+mod avcc;
+
+// Incomplete H264 decoder, saved for possible future use
+//mod golomb;
+//mod pps;
+//mod sps;
+
+pub use avcc::*;
+
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -96,91 +105,6 @@ impl Atom for Avc1 {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Avcc {
-    pub configuration_version: u8,
-    pub avc_profile_indication: u8,
-    pub profile_compatibility: u8,
-    pub avc_level_indication: u8,
-    pub length_size_minus_one: u8,
-    pub sequence_parameter_sets: Vec<Vec<u8>>,
-    pub picture_parameter_sets: Vec<Vec<u8>>,
-}
-
-impl Avcc {
-    pub fn new(sps: &[u8], pps: &[u8]) -> Self {
-        Self {
-            configuration_version: 1,
-            avc_profile_indication: sps[1],
-            profile_compatibility: sps[2],
-            avc_level_indication: sps[3],
-            length_size_minus_one: 0xff, // length_size = 4
-            sequence_parameter_sets: vec![sps.into()],
-            picture_parameter_sets: vec![pps.into()],
-        }
-    }
-}
-
-impl Atom for Avcc {
-    const KIND: FourCC = FourCC::new(b"avcC");
-
-    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
-        let configuration_version = u8::decode(buf)?;
-        let avc_profile_indication = u8::decode(buf)?;
-        let profile_compatibility = u8::decode(buf)?;
-        let avc_level_indication = u8::decode(buf)?;
-        let length_size_minus_one = u8::decode(buf)? & 0x3;
-
-        let num_of_spss = u8::decode(buf)? & 0x1F;
-        let mut sequence_parameter_sets = Vec::with_capacity(num_of_spss as usize);
-        for _ in 0..num_of_spss {
-            let size = u16::decode(buf)? as usize;
-            let nal = Vec::decode_exact(buf, size)?;
-            sequence_parameter_sets.push(nal);
-        }
-
-        let num_of_ppss = u8::decode(buf)?;
-        let mut picture_parameter_sets = Vec::with_capacity(num_of_ppss as usize);
-        for _ in 0..num_of_ppss {
-            let size = u16::decode(buf)? as usize;
-            let nal = Vec::decode_exact(buf, size)?;
-            picture_parameter_sets.push(nal);
-        }
-
-        Ok(Avcc {
-            configuration_version,
-            avc_profile_indication,
-            profile_compatibility,
-            avc_level_indication,
-            length_size_minus_one,
-            sequence_parameter_sets,
-            picture_parameter_sets,
-        })
-    }
-
-    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        self.configuration_version.encode(buf)?;
-        self.avc_profile_indication.encode(buf)?;
-        self.profile_compatibility.encode(buf)?;
-        self.avc_level_indication.encode(buf)?;
-        (self.length_size_minus_one | 0xFC).encode(buf)?;
-
-        (self.sequence_parameter_sets.len() as u8 | 0xE0).encode(buf)?;
-        for sps in &self.sequence_parameter_sets {
-            (sps.len() as u16).encode(buf)?;
-            sps.encode(buf)?;
-        }
-
-        (self.picture_parameter_sets.len() as u8).encode(buf)?;
-        for pps in &self.picture_parameter_sets {
-            (pps.len() as u16).encode(buf)?;
-            pps.encode(buf)?;
-        }
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -201,12 +125,13 @@ mod tests {
                 avc_profile_indication: 100,
                 profile_compatibility: 0,
                 avc_level_indication: 13,
-                length_size_minus_one: 3,
+                length_size: 4,
                 sequence_parameter_sets: vec![vec![
                     0x67, 0x64, 0x00, 0x0D, 0xAC, 0xD9, 0x41, 0x41, 0xFA, 0x10, 0x00, 0x00, 0x03,
                     0x00, 0x10, 0x00, 0x00, 0x03, 0x03, 0x20, 0xF1, 0x42, 0x99, 0x60,
                 ]],
                 picture_parameter_sets: vec![vec![0x68, 0xEB, 0xE3, 0xCB, 0x22, 0xC0]],
+                ..Default::default()
             },
         };
         let mut buf = Vec::new();
