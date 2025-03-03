@@ -51,6 +51,9 @@ pub enum Error {
     #[error("out of memory")]
     OutOfMemory,
 
+    #[error("reserved")]
+    Reserved,
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 }

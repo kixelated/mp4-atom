@@ -6,7 +6,7 @@ pub use traf::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Moof {
     pub mfhd: Mfhd,

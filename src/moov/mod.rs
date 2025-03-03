@@ -186,14 +186,16 @@ mod test {
                             stbl: Stbl {
                                 stsd: Stsd {
                                     avc1: Some(Avc1 {
-                                        data_reference_index: 1,
-                                        width: 1920,
-                                        height: 1080,
-                                        horizresolution: 72.into(),
-                                        vertresolution: 72.into(),
-                                        frame_count: 1,
-                                        compressor: "\nAVC Coding".into(),
-                                        depth: 24,
+                                        visual: Visual {
+                                            data_reference_index: 1,
+                                            width: 1920,
+                                            height: 1080,
+                                            horizresolution: 72.into(),
+                                            vertresolution: 72.into(),
+                                            frame_count: 1,
+                                            compressor: "\nAVC Coding".into(),
+                                            depth: 24,
+                                        },
                                         avcc: Avcc {
                                             configuration_version: 1,
                                             avc_profile_indication: 100,

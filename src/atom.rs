@@ -8,6 +8,20 @@ pub trait Atom: Sized {
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self>;
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()>;
+
+    #[cfg(test)]
+    fn assert_encode_decode(&self)
+    where
+        Self: std::fmt::Debug + PartialEq,
+    {
+        let mut buf = Vec::new();
+        Self::encode(self, &mut buf).unwrap();
+
+        let mut cursor = std::io::Cursor::new(&buf);
+        let decoded = Self::decode(&mut cursor).unwrap();
+
+        assert_eq!(self, &decoded, "different decoded result");
+    }
 }
 
 impl<T: Atom> Encode for T {

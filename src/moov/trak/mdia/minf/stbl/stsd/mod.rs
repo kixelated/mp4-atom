@@ -1,14 +1,18 @@
+mod av01;
 mod avc1;
 mod hev1;
 mod mp4a;
 mod tx3g;
+mod visual;
 mod vp09;
 mod vpcc;
 
+pub use av01::*;
 pub use avc1::*;
 pub use hev1::*;
 pub use mp4a::*;
 pub use tx3g::*;
+pub use visual::*;
 pub use vp09::*;
 pub use vpcc::*;
 
@@ -22,6 +26,7 @@ pub struct Stsd {
     pub vp09: Option<Vp09>,
     pub mp4a: Option<Mp4a>,
     pub tx3g: Option<Tx3g>,
+    pub av01: Option<Av01>,
 }
 
 impl AtomExt for Stsd {
@@ -37,6 +42,7 @@ impl AtomExt for Stsd {
         let mut vp09 = None;
         let mut mp4a = None;
         let mut tx3g = None;
+        let mut av01 = None;
 
         for _ in 0..entries {
             let atom = Any::decode(buf)?;
@@ -46,6 +52,7 @@ impl AtomExt for Stsd {
                 Any::Vp09(atom) => vp09 = atom.into(),
                 Any::Mp4a(atom) => mp4a = atom.into(),
                 Any::Tx3g(atom) => tx3g = atom.into(),
+                Any::Av01(atom) => av01 = atom.into(),
                 Any::Unknown(kind, _) => tracing::warn!("unknown atom: {:?}", kind),
                 _ => return Err(Error::UnexpectedBox(atom.kind())),
             }
@@ -57,6 +64,7 @@ impl AtomExt for Stsd {
             vp09,
             mp4a,
             tx3g,
+            av01,
         })
     }
 

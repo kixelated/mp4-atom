@@ -243,6 +243,7 @@ fn bbb() {
                         stbl: Stbl {
                             stsd: Stsd {
                                 avc1: Some(Avc1 {
+                                    visual: Visual {
                                     data_reference_index: 1,
                                     width: 1280,
                                     height: 720,
@@ -251,6 +252,7 @@ fn bbb() {
                                     frame_count: 1,
                                     compressor: "".into(),
                                     depth: 24,
+                                    },
                                     avcc: Avcc {
                                         configuration_version: 1,
                                         avc_profile_indication: 100,
@@ -452,4 +454,14 @@ fn bbb() {
             data: vec![0x21, 0x00, 0x49, 0x90, 0x02, 0x19, 0x00, 0x23, 0x80],
         }
     );
+
+    let mut buf = Vec::new();
+
+    ftyp.encode(&mut buf).expect("failed to encode ftyp");
+    moov.encode(&mut buf).expect("failed to encode moov");
+    moof.encode(&mut buf).expect("failed to encode moof");
+    mdat.encode(&mut buf).expect("failed to encode mdat");
+
+    // One day:
+    // assert_eq!(buf, ENCODED);
 }
