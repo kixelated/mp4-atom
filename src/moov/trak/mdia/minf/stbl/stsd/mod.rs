@@ -5,7 +5,6 @@ mod mp4a;
 mod tx3g;
 mod visual;
 mod vp09;
-mod vpcc;
 
 pub use av01::*;
 pub use avc1::*;
@@ -14,7 +13,6 @@ pub use mp4a::*;
 pub use tx3g::*;
 pub use visual::*;
 pub use vp09::*;
-pub use vpcc::*;
 
 use crate::*;
 
