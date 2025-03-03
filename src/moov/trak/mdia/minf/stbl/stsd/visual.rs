@@ -53,13 +53,34 @@ impl Encode for Visual {
 }
 impl Decode for Visual {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
-        u32::decode(buf)?; // reserved
-        u16::decode(buf)?; // reserved
+        /*
+        class VisualSampleEntry(codingname) extends SampleEntry (codingname){
+            unsigned int(16) pre_defined = 0;
+            const unsigned int(16) reserved = 0;
+            unsigned int(32)[3]  pre_defined = 0;
+            unsigned int(16)  width;
+            unsigned int(16)  height;
+            template unsigned int(32)  horizresolution = 0x00480000; // 72 dpi
+            template unsigned int(32)  vertresolution  = 0x00480000; // 72 dpi
+            const unsigned int(32)  reserved = 0;
+            template unsigned int(16)  frame_count = 1;
+            string[32]  compressorname;
+            template unsigned int(16)  depth = 0x0018;
+            int(16)  pre_defined = -1;
+            // other boxes from derived specifications
+            CleanApertureBox     clap;    // optional
+            PixelAspectRatioBox  pasp;    // optional
+        }
+
+         */
+
+        // SampleEntry
+        <[u8; 6]>::decode(buf)?;
         let data_reference_index = u16::decode(buf)?;
 
-        u32::decode(buf)?; // pre-defined, reserved
-        u64::decode(buf)?; // pre-defined
-        u32::decode(buf)?; // pre-defined
+        // VisualSampleEntry
+        // 16 bytes of garb at the front
+        <[u8; 16]>::decode(buf)?;
         let width = u16::decode(buf)?;
         let height = u16::decode(buf)?;
         let horizresolution = FixedPoint::decode(buf)?;
