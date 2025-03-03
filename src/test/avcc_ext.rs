@@ -215,14 +215,16 @@ fn avcc_ext() {
                         stbl: Stbl {
                             stsd: Stsd {
                                 avc1: Some(Avc1 {
-                                    data_reference_index: 1,
-                                    width: 1280,
-                                    height: 720,
-                                    horizresolution: 72.into(),
-                                    vertresolution: 72.into(),
-                                    frame_count: 1,
-                                    compressor: "\nAVC Coding".into(),
-                                    depth: 24,
+                                    visual: Visual {
+                                        data_reference_index: 1,
+                                        width: 1280,
+                                        height: 720,
+                                        horizresolution: 72.into(),
+                                        vertresolution: 72.into(),
+                                        frame_count: 1,
+                                        compressor: "\nAVC Coding".into(),
+                                        depth: 24,
+                                    },
                                     avcc: Avcc {
                                         configuration_version: 1,
                                         avc_profile_indication: 100,
@@ -242,10 +244,7 @@ fn avcc_ext() {
                                         }),
                                     },
                                 }),
-                                hev1: None,
-                                vp09: None,
-                                mp4a: None,
-                                tx3g: None,
+                                ..Default::default()
                             },
                             stts: Stts::default(),
                             ctts: None,
@@ -306,9 +305,6 @@ fn avcc_ext() {
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                avc1: None,
-                                hev1: None,
-                                vp09: None,
                                 mp4a: Some(Mp4a {
                                     data_reference_index: 1,
                                     channelcount: 2,
@@ -334,7 +330,7 @@ fn avcc_ext() {
                                         },
                                     }),
                                 }),
-                                tx3g: None,
+                                ..Default::default()
                             },
                             stts: Stts::default(),
                             ctts: None,
@@ -357,4 +353,10 @@ fn avcc_ext() {
     };
 
     assert_eq!(moov, expected,);
+
+    let mut buf = Vec::new();
+    ftyp.encode(&mut buf).expect("failed to encode ftyp");
+    moov.encode(&mut buf).expect("failed to encode moov");
+
+    // assert_eq!(buf, ENCODED);
 }

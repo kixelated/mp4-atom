@@ -21,9 +21,10 @@ jobs:
           components: clippy, rustfmt
 
       # Make sure u guys don't write bad code
-      - run: cargo test --verbose
-      - run: cargo clippy --no-deps
-      - run: cargo fmt --check
+      - run: cargo check --all
+      - run: cargo test --all --verbose
+      - run: cargo clippy -all --no-deps -- -D warnings
+      - run: cargo fmt --all --check
 
       # Check for unused dependencies
       - uses: bnjbvr/cargo-machete@main

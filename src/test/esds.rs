@@ -172,6 +172,7 @@ fn esds() {
                         stbl: Stbl {
                             stsd: Stsd {
                                 avc1: Some(Avc1 {
+                                    visual: Visual {
                                     data_reference_index: 1,
                                     width: 1280,
                                     height: 720,
@@ -180,6 +181,7 @@ fn esds() {
                                     frame_count: 1,
                                     compressor: "\u{15}Lavc60.31.102 libx264".into(),
                                     depth: 24,
+                                    },
                                     avcc: Avcc {
                                         configuration_version: 1,
                                         avc_profile_indication: 66,
@@ -321,4 +323,12 @@ fn esds() {
             }],
         },
     );
+
+    let mut buf = Vec::new();
+    ftyp.encode(&mut buf).expect("failed to encode ftyp");
+    moov.encode(&mut buf).expect("failed to encode moov");
+    moof.encode(&mut buf).expect("failed to encode moof");
+
+    // One day:
+    // assert_eq!(buf, ENCODED);
 }

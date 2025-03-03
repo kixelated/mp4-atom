@@ -147,6 +147,8 @@ any! {
                                 Esds,
                             Tx3g,
                             Vp09,
+                            Av01,
+                                Av1c,
                         Stts,
                         Stsc,
                         Stsz,
