@@ -12,9 +12,19 @@ impl Atom for Hev1 {
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         let visual = Visual::decode(buf)?;
-        let hvcc = Hvcc::decode(buf)?;
 
-        Ok(Hev1 { visual, hvcc })
+        let mut hvcc = None;
+        while let Some(atom) = Any::decode_maybe(buf)? {
+            match atom {
+                Any::Hvcc(atom) => hvcc = atom.into(),
+                _ => tracing::warn!("unknown atom: {:?}", atom),
+            }
+        }
+
+        Ok(Hev1 {
+            visual,
+            hvcc: hvcc.ok_or(Error::MissingBox(Hvcc::KIND))?,
+        })
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
@@ -32,8 +42,8 @@ pub struct Hvcc {
     pub general_profile_space: u8,
     pub general_tier_flag: bool,
     pub general_profile_idc: u8,
-    pub general_profile_compatibility_flags: u32,
-    pub general_constraint_indicator_flag: u48,
+    pub general_profile_compatibility_flags: [u8; 4],
+    pub general_constraint_indicator_flags: [u8; 6],
     pub general_level_idc: u8,
     pub min_spatial_segmentation_idc: u16,
     pub parallelism_type: u8,
@@ -59,17 +69,10 @@ impl Hvcc {
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct HvcCArrayNalu {
-    pub size: usize,
-    pub data: Vec<u8>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HvcCArray {
     pub completeness: bool,
     pub nal_unit_type: u8,
-    pub nalus: Vec<HvcCArrayNalu>,
+    pub nalus: Vec<Vec<u8>>,
 }
 
 impl Atom for Hvcc {
@@ -82,8 +85,8 @@ impl Atom for Hvcc {
         let general_tier_flag = (params & (0b00100000 >> 5)) > 0;
         let general_profile_idc = params & 0b00011111;
 
-        let general_profile_compatibility_flags = u32::decode(buf)?;
-        let general_constraint_indicator_flag = u48::decode(buf)?;
+        let general_profile_compatibility_flags = <[u8; 4]>::decode(buf)?;
+        let general_constraint_indicator_flags = <[u8; 6]>::decode(buf)?;
         let general_level_idc = u8::decode(buf)?;
         let min_spatial_segmentation_idc = u16::decode(buf)? & 0x0FFF;
         let parallelism_type = u8::decode(buf)? & 0b11;
@@ -109,7 +112,7 @@ impl Atom for Hvcc {
             for _ in 0..num_nalus {
                 let size = u16::decode(buf)? as usize;
                 let data = Vec::decode_exact(buf, size)?;
-                nalus.push(HvcCArrayNalu { size, data })
+                nalus.push(data)
             }
 
             arrays.push(HvcCArray {
@@ -125,7 +128,7 @@ impl Atom for Hvcc {
             general_tier_flag,
             general_profile_idc,
             general_profile_compatibility_flags,
-            general_constraint_indicator_flag,
+            general_constraint_indicator_flags,
             general_level_idc,
             min_spatial_segmentation_idc,
             parallelism_type,
@@ -149,7 +152,7 @@ impl Atom for Hvcc {
 
         (general_profile_space | general_tier_flag | general_profile_idc).encode(buf)?;
         self.general_profile_compatibility_flags.encode(buf)?;
-        self.general_constraint_indicator_flag.encode(buf)?;
+        self.general_constraint_indicator_flags.encode(buf)?;
         self.general_level_idc.encode(buf)?;
 
         (self.min_spatial_segmentation_idc & 0x0FFF).encode(buf)?;
@@ -171,8 +174,8 @@ impl Atom for Hvcc {
             (arr.nalus.len() as u16).encode(buf)?;
 
             for nalu in &arr.nalus {
-                (nalu.size as u16).encode(buf)?;
-                nalu.data.encode(buf)?;
+                (nalu.len() as u16).encode(buf)?;
+                nalu.encode(buf)?;
             }
         }
 

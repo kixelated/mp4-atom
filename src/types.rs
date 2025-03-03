@@ -145,6 +145,18 @@ impl From<u48> for u64 {
     }
 }
 
+impl From<[u8; 6]> for u48 {
+    fn from(value: [u8; 6]) -> Self {
+        u48(value)
+    }
+}
+
+impl AsRef<[u8; 6]> for u48 {
+    fn as_ref(&self) -> &[u8; 6] {
+        &self.0
+    }
+}
+
 // The top N bits are the integer part, the bottom N bits are the fractional part.
 // Somebody who cares should implement some math stuff.
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
