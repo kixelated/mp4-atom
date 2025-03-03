@@ -1,6 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum StszSamples {
     Identical { count: u32, size: u32 },
     Different { sizes: Vec<u32> },

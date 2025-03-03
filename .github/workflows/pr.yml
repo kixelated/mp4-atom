@@ -1,4 +1,4 @@
-name: Rust
+name: PR
 
 on:
   pull_request:
@@ -14,16 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      # Install Just to run CI scripts
+      - uses: extractions/setup-just@v2
+
       # Install Rust with clippy/rustfmt
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          target: wasm32-unknown-unknown
           components: clippy, rustfmt
 
-      # Make sure u guys don't write bad code
-      - run: cargo test --verbose
-      - run: cargo clippy --no-deps
-      - run: cargo fmt --check
+      # Install Shear to find unused dependencies
+      - uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall --no-confirm --force cargo-shear
 
-      # Check for unused dependencies
-      - uses: bnjbvr/cargo-machete@main
+      # Make sure u guys don't write bad code
+      - run: just check
+      - run: just test
