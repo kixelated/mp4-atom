@@ -78,8 +78,8 @@ impl Atom for Hvcc {
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         let configuration_version = u8::decode(buf)?;
         let params = u8::decode(buf)?;
-        let general_profile_space = params & 0b11000000 >> 6;
-        let general_tier_flag = (params & 0b00100000 >> 5) > 0;
+        let general_profile_space = params & (0b11000000 >> 6);
+        let general_tier_flag = (params & (0b00100000 >> 5)) > 0;
         let general_profile_idc = params & 0b00011111;
 
         let general_profile_compatibility_flags = u32::decode(buf)?;
@@ -93,9 +93,9 @@ impl Atom for Hvcc {
         let avg_frame_rate = u16::decode(buf)?;
 
         let params = u8::decode(buf)?;
-        let constant_frame_rate = params & 0b11000000 >> 6;
-        let num_temporal_layers = params & 0b00111000 >> 3;
-        let temporal_id_nested = (params & 0b00000100 >> 2) > 0;
+        let constant_frame_rate = params & (0b11000000 >> 6);
+        let num_temporal_layers = params & (0b00111000 >> 3);
+        let temporal_id_nested = (params & (0b00000100 >> 2)) > 0;
         let length_size_minus_one = params & 0b000011;
 
         let num_of_arrays = u8::decode(buf)?;
@@ -167,7 +167,7 @@ impl Atom for Hvcc {
             .encode(buf)?;
         (self.arrays.len() as u8).encode(buf)?;
         for arr in &self.arrays {
-            ((arr.nal_unit_type & 0b111111) | u8::from(arr.completeness) << 7).encode(buf)?;
+            ((arr.nal_unit_type & 0b111111) | (u8::from(arr.completeness) << 7)).encode(buf)?;
             (arr.nalus.len() as u16).encode(buf)?;
 
             for nalu in &arr.nalus {
