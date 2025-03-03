@@ -352,7 +352,11 @@ fn avcc_ext() {
         }),
     };
 
-    assert_eq!(moov, expected,);
+    assert_eq!(moov, expected, "different decoded result");
+
+    // Make sure the avc1 atom encodes/decodes to the exact same content.
+    let avc1 = moov.trak[0].mdia.minf.stbl.stsd.avc1.as_ref().unwrap();
+    avc1.assert_encode_decode();
 
     let mut buf = Vec::new();
     ftyp.encode(&mut buf).expect("failed to encode ftyp");

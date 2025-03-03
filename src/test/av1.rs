@@ -289,6 +289,10 @@ fn av1() {
         }
     );
 
+    // Make sure the av01 atom encodes/decodes to the exact same content.
+    let av01 = moov.trak[0].mdia.minf.stbl.stsd.av01.as_ref().unwrap();
+    av01.assert_encode_decode();
+
     let mut buf = Vec::new();
     ftyp.encode(&mut buf).expect("failed to encode ftyp");
     moov.encode(&mut buf).expect("failed to encode moov");
