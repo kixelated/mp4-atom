@@ -70,11 +70,11 @@ impl Atom for Av1c {
 
         let v = u8::decode(buf)?;
         let seq_tier_0 = (v >> 7) == 1;
-        let high_bitdepth = (v >> 6 & 0b1) == 1;
-        let twelve_bit = (v >> 5 & 0b1) == 1;
-        let monochrome = (v >> 4 & 0b1) == 1;
-        let chroma_subsampling_x = (v >> 3 & 0b1) == 1;
-        let chroma_subsampling_y = (v >> 2 & 0b1) == 1;
+        let high_bitdepth = ((v >> 6) & 0b1) == 1;
+        let twelve_bit = ((v >> 5) & 0b1) == 1;
+        let monochrome = ((v >> 4) & 0b1) == 1;
+        let chroma_subsampling_x = ((v >> 3) & 0b1) == 1;
+        let chroma_subsampling_y = ((v >> 2) & 0b1) == 1;
         let chroma_sample_position = v & 0b11;
 
         let v = u8::decode(buf)?;
@@ -83,7 +83,7 @@ impl Atom for Av1c {
             return Err(Error::Reserved);
         }
 
-        let initial_presentation_delay_present = v >> 4 & 0b1;
+        let initial_presentation_delay_present = (v >> 4) & 0b1;
         let initial_presentation_delay_minus_one = v & 0b1111;
 
         let initial_presentation_delay = if initial_presentation_delay_present == 1 {
@@ -114,22 +114,22 @@ impl Atom for Av1c {
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        (0b1000_0001 as u8).encode(buf)?;
-        (self.seq_profile << 5 | self.seq_level_idx_0).encode(buf)?;
+        0b1000_0001_u8.encode(buf)?;
+        ((self.seq_profile << 5) | self.seq_level_idx_0).encode(buf)?;
 
-        ((self.seq_tier_0 as u8) << 7
-            | (self.high_bitdepth as u8) << 6
-            | (self.twelve_bit as u8) << 5
-            | (self.monochrome as u8) << 4
-            | (self.chroma_subsampling_x as u8) << 3
-            | (self.chroma_subsampling_y as u8) << 2
+        (((self.seq_tier_0 as u8) << 7)
+            | ((self.high_bitdepth as u8) << 6)
+            | ((self.twelve_bit as u8) << 5)
+            | ((self.monochrome as u8) << 4)
+            | ((self.chroma_subsampling_x as u8) << 3)
+            | ((self.chroma_subsampling_y as u8) << 2)
             | self.chroma_sample_position)
             .encode(buf)?;
 
         if let Some(initial_presentation_delay) = self.initial_presentation_delay {
             ((initial_presentation_delay - 1) | 0b0001_0000).encode(buf)?;
         } else {
-            (0b0000_0000 as u8).encode(buf)?;
+            0b0000_0000_u8.encode(buf)?;
         }
 
         self.config_obus.encode(buf)?;

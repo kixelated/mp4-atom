@@ -15,7 +15,7 @@ pub trait Atom: Sized {
         Self: std::fmt::Debug + PartialEq,
     {
         let mut buf = Vec::new();
-        Self::encode(&self, &mut buf).unwrap();
+        Self::encode(self, &mut buf).unwrap();
 
         let mut cursor = std::io::Cursor::new(&buf);
         let decoded = Self::decode(&mut cursor).unwrap();
