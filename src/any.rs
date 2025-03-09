@@ -8,6 +8,7 @@ macro_rules! any {
         /// Any of the supported atoms.
         #[derive(Clone, PartialEq)]
         #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+        #[non_exhaustive]
         pub enum Any {
             $($kind($kind),)*
             Unknown(FourCC, Vec<u8>),
