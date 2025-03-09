@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/kixelated/mp4-atom/compare/v0.6.0...v0.7.0) - 2025-03-09
+
+### Other
+
+- Add #[non_exhaustive] to the huge enums. ([#26](https://github.com/kixelated/mp4-atom/pull/26))
+- Maybe support VP8 too? ([#25](https://github.com/kixelated/mp4-atom/pull/25))
+- Added support for Hvc1 atoms. ([#23](https://github.com/kixelated/mp4-atom/pull/23))
+
 ## [0.6.0](https://github.com/kixelated/mp4-atom/compare/v0.5.0...v0.6.0) - 2025-03-03
 
 ### Other
