@@ -171,7 +171,7 @@ fn esds() {
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                avc1: Some(Avc1 {
+                                codecs: vec![Avc1 {
                                     visual: Visual {
                                     data_reference_index: 1,
                                     width: 1280,
@@ -192,8 +192,8 @@ fn esds() {
                                         picture_parameter_sets:  vec![b"h\xce\x0f\xc8".into()],
                                         ext: None,
                                     },
-                                }),
-                                ..Default::default()
+                                }
+                                .into()],
                             },
                             stts: Stts {
                                 ..Default::default()
@@ -242,7 +242,7 @@ fn esds() {
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                mp4a: Some(Mp4a {
+                                codecs: vec![Mp4a {
                                     data_reference_index: 1,
                                     channelcount: 2,
                                     samplesize: 16,
@@ -265,8 +265,8 @@ fn esds() {
                                             sl_config: esds::SLConfig{},
                                         },
                                     }),
-                                }),
-                                ..Default::default()
+                                }
+                                .into()],
                             },
                             stts: Stts {
                                 ..Default::default()

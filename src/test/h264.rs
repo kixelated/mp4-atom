@@ -214,7 +214,7 @@ fn avcc_ext() {
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                avc1: Some(Avc1 {
+                                codecs: vec![Avc1 {
                                     visual: Visual {
                                         data_reference_index: 1,
                                         width: 1280,
@@ -243,8 +243,8 @@ fn avcc_ext() {
                                             sequence_parameter_sets_ext: vec![],
                                         }),
                                     },
-                                }),
-                                ..Default::default()
+                                }
+                                .into()],
                             },
                             stts: Stts::default(),
                             ctts: None,
@@ -305,7 +305,7 @@ fn avcc_ext() {
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                mp4a: Some(Mp4a {
+                                codecs: vec![Mp4a {
                                     data_reference_index: 1,
                                     channelcount: 2,
                                     samplesize: 16,
@@ -329,8 +329,8 @@ fn avcc_ext() {
                                             sl_config: esds::SLConfig::default(),
                                         },
                                     }),
-                                }),
-                                ..Default::default()
+                                }
+                                .into()],
                             },
                             stts: Stts::default(),
                             ctts: None,
@@ -355,7 +355,7 @@ fn avcc_ext() {
     assert_eq!(moov, expected, "different decoded result");
 
     // Make sure the avc1 atom encodes/decodes to the exact same content.
-    let avc1 = moov.trak[0].mdia.minf.stbl.stsd.avc1.as_ref().unwrap();
+    let avc1 = &moov.trak[0].mdia.minf.stbl.stsd.codecs[0];
     avc1.assert_encode_decode();
 
     let mut buf = Vec::new();

@@ -185,7 +185,7 @@ mod test {
                             },
                             stbl: Stbl {
                                 stsd: Stsd {
-                                    avc1: Some(Avc1 {
+                                    codecs: vec![Avc1 {
                                         visual: Visual {
                                             data_reference_index: 1,
                                             width: 1920,
@@ -212,8 +212,8 @@ mod test {
                                             ]],
                                             ext: None,
                                         }
-                                    }),
-                                    ..Default::default()
+                                    }
+                                    .into()],
                                 },
                                 stco: Some(Stco::default()),
                                 ..Default::default()

@@ -141,7 +141,7 @@ any! {
                         Stsd,
                             Avc1,
                                 Avcc,
-                            Hev1,
+                            Hev1, Hvc1,
                                 Hvcc,
                             Mp4a,
                                 Esds,

@@ -1,30 +1,87 @@
 mod av01;
-mod avc1;
-mod hev1;
+mod h264;
+mod hevc;
 mod mp4a;
 mod tx3g;
 mod visual;
 mod vp09;
 
 pub use av01::*;
-pub use avc1::*;
-pub use hev1::*;
+pub use h264::*;
+pub use hevc::*;
 pub use mp4a::*;
 pub use tx3g::*;
 pub use visual::*;
 pub use vp09::*;
 
 use crate::*;
+use derive_more::From;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stsd {
-    pub avc1: Option<Avc1>,
-    pub hev1: Option<Hev1>,
-    pub vp09: Option<Vp09>,
-    pub mp4a: Option<Mp4a>,
-    pub tx3g: Option<Tx3g>,
-    pub av01: Option<Av01>,
+    pub codecs: Vec<Codec>,
+}
+
+/// Called a "sample entry" in the ISOBMFF specification.
+#[derive(Debug, Clone, PartialEq, Eq, From)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum Codec {
+    // H264
+    Avc1(Avc1),
+
+    // HEVC: SPS/PPS/VPS is inline
+    Hev1(Hev1),
+
+    // HEVC: SPS/PPS/VPS is in a separate atom
+    Hvc1(Hvc1),
+
+    // VP9
+    Vp09(Vp09),
+
+    // AV1
+    Av01(Av01),
+
+    // AAC
+    Mp4a(Mp4a),
+
+    // Text
+    Tx3g(Tx3g),
+
+    // Unknown
+    Unknown(FourCC),
+}
+
+impl Decode for Codec {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        let atom = Any::decode(buf)?;
+        Ok(match atom {
+            Any::Avc1(atom) => atom.into(),
+            Any::Hev1(atom) => atom.into(),
+            Any::Hvc1(atom) => atom.into(),
+            Any::Vp09(atom) => atom.into(),
+            Any::Mp4a(atom) => atom.into(),
+            Any::Tx3g(atom) => atom.into(),
+            Any::Av01(atom) => atom.into(),
+            Any::Unknown(kind, _) => Self::Unknown(kind),
+            _ => return Err(Error::UnexpectedBox(atom.kind())),
+        })
+    }
+}
+
+impl Encode for Codec {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        match self {
+            Self::Unknown(kind) => kind.encode(buf),
+            Self::Avc1(atom) => atom.encode(buf),
+            Self::Hev1(atom) => atom.encode(buf),
+            Self::Hvc1(atom) => atom.encode(buf),
+            Self::Vp09(atom) => atom.encode(buf),
+            Self::Mp4a(atom) => atom.encode(buf),
+            Self::Tx3g(atom) => atom.encode(buf),
+            Self::Av01(atom) => atom.encode(buf),
+        }
+    }
 }
 
 impl AtomExt for Stsd {
@@ -33,52 +90,22 @@ impl AtomExt for Stsd {
     const KIND_EXT: FourCC = FourCC::new(b"stsd");
 
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
-        let entries = u32::decode(buf)?;
+        let codec_count = u32::decode(buf)?;
+        let mut codecs = Vec::new();
 
-        let mut avc1 = None;
-        let mut hev1 = None;
-        let mut vp09 = None;
-        let mut mp4a = None;
-        let mut tx3g = None;
-        let mut av01 = None;
-
-        for _ in 0..entries {
-            let atom = Any::decode(buf)?;
-            match atom {
-                Any::Avc1(atom) => avc1 = atom.into(),
-                Any::Hev1(atom) => hev1 = atom.into(),
-                Any::Vp09(atom) => vp09 = atom.into(),
-                Any::Mp4a(atom) => mp4a = atom.into(),
-                Any::Tx3g(atom) => tx3g = atom.into(),
-                Any::Av01(atom) => av01 = atom.into(),
-                Any::Unknown(kind, _) => tracing::warn!("unknown atom: {:?}", kind),
-                _ => return Err(Error::UnexpectedBox(atom.kind())),
-            }
+        for _ in 0..codec_count {
+            let codec = Codec::decode(buf)?;
+            codecs.push(codec);
         }
 
-        Ok(Stsd {
-            avc1,
-            hev1,
-            vp09,
-            mp4a,
-            tx3g,
-            av01,
-        })
+        Ok(Stsd { codecs })
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        (self.avc1.is_some() as u32
-            + self.hev1.is_some() as u32
-            + self.vp09.is_some() as u32
-            + self.mp4a.is_some() as u32
-            + self.tx3g.is_some() as u32)
-            .encode(buf)?;
-
-        self.avc1.encode(buf)?;
-        self.hev1.encode(buf)?;
-        self.vp09.encode(buf)?;
-        self.mp4a.encode(buf)?;
-        self.tx3g.encode(buf)?;
+        (self.codecs.len() as u32).encode(buf)?;
+        for codec in &self.codecs {
+            codec.encode(buf)?;
+        }
 
         Ok(())
     }

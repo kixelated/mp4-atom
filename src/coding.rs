@@ -44,6 +44,20 @@ pub trait DecodeAtom: Sized {
 // If we use BufMut or Vec, then we can write 0 for the size, then write the atom, then go back and fix the size.
 pub trait Encode {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()>;
+
+    #[cfg(test)]
+    fn assert_encode_decode(&self)
+    where
+        Self: std::fmt::Debug + PartialEq + Decode,
+    {
+        let mut buf = Vec::new();
+        Self::encode(self, &mut buf).unwrap();
+
+        let mut cursor = std::io::Cursor::new(&buf);
+        let decoded = Self::decode(&mut cursor).unwrap();
+
+        assert_eq!(self, &decoded, "different decoded result");
+    }
 }
 
 impl Decode for u8 {
