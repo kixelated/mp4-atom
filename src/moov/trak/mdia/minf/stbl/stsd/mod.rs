@@ -37,6 +37,9 @@ pub enum Codec {
     // HEVC: SPS/PPS/VPS is in a separate atom
     Hvc1(Hvc1),
 
+    // VP8
+    Vp08(Vp08),
+
     // VP9
     Vp09(Vp09),
 
@@ -60,6 +63,7 @@ impl Decode for Codec {
             Any::Avc1(atom) => atom.into(),
             Any::Hev1(atom) => atom.into(),
             Any::Hvc1(atom) => atom.into(),
+            Any::Vp08(atom) => atom.into(),
             Any::Vp09(atom) => atom.into(),
             Any::Mp4a(atom) => atom.into(),
             Any::Tx3g(atom) => atom.into(),
@@ -77,6 +81,7 @@ impl Encode for Codec {
             Self::Avc1(atom) => atom.encode(buf),
             Self::Hev1(atom) => atom.encode(buf),
             Self::Hvc1(atom) => atom.encode(buf),
+            Self::Vp08(atom) => atom.encode(buf),
             Self::Vp09(atom) => atom.encode(buf),
             Self::Mp4a(atom) => atom.encode(buf),
             Self::Tx3g(atom) => atom.encode(buf),
