@@ -146,7 +146,7 @@ any! {
                             Mp4a,
                                 Esds,
                             Tx3g,
-                            Vp09,
+                            Vp08, Vp09,
                                 VpcC,
                             Av01,
                                 Av1c,

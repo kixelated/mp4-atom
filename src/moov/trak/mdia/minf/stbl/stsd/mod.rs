@@ -4,7 +4,7 @@ mod hevc;
 mod mp4a;
 mod tx3g;
 mod visual;
-mod vp09;
+mod vp9;
 
 pub use av01::*;
 pub use h264::*;
@@ -12,7 +12,7 @@ pub use hevc::*;
 pub use mp4a::*;
 pub use tx3g::*;
 pub use visual::*;
-pub use vp09::*;
+pub use vp9::*;
 
 use crate::*;
 use derive_more::From;
