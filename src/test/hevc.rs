@@ -303,8 +303,7 @@ fn hevc() {
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                avc1: None,
-                                hev1: Some(Hev1 {
+                                codecs: vec![Hev1 {
                                     visual: Visual {
                                         data_reference_index: 1,
                                         width: 1920,
@@ -556,8 +555,8 @@ fn hevc() {
                                             }
                                         ]
                                     }
-                                }),
-                                ..Default::default()
+                                }
+                                .into()],
                             },
                             stco: Some(Stco { entries: vec![] }),
                             ..Default::default()
@@ -580,7 +579,7 @@ fn hevc() {
     );
 
     // Make sure the hev1 atom encodes/decodes to the exact same content.
-    let hev1 = moov.trak[0].mdia.minf.stbl.stsd.hev1.as_ref().unwrap();
+    let hev1 = &moov.trak[0].mdia.minf.stbl.stsd.codecs[0];
     hev1.assert_encode_decode();
 
     let mut buf = Vec::new();

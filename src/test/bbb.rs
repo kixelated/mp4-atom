@@ -242,7 +242,7 @@ fn bbb() {
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                avc1: Some(Avc1 {
+                                codecs: vec![Avc1 {
                                     visual: Visual {
                                     data_reference_index: 1,
                                     width: 1280,
@@ -263,8 +263,8 @@ fn bbb() {
                                         picture_parameter_sets:  vec![b"h\xee2\xc8\xb0".into()],
                                         ext: None,
                                     },
-                                }),
-                                ..Default::default()
+                                }
+                                .into()],
                             },
                             stts: Stts {
                                 ..Default::default()
@@ -313,7 +313,7 @@ fn bbb() {
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                mp4a: Some(Mp4a {
+                                codecs: vec![Mp4a {
                                     data_reference_index: 1,
                                     channelcount: 2,
                                     samplesize: 16,
@@ -336,8 +336,8 @@ fn bbb() {
                                             sl_config: esds::SLConfig{},
                                         },
                                     }),
-                                }),
-                                ..Default::default()
+                                }
+                                .into()],
                             },
                             stts: Stts {
                                 ..Default::default()

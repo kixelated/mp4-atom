@@ -258,7 +258,7 @@ fn vp9() {
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                vp09: Some(Vp09 {
+                                codecs: vec![Vp09 {
                                     visual: Visual {
                                         data_reference_index: 1,
                                         width: 320,
@@ -280,8 +280,8 @@ fn vp9() {
                                         matrix_coefficients: 2,
                                         codec_initialization_data: vec![]
                                     }
-                                }),
-                                ..Default::default()
+                                }
+                                .into()],
                             },
                             stts: Stts { entries: vec![] },
                             ctts: None,
@@ -299,7 +299,7 @@ fn vp9() {
     );
 
     // Make sure the vp09 atom encodes/decodes to the exact same content.
-    let vp09 = moov.trak[0].mdia.minf.stbl.stsd.vp09.as_ref().unwrap();
+    let vp09 = &moov.trak[0].mdia.minf.stbl.stsd.codecs[0];
     vp09.assert_encode_decode();
 
     let mut buf = Vec::new();

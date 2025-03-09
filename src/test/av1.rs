@@ -201,12 +201,7 @@ fn av1() {
                         },
                         stbl: Stbl {
                             stsd: Stsd {
-                                avc1: None,
-                                hev1: None,
-                                vp09: None,
-                                mp4a: None,
-                                tx3g: None,
-                                av01: Some(Av01 {
+                                codecs: vec![Av01 {
                                     visual: Visual {
                                         data_reference_index: 1,
                                         width: 1920,
@@ -232,7 +227,8 @@ fn av1() {
                                             10, 11, 0, 0, 0, 74, 171, 191, 195, 119, 255, 231, 1
                                         ]
                                     }
-                                })
+                                }
+                                .into()],
                             },
                             stts: Stts::default(),
                             ctts: None,
@@ -290,7 +286,7 @@ fn av1() {
     );
 
     // Make sure the av01 atom encodes/decodes to the exact same content.
-    let av01 = moov.trak[0].mdia.minf.stbl.stsd.av01.as_ref().unwrap();
+    let av01 = &moov.trak[0].mdia.minf.stbl.stsd.codecs[0];
     av01.assert_encode_decode();
 
     let mut buf = Vec::new();
