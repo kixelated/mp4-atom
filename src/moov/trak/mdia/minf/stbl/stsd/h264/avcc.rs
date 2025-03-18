@@ -90,30 +90,30 @@ impl Atom for Avcc {
             picture_parameter_sets.push(nal);
         }
 
-        let ext = match avc_profile_indication {
-            // NOTE: Many encoders/decoders skip this part, so it's not always present
-            100 | 110 | 122 | 144 if buf.remaining() > 0 => {
-                let chroma_format = u8::decode(buf)? & 0x3;
-                let bit_depth_luma_minus8 = u8::decode(buf)? & 0x7;
-                let bit_depth_chroma_minus8 = u8::decode(buf)? & 0x7;
-                let num_of_sequence_parameter_set_exts = u8::decode(buf)? as usize;
-                let mut sequence_parameter_sets_ext =
-                    Vec::with_capacity(num_of_sequence_parameter_set_exts);
+        // NOTE: Many encoders/decoders skip this extended avcC part.
+        // It's profile specific, but we don't really care and will parse it if present.
+        let ext = if buf.has_remaining() {
+            let chroma_format = u8::decode(buf)? & 0x3;
+            let bit_depth_luma_minus8 = u8::decode(buf)? & 0x7;
+            let bit_depth_chroma_minus8 = u8::decode(buf)? & 0x7;
+            let num_of_sequence_parameter_set_exts = u8::decode(buf)? as usize;
+            let mut sequence_parameter_sets_ext =
+                Vec::with_capacity(num_of_sequence_parameter_set_exts);
 
-                for _ in 0..num_of_sequence_parameter_set_exts {
-                    let size = u16::decode(buf)? as usize;
-                    let nal = Vec::decode_exact(buf, size)?;
-                    sequence_parameter_sets_ext.push(nal);
-                }
-
-                Some(AvccExt {
-                    chroma_format,
-                    bit_depth_luma: bit_depth_luma_minus8 + 8,
-                    bit_depth_chroma: bit_depth_chroma_minus8 + 8,
-                    sequence_parameter_sets_ext,
-                })
+            for _ in 0..num_of_sequence_parameter_set_exts {
+                let size = u16::decode(buf)? as usize;
+                let nal = Vec::decode_exact(buf, size)?;
+                sequence_parameter_sets_ext.push(nal);
             }
-            _ => None,
+
+            Some(AvccExt {
+                chroma_format,
+                bit_depth_luma: bit_depth_luma_minus8 + 8,
+                bit_depth_chroma: bit_depth_chroma_minus8 + 8,
+                sequence_parameter_sets_ext,
+            })
+        } else {
+            None
         };
 
         Ok(Avcc {
