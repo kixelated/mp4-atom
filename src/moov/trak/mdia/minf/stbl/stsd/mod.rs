@@ -26,7 +26,6 @@ pub struct Stsd {
 /// Called a "sample entry" in the ISOBMFF specification.
 #[derive(Debug, Clone, PartialEq, Eq, From)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[non_exhaustive]
 pub enum Codec {
     // H264
     Avc1(Avc1),
