@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2](https://github.com/kixelated/mp4-atom/compare/v0.7.1...v0.7.2) - 2025-03-18
+
+### Other
+
+- Exhaustive ([#29](https://github.com/kixelated/mp4-atom/pull/29))
+- Always parse the extended avcC atom. ([#30](https://github.com/kixelated/mp4-atom/pull/30))
+
 ## [0.7.1](https://github.com/kixelated/mp4-atom/compare/v0.7.0...v0.7.1) - 2025-03-09
 
 ### Other
