@@ -211,7 +211,8 @@ mod test {
                                                 104, 235, 236, 178, 44
                                             ]],
                                             ext: None,
-                                        }
+                                        },
+                                        pasp: None,
                                     }
                                     .into()],
                                 },

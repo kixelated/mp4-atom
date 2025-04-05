@@ -6,6 +6,7 @@ pub struct Hvc1 {
     pub visual: Visual,
     pub hvcc: Hvcc,
     // TODO support SPS/PPS/VPS atoms
+    pub pasp: Option<Pasp>,
 }
 
 impl Atom for Hvc1 {
@@ -15,9 +16,11 @@ impl Atom for Hvc1 {
         let visual = Visual::decode(buf)?;
 
         let mut hvcc = None;
+        let mut pasp = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Hvcc(atom) => hvcc = atom.into(),
+                Any::Pasp(atom) => pasp = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),
             }
         }
@@ -25,12 +28,16 @@ impl Atom for Hvc1 {
         Ok(Self {
             visual,
             hvcc: hvcc.ok_or(Error::MissingBox(Hvcc::KIND))?,
+            pasp,
         })
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
         self.hvcc.encode(buf)?;
+        if self.pasp.is_some() {
+            self.pasp.encode(buf)?;
+        }
 
         Ok(())
     }
