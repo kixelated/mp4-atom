@@ -554,7 +554,11 @@ fn hevc() {
                                                 ]]
                                             }
                                         ]
-                                    }
+                                    },
+                                    pasp: Some(Pasp {
+                                        h_spacing: 1,
+                                        v_spacing: 1,
+                                    }),
                                 }
                                 .into()],
                             },

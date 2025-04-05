@@ -169,6 +169,7 @@ mod tests {
                 configuration_version: 1,
                 ..Default::default()
             },
+            pasp: None,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();

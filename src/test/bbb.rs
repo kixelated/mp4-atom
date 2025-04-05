@@ -263,6 +263,10 @@ fn bbb() {
                                         picture_parameter_sets:  vec![b"h\xee2\xc8\xb0".into()],
                                         ext: None,
                                     },
+                                    pasp: Some(Pasp {
+                                        h_spacing: 1,
+                                        v_spacing: 1,
+                                    }),
                                 }
                                 .into()],
                             },
