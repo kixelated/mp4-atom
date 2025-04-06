@@ -192,6 +192,7 @@ fn esds() {
                                         picture_parameter_sets:  vec![b"h\xce\x0f\xc8".into()],
                                         ext: None,
                                     },
+                                    colr: None,
                                     pasp: Some(Pasp {
                                         h_spacing: 1,
                                         v_spacing: 1

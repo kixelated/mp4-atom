@@ -212,6 +212,7 @@ mod test {
                                             ]],
                                             ext: None,
                                         },
+                                        colr: None,
                                         pasp: None,
                                     }
                                     .into()],

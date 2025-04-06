@@ -169,6 +169,7 @@ mod tests {
                 configuration_version: 1,
                 ..Default::default()
             },
+            colr: None,
             pasp: None,
         };
         let mut buf = Vec::new();
