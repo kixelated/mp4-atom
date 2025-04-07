@@ -555,6 +555,7 @@ fn hevc() {
                                             }
                                         ]
                                     },
+                                    colr: None,
                                     pasp: Some(Pasp {
                                         h_spacing: 1,
                                         v_spacing: 1,

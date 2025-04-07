@@ -243,6 +243,12 @@ fn avcc_ext() {
                                             sequence_parameter_sets_ext: vec![],
                                         }),
                                     },
+                                    colr: Some(Colr::Nclx {
+                                        colour_primaries: 1,
+                                        transfer_characteristics: 1,
+                                        matrix_coefficients: 1,
+                                        full_range_flag: false,
+                                    }),
                                     pasp: Some(Pasp {
                                         h_spacing: 1,
                                         v_spacing: 1,
