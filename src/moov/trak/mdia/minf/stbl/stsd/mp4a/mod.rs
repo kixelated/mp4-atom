@@ -12,6 +12,7 @@ pub struct Mp4a {
     pub samplesize: u16,
     pub samplerate: FixedPoint<u16>,
     pub esds: Option<Esds>,
+    pub btrt: Option<Btrt>,
 }
 
 impl Default for Mp4a {
@@ -22,6 +23,7 @@ impl Default for Mp4a {
             samplesize: 16,
             samplerate: 48000.into(),
             esds: Some(Esds::default()),
+            btrt: None,
         }
     }
 }
@@ -47,11 +49,13 @@ impl Atom for Mp4a {
             u64::decode(buf)?;
         }
 
+        let mut btrt = None;
         let mut esds = None;
 
         // Find esds in mp4a or wave
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
+                Any::Btrt(atom) => btrt = atom.into(),
                 Any::Esds(atom) => esds = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),
             }
@@ -63,6 +67,7 @@ impl Atom for Mp4a {
             samplesize,
             samplerate,
             esds,
+            btrt,
         })
     }
 
@@ -79,6 +84,9 @@ impl Atom for Mp4a {
         self.samplerate.encode(buf)?;
 
         self.esds.encode(buf)?;
+        if self.btrt.is_some() {
+            self.btrt.encode(buf)?;
+        }
 
         Ok(())
     }
@@ -114,6 +122,11 @@ mod tests {
                     sl_config: esds::SLConfig::default(),
                 },
             }),
+            btrt: Some(Btrt {
+                buffer_size_db: 1,
+                max_bitrate: 2,
+                avg_bitrate: 3,
+            }),
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -131,6 +144,7 @@ mod tests {
             samplesize: 16,
             samplerate: 48000.into(),
             esds: None,
+            btrt: None,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();

@@ -169,6 +169,7 @@ mod tests {
                 configuration_version: 1,
                 ..Default::default()
             },
+            btrt: None,
             colr: None,
             pasp: None,
         };

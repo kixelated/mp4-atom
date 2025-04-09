@@ -142,6 +142,7 @@ any! {
                         Stsd,
                             Avc1,
                                 Avcc,
+                                Btrt,
                                 Colr,
                                 Pasp,
                             Hev1, Hvc1,
