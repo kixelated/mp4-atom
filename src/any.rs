@@ -160,6 +160,7 @@ any! {
                         Stco,
                         Co64,
                         Ctts,
+                        Saiz,
                     Dinf,
                         Dref,
                     Smhd,

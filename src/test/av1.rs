@@ -238,7 +238,8 @@ fn av1() {
                             stsc: Stsc::default(),
                             stsz: Stsz::default(),
                             stco: Some(Stco::default()),
-                            co64: None
+                            co64: None,
+                            saiz: None,
                         }
                     }
                 }
