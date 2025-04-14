@@ -227,6 +227,11 @@ fn av1() {
                                             10, 11, 0, 0, 0, 74, 171, 191, 195, 119, 255, 231, 1
                                         ]
                                     },
+                                    btrt: Some(Btrt {
+                                        buffer_size_db: 0,
+                                        max_bitrate: 914496,
+                                        avg_bitrate: 914496
+                                    }),
                                     colr: None,
                                     pasp: None,
                                 }

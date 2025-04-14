@@ -5,6 +5,7 @@ use crate::*;
 pub struct Avc1 {
     pub visual: Visual,
     pub avcc: Avcc,
+    pub btrt: Option<Btrt>,
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
 }
@@ -16,11 +17,13 @@ impl Atom for Avc1 {
         let visual = Visual::decode(buf)?;
 
         let mut avcc = None;
+        let mut btrt = None;
         let mut colr = None;
         let mut pasp = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Avcc(atom) => avcc = atom.into(),
+                Any::Btrt(atom) => btrt = atom.into(),
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),
@@ -30,6 +33,7 @@ impl Atom for Avc1 {
         Ok(Avc1 {
             visual,
             avcc: avcc.ok_or(Error::MissingBox(Avcc::KIND))?,
+            btrt,
             colr,
             pasp,
         })
@@ -38,6 +42,9 @@ impl Atom for Avc1 {
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
         self.avcc.encode(buf)?;
+        if self.btrt.is_some() {
+            self.btrt.encode(buf)?;
+        }
         if self.colr.is_some() {
             self.colr.encode(buf)?;
         }
@@ -79,6 +86,7 @@ mod tests {
                 picture_parameter_sets: vec![vec![0x68, 0xEB, 0xE3, 0xCB, 0x22, 0xC0]],
                 ..Default::default()
             },
+            btrt: None,
             colr: None,
             pasp: None,
         };
@@ -116,6 +124,11 @@ mod tests {
                 picture_parameter_sets: vec![vec![0x68, 0xEB, 0xE3, 0xCB, 0x22, 0xC0]],
                 ..Default::default()
             },
+            btrt: Some(Btrt {
+                buffer_size_db: 14075,
+                max_bitrate: 374288,
+                avg_bitrate: 240976,
+            }),
             colr: Some(Colr::default()),
             pasp: Some(Pasp {
                 h_spacing: 4,

@@ -1,4 +1,5 @@
 mod av01;
+mod btrt;
 mod colr;
 mod h264;
 mod hevc;
@@ -9,6 +10,7 @@ mod visual;
 mod vp9;
 
 pub use av01::*;
+pub use btrt::*;
 pub use colr::*;
 pub use h264::*;
 pub use hevc::*;

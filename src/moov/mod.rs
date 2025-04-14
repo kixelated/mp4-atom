@@ -212,6 +212,7 @@ mod test {
                                             ]],
                                             ext: None,
                                         },
+                                        btrt: None,
                                         colr: None,
                                         pasp: None,
                                     }

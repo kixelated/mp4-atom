@@ -243,6 +243,11 @@ fn avcc_ext() {
                                             sequence_parameter_sets_ext: vec![],
                                         }),
                                     },
+                                    btrt: Some(Btrt {
+                                        buffer_size_db: 0,
+                                        max_bitrate: 2453499,
+                                        avg_bitrate: 2453499,
+                                    }),
                                     colr: Some(Colr::Nclx {
                                         colour_primaries: 1,
                                         transfer_characteristics: 1,
@@ -338,6 +343,11 @@ fn avcc_ext() {
                                             },
                                             sl_config: esds::SLConfig::default(),
                                         },
+                                    }),
+                                    btrt: Some(Btrt {
+                                        buffer_size_db: 0,
+                                        max_bitrate: 160000,
+                                        avg_bitrate: 160000,
                                     }),
                                 }
                                 .into()],
