@@ -1,13 +1,14 @@
 use crate::coding::{Decode, Encode};
 use crate::{Any, Atom, Buf, BufMut, DecodeMaybe, Error, FourCC, Result};
 
-use super::{Pasp, Visual};
+use super::{Colr, Pasp, Visual};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Av01 {
     pub visual: Visual,
     pub av1c: Av1c,
+    pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
 }
 
@@ -18,10 +19,12 @@ impl Atom for Av01 {
         let visual = Visual::decode(buf)?;
 
         let mut av1c = None;
+        let mut colr = None;
         let mut pasp = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Av1c(atom) => av1c = atom.into(),
+                Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),
             }
@@ -30,6 +33,7 @@ impl Atom for Av01 {
         Ok(Av01 {
             visual,
             av1c: av1c.ok_or(Error::MissingBox(Av1c::KIND))?,
+            colr,
             pasp,
         })
     }
