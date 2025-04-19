@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/kixelated/mp4-atom/compare/v0.7.2...v0.8.0) - 2025-04-19
+
+### Added
+
+- add TAIClockInfoBox (taic) support ([#37](https://github.com/kixelated/mp4-atom/pull/37))
+- add support for BitRateBox (btrt) ([#35](https://github.com/kixelated/mp4-atom/pull/35))
+- add ColourInformationBox (colr) ([#34](https://github.com/kixelated/mp4-atom/pull/34))
+- add PixelAspectRatioBox (pasp) ([#32](https://github.com/kixelated/mp4-atom/pull/32))
+
+### Other
+
+- Add auxiliary information box support ([#36](https://github.com/kixelated/mp4-atom/pull/36))
+
 ## [0.7.2](https://github.com/kixelated/mp4-atom/compare/v0.7.1...v0.7.2) - 2025-03-18
 
 ### Other
