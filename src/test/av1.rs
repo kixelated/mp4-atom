@@ -234,6 +234,7 @@ fn av1() {
                                     }),
                                     colr: None,
                                     pasp: None,
+                                    taic: None,
                                 }
                                 .into()],
                             },

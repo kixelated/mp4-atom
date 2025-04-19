@@ -565,6 +565,7 @@ fn hevc() {
                                         h_spacing: 1,
                                         v_spacing: 1,
                                     }),
+                                    taic: None,
                                 }
                                 .into()],
                             },
