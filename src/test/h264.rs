@@ -258,6 +258,7 @@ fn avcc_ext() {
                                         h_spacing: 1,
                                         v_spacing: 1,
                                     }),
+                                    taic: None,
                                 }
                                 .into()],
                             },
@@ -349,6 +350,7 @@ fn avcc_ext() {
                                         max_bitrate: 160000,
                                         avg_bitrate: 160000,
                                     }),
+                                    taic: None,
                                 }
                                 .into()],
                             },

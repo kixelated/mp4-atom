@@ -9,6 +9,7 @@ pub struct Hvc1 {
     pub btrt: Option<Btrt>,
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
+    pub taic: Option<Taic>,
 }
 
 impl Atom for Hvc1 {
@@ -21,12 +22,14 @@ impl Atom for Hvc1 {
         let mut btrt = None;
         let mut colr = None;
         let mut pasp = None;
+        let mut taic = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Hvcc(atom) => hvcc = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
+                Any::Taic(atom) => taic = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),
             }
         }
@@ -37,6 +40,7 @@ impl Atom for Hvc1 {
             btrt,
             colr,
             pasp,
+            taic,
         })
     }
 
@@ -51,6 +55,9 @@ impl Atom for Hvc1 {
         }
         if self.pasp.is_some() {
             self.pasp.encode(buf)?;
+        }
+        if self.taic.is_some() {
+            self.taic.encode(buf)?;
         }
 
         Ok(())

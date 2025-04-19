@@ -1,7 +1,7 @@
 use crate::coding::{Decode, Encode};
 use crate::{Any, Atom, Buf, BufMut, DecodeMaybe, Error, FourCC, Result};
 
-use super::{Btrt, Colr, Pasp, Visual};
+use super::{Btrt, Colr, Pasp, Taic, Visual};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -11,6 +11,7 @@ pub struct Av01 {
     pub btrt: Option<Btrt>,
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
+    pub taic: Option<Taic>,
 }
 
 impl Atom for Av01 {
@@ -23,12 +24,14 @@ impl Atom for Av01 {
         let mut btrt = None;
         let mut colr = None;
         let mut pasp = None;
+        let mut taic = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Av1c(atom) => av1c = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
+                Any::Taic(atom) => taic = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),
             }
         }
@@ -39,6 +42,7 @@ impl Atom for Av01 {
             btrt,
             colr,
             pasp,
+            taic,
         })
     }
 
@@ -48,8 +52,14 @@ impl Atom for Av01 {
         if self.btrt.is_some() {
             self.btrt.encode(buf)?;
         }
+        if self.colr.is_some() {
+            self.colr.encode(buf)?;
+        }
         if self.pasp.is_some() {
             self.pasp.encode(buf)?;
+        }
+        if self.taic.is_some() {
+            self.taic.encode(buf)?;
         }
 
         Ok(())

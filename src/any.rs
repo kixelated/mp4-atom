@@ -145,6 +145,7 @@ any! {
                                 Btrt,
                                 Colr,
                                 Pasp,
+                                Taic,
                             Hev1, Hvc1,
                                 Hvcc,
                             Mp4a,

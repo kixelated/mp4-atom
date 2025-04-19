@@ -215,6 +215,7 @@ mod test {
                                         btrt: None,
                                         colr: None,
                                         pasp: None,
+                                        taic: None,
                                     }
                                     .into()],
                                 },

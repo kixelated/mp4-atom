@@ -269,6 +269,7 @@ fn bbb() {
                                         h_spacing: 1,
                                         v_spacing: 1,
                                     }),
+                                    taic: None,
                                 }
                                 .into()],
                             },
@@ -343,6 +344,7 @@ fn bbb() {
                                         },
                                     }),
                                     btrt: Some(Btrt { buffer_size_db: 0, max_bitrate: 125587, avg_bitrate: 125587 }),
+                                    taic: None,
                                 }
                                 .into()],
                             },

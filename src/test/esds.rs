@@ -198,6 +198,7 @@ fn esds() {
                                         h_spacing: 1,
                                         v_spacing: 1
                                     }),
+                                    taic: None,
                                 }
                                 .into()],
                             },
@@ -272,6 +273,7 @@ fn esds() {
                                         },
                                     }),
                                     btrt: Some(Btrt { buffer_size_db: 0, max_bitrate: 128000, avg_bitrate: 128000 }),
+                                    taic: None,
                                 }
                                 .into()],
                             },

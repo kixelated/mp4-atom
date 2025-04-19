@@ -8,6 +8,7 @@ pub struct Avc1 {
     pub btrt: Option<Btrt>,
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
+    pub taic: Option<Taic>,
 }
 
 impl Atom for Avc1 {
@@ -20,12 +21,14 @@ impl Atom for Avc1 {
         let mut btrt = None;
         let mut colr = None;
         let mut pasp = None;
+        let mut taic = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Avcc(atom) => avcc = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
+                Any::Taic(atom) => taic = atom.into(),
                 _ => tracing::warn!("unknown atom: {:?}", atom),
             }
         }
@@ -36,6 +39,7 @@ impl Atom for Avc1 {
             btrt,
             colr,
             pasp,
+            taic,
         })
     }
 
@@ -51,7 +55,9 @@ impl Atom for Avc1 {
         if self.pasp.is_some() {
             self.pasp.encode(buf)?;
         }
-
+        if self.taic.is_some() {
+            self.taic.encode(buf)?
+        }
         Ok(())
     }
 }
@@ -89,6 +95,7 @@ mod tests {
             btrt: None,
             colr: None,
             pasp: None,
+            taic: None,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -133,6 +140,12 @@ mod tests {
             pasp: Some(Pasp {
                 h_spacing: 4,
                 v_spacing: 3,
+            }),
+            taic: Some(Taic {
+                time_uncertainty: u64::MAX,
+                clock_resolution: 1000,
+                clock_drift_rate: i32::MAX,
+                clock_type: ClockType::CanSync,
             }),
         };
         let mut buf = Vec::new();
