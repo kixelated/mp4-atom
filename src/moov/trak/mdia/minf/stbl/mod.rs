@@ -1,5 +1,6 @@
 mod co64;
 mod ctts;
+mod saiz;
 mod stco;
 mod stsc;
 mod stsd;
@@ -9,6 +10,7 @@ mod stts;
 
 pub use co64::*;
 pub use ctts::*;
+pub use saiz::*;
 pub use stco::*;
 pub use stsc::*;
 pub use stsd::*;
@@ -29,6 +31,8 @@ pub struct Stbl {
     pub stsz: Stsz,
     pub stco: Option<Stco>,
     pub co64: Option<Co64>,
+    pub saiz: Option<Saiz>,
+    pub saio: Option<Saio>,
 }
 
 impl Atom for Stbl {
@@ -36,7 +40,7 @@ impl Atom for Stbl {
 
     nested! {
         required: [ Stsd, Stts, Stsc, Stsz ],
-        optional: [ Ctts, Stss, Stco, Co64 ],
+        optional: [ Ctts, Stss, Stco, Co64, Saiz, Saio ],
         multiple: [],
     }
 }
