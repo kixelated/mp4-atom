@@ -76,6 +76,13 @@ fn heif() {
                 name: "".into()
             },
             pitm: Some(Pitm { item_id: 1 }),
+            iref: Some(Iref {
+                references: vec![Reference {
+                    reference_type: FourCC::new(b"auxl"),
+                    from_item_id: 2,
+                    to_item_ids: vec![1]
+                }]
+            }),
             ilst: None,
             unknown: vec![
                 Any::Unknown(
@@ -118,10 +125,6 @@ fn heif() {
                         117, 120, 105, 100, 58, 49, 0, 0, 0, 0, 32, 105, 112, 109, 97, 0, 0, 0, 0,
                         0, 0, 0, 2, 0, 1, 5, 129, 2, 3, 5, 132, 0, 2, 5, 134, 3, 7, 136, 132
                     ]
-                ),
-                Any::Unknown(
-                    b"iref".into(),
-                    vec![0, 0, 0, 0, 0, 0, 0, 14, 97, 117, 120, 108, 0, 2, 0, 1, 0, 1]
                 ),
             ]
         }

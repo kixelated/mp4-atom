@@ -582,6 +582,7 @@ fn hevc() {
                         name: "".into()
                     },
                     pitm: None,
+                    iref: None,
                     ilst: Some(Ilst {
                         name: None,
                         year: None,

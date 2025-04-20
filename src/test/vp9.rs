@@ -182,6 +182,7 @@ fn vp9() {
                     name: "".into()
                 },
                 pitm: None,
+                iref: None,
                 ilst: None,
                 unknown: vec![Any::Unknown(
                     FourCC::new(b"ID32"),

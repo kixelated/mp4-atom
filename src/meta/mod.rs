@@ -1,6 +1,8 @@
 mod ilst;
+mod iref;
 mod pitm;
 pub use ilst::*;
+pub use iref::*;
 pub use pitm::*;
 
 use crate::*;
@@ -10,6 +12,7 @@ use crate::*;
 pub struct Meta {
     pub hdlr: Hdlr,
     pub pitm: Option<Pitm>,
+    pub iref: Option<Iref>,
     pub ilst: Option<Ilst>,
     pub unknown: Vec<crate::Any>,
 }
@@ -24,11 +27,13 @@ impl AtomExt for Meta {
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
         let mut pitm = None;
+        let mut iref = None;
         let mut ilst = None;
         let mut unknown_boxes = vec![];
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Pitm(atom) => pitm = Some(atom),
+                Any::Iref(atom) => iref = Some(atom),
                 Any::Ilst(atom) => ilst = Some(atom),
                 _ => {
                     unknown_boxes.push(atom);
@@ -39,6 +44,7 @@ impl AtomExt for Meta {
         Ok(Self {
             hdlr,
             pitm,
+            iref,
             ilst,
             unknown: unknown_boxes,
         })
@@ -54,6 +60,9 @@ impl AtomExt for Meta {
         }
         for atom in &self.unknown {
             atom.encode(buf)?;
+        }
+        if self.iref.is_some() {
+            self.iref.encode(buf)?;
         }
         Ok(())
     }
@@ -71,6 +80,7 @@ mod tests {
                 name: "".into(),
             },
             pitm: None,
+            iref: None,
             ilst: None,
             unknown: vec![],
         };
@@ -90,6 +100,13 @@ mod tests {
                 name: "".into(),
             },
             pitm: Some(Pitm { item_id: 3 }),
+            iref: Some(Iref {
+                references: vec![Reference {
+                    reference_type: b"cdsc".into(),
+                    from_item_id: 2,
+                    to_item_ids: vec![1, 3],
+                }],
+            }),
             ilst: Some(Ilst::default()),
             unknown: vec![],
         };

@@ -258,6 +258,7 @@ fn av1() {
                         name: "".into()
                     },
                     pitm: None,
+                    iref: None,
                     ilst: Some(Ilst {
                         name: None,
                         year: None,
