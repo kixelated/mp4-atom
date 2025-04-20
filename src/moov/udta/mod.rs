@@ -48,6 +48,7 @@ mod tests {
                     handler: FourCC::new(b"fake"),
                     name: "".into(),
                 },
+                pitm: None,
                 ilst: None,
                 unknown: vec![],
             }),

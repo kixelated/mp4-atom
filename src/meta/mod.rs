@@ -1,5 +1,7 @@
 mod ilst;
+mod pitm;
 pub use ilst::*;
+pub use pitm::*;
 
 use crate::*;
 
@@ -7,6 +9,7 @@ use crate::*;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Meta {
     pub hdlr: Hdlr,
+    pub pitm: Option<Pitm>,
     pub ilst: Option<Ilst>,
     pub unknown: Vec<crate::Any>,
 }
@@ -20,10 +23,12 @@ impl AtomExt for Meta {
 
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
+        let mut pitm = None;
         let mut ilst = None;
         let mut unknown_boxes = vec![];
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
+                Any::Pitm(atom) => pitm = Some(atom),
                 Any::Ilst(atom) => ilst = Some(atom),
                 _ => {
                     unknown_boxes.push(atom);
@@ -33,6 +38,7 @@ impl AtomExt for Meta {
 
         Ok(Self {
             hdlr,
+            pitm,
             ilst,
             unknown: unknown_boxes,
         })
@@ -40,6 +46,9 @@ impl AtomExt for Meta {
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.hdlr.encode(buf)?;
+        if self.pitm.is_some() {
+            self.pitm.encode(buf)?;
+        }
         if self.ilst.is_some() {
             self.ilst.encode(buf)?;
         }
@@ -61,6 +70,7 @@ mod tests {
                 handler: b"fake".into(),
                 name: "".into(),
             },
+            pitm: None,
             ilst: None,
             unknown: vec![],
         };
@@ -79,6 +89,7 @@ mod tests {
                 handler: b"mdir".into(),
                 name: "".into(),
             },
+            pitm: Some(Pitm { item_id: 3 }),
             ilst: Some(Ilst::default()),
             unknown: vec![],
         };

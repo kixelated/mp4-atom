@@ -257,6 +257,7 @@ fn av1() {
                         handler: FourCC::new(b"mdir"),
                         name: "".into()
                     },
+                    pitm: None,
                     ilst: Some(Ilst {
                         name: None,
                         year: None,
