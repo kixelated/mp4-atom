@@ -45,7 +45,14 @@ mod tests {
     #[test]
     fn test_udta() {
         let expected = Udta {
-            meta: Some(Meta::default()),
+            meta: Some(Meta {
+                hdlr: Hdlr {
+                    handler: FourCC::new(b"fake"),
+                    name: "".into(),
+                },
+                ilst: None,
+                unknown: vec![],
+            }),
             skip: None,
         };
 

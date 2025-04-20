@@ -106,7 +106,7 @@ macro_rules! any {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 match self {
                     $(Any::$kind(inner) => inner.fmt(f),)*
-                    Any::Unknown(kind, body) => write!(f, "Unknown {{ kind: {:?}, size: {:?} }}", kind, body.len()),
+                    Any::Unknown(kind, body) => write!(f, "Unknown {{ kind: {:?}, size: {:?}, bytes: {:?} }}", kind, body.len(), body),
                 }
             }
         }

@@ -3,20 +3,15 @@ pub use ilst::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Meta {
-    Mdir { ilst: Option<Ilst> },
-    Unknown { hdlr: Hdlr, data: Vec<u8> },
+pub struct Meta {
+    pub hdlr: Hdlr,
+    pub ilst: Option<Ilst>,
+    pub unknown: Vec<crate::Any>,
 }
 
-impl Default for Meta {
-    fn default() -> Self {
-        Self::Mdir { ilst: None }
-    }
-}
-
-const MDIR: FourCC = FourCC::new(b"mdir");
+impl Eq for Meta {}
 
 impl AtomExt for Meta {
     type Ext = ();
@@ -25,35 +20,32 @@ impl AtomExt for Meta {
 
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
-
-        match hdlr.handler {
-            MDIR => {
-                let ilst = Ilst::decode_maybe(buf)?;
-                Ok(Meta::Mdir { ilst })
-            }
-            _ => {
-                let data = Vec::<u8>::decode(buf)?;
-                Ok(Meta::Unknown { hdlr, data })
+        let mut ilst = None;
+        let mut unknown_boxes = vec![];
+        while let Some(atom) = Any::decode_maybe(buf)? {
+            match atom {
+                Any::Ilst(atom) => ilst = Some(atom),
+                _ => {
+                    unknown_boxes.push(atom);
+                }
             }
         }
+
+        Ok(Self {
+            hdlr,
+            ilst,
+            unknown: unknown_boxes,
+        })
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        match self {
-            Self::Mdir { ilst } => {
-                Hdlr {
-                    handler: MDIR,
-                    ..Default::default()
-                }
-                .encode(buf)?;
-                ilst.encode(buf)?;
-            }
-            Self::Unknown { hdlr, data } => {
-                hdlr.encode(buf)?;
-                data.encode(buf)?;
-            }
+        self.hdlr.encode(buf)?;
+        if self.ilst.is_some() {
+            self.ilst.encode(buf)?;
         }
-
+        for atom in &self.unknown {
+            atom.encode(buf)?;
+        }
         Ok(())
     }
 }
@@ -63,9 +55,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_meta_mdir_empty() {
-        let expected = Meta::Mdir { ilst: None };
-
+    fn test_meta_empty() {
+        let expected = Meta {
+            hdlr: Hdlr {
+                handler: b"fake".into(),
+                name: "".into(),
+            },
+            ilst: None,
+            unknown: vec![],
+        };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 
@@ -76,10 +74,14 @@ mod tests {
 
     #[test]
     fn test_meta_mdir() {
-        let expected = Meta::Mdir {
+        let expected = Meta {
+            hdlr: Hdlr {
+                handler: b"mdir".into(),
+                name: "".into(),
+            },
             ilst: Some(Ilst::default()),
+            unknown: vec![],
         };
-
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 

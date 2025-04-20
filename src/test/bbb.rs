@@ -368,11 +368,7 @@ fn bbb() {
                 ..Default::default()
             }],
             udta: Some(Udta {
-                meta: Some(Meta::Mdir {
-                    ilst: Some(Ilst {
-                        ..Default::default()
-                    }),
-                }),
+                meta: Some(Meta { hdlr: Hdlr{ handler: FourCC::new(b"mdir"), name: "".into() }, ilst: Some(Ilst { name: None, year: None, covr: None, desc: None }), unknown: vec![] }),
                 ..Default::default()
             }),
 
