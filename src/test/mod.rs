@@ -3,4 +3,5 @@ mod bbb;
 mod esds;
 mod h264;
 mod hevc;
+mod uncompressed;
 mod vp9;

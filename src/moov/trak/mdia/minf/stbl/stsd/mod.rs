@@ -7,6 +7,7 @@ mod mp4a;
 mod pasp;
 mod taic;
 mod tx3g;
+mod uncv;
 mod visual;
 mod vp9;
 
@@ -19,6 +20,7 @@ pub use mp4a::*;
 pub use pasp::*;
 pub use taic::*;
 pub use tx3g::*;
+pub use uncv::*;
 pub use visual::*;
 pub use vp9::*;
 
@@ -59,6 +61,9 @@ pub enum Codec {
     // Text
     Tx3g(Tx3g),
 
+    // Uncompressed video
+    Uncv(Uncv),
+
     // Unknown
     Unknown(FourCC),
 }
@@ -75,6 +80,7 @@ impl Decode for Codec {
             Any::Mp4a(atom) => atom.into(),
             Any::Tx3g(atom) => atom.into(),
             Any::Av01(atom) => atom.into(),
+            Any::Uncv(atom) => atom.into(),
             Any::Unknown(kind, _) => Self::Unknown(kind),
             _ => return Err(Error::UnexpectedBox(atom.kind())),
         })
@@ -93,6 +99,7 @@ impl Encode for Codec {
             Self::Mp4a(atom) => atom.encode(buf),
             Self::Tx3g(atom) => atom.encode(buf),
             Self::Av01(atom) => atom.encode(buf),
+            Self::Uncv(atom) => atom.encode(buf),
         }
     }
 }
