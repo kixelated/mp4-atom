@@ -1,6 +1,10 @@
+mod iinf;
+mod iloc;
 mod ilst;
 mod iref;
 mod pitm;
+pub use iinf::*;
+pub use iloc::*;
 pub use ilst::*;
 pub use iref::*;
 pub use pitm::*;
@@ -12,6 +16,8 @@ use crate::*;
 pub struct Meta {
     pub hdlr: Hdlr,
     pub pitm: Option<Pitm>,
+    pub iloc: Option<Iloc>,
+    pub iinf: Option<Iinf>,
     pub iref: Option<Iref>,
     pub ilst: Option<Ilst>,
     pub unknown: Vec<crate::Any>,
@@ -27,12 +33,16 @@ impl AtomExt for Meta {
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
         let mut pitm = None;
+        let mut iloc = None;
+        let mut iinf = None;
         let mut iref = None;
         let mut ilst = None;
         let mut unknown_boxes = vec![];
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Pitm(atom) => pitm = Some(atom),
+                Any::Iloc(atom) => iloc = Some(atom),
+                Any::Iinf(atom) => iinf = Some(atom),
                 Any::Iref(atom) => iref = Some(atom),
                 Any::Ilst(atom) => ilst = Some(atom),
                 _ => {
@@ -44,6 +54,8 @@ impl AtomExt for Meta {
         Ok(Self {
             hdlr,
             pitm,
+            iloc,
+            iinf,
             iref,
             ilst,
             unknown: unknown_boxes,
@@ -54,6 +66,12 @@ impl AtomExt for Meta {
         self.hdlr.encode(buf)?;
         if self.pitm.is_some() {
             self.pitm.encode(buf)?;
+        }
+        if self.iloc.is_some() {
+            self.iloc.encode(buf)?
+        }
+        if self.iinf.is_some() {
+            self.iinf.encode(buf)?;
         }
         if self.ilst.is_some() {
             self.ilst.encode(buf)?;
@@ -80,6 +98,8 @@ mod tests {
                 name: "".into(),
             },
             pitm: None,
+            iloc: None,
+            iinf: None,
             iref: None,
             ilst: None,
             unknown: vec![],
@@ -100,6 +120,20 @@ mod tests {
                 name: "".into(),
             },
             pitm: Some(Pitm { item_id: 3 }),
+            iloc: Some(Iloc {
+                item_locations: vec![ItemLocation {
+                    item_id: 3,
+                    construction_method: 0,
+                    data_reference_index: 0,
+                    base_offset: 0,
+                    extents: vec![ItemLocationExtent {
+                        item_reference_index: 0,
+                        offset: 200,
+                        length: 100,
+                    }],
+                }],
+            }),
+            iinf: Some(Iinf { item_infos: vec![] }),
             iref: Some(Iref {
                 references: vec![Reference {
                     reference_type: b"cdsc".into(),

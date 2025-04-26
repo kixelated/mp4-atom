@@ -368,7 +368,14 @@ fn bbb() {
                 ..Default::default()
             }],
             udta: Some(Udta {
-                meta: Some(Meta { hdlr: Hdlr{ handler: FourCC::new(b"mdir"), name: "".into() }, pitm: None, iref: None, ilst: Some(Ilst { name: None, year: None, covr: None, desc: None }), unknown: vec![] }),
+                meta: Some(Meta {
+                    hdlr: Hdlr{ handler: FourCC::new(b"mdir"), name: "".into() },
+                    pitm: None,
+                    iloc: None,
+                    iinf: None,
+                    iref: None,
+                    ilst: Some(Ilst { name: None, year: None, covr: None, desc: None }),
+                    unknown: vec![] }),
                 ..Default::default()
             }),
 

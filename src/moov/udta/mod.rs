@@ -49,6 +49,8 @@ mod tests {
                     name: "".into(),
                 },
                 pitm: None,
+                iloc: None,
+                iinf: None,
                 iref: None,
                 ilst: None,
                 unknown: vec![],

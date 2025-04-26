@@ -258,6 +258,8 @@ fn av1() {
                         name: "".into()
                     },
                     pitm: None,
+                    iloc: None,
+                    iinf: None,
                     iref: None,
                     ilst: Some(Ilst {
                         name: None,

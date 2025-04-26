@@ -125,6 +125,8 @@ any! {
     Meta,
         Hdlr,
         Pitm,
+        Iloc,
+        Iinf,
         Iref,
         Ilst,
             Covr,

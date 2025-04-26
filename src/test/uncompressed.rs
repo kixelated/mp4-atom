@@ -278,13 +278,22 @@ fn uncompressed() {
             }]
             .into(),
             udta: Some(Udta {
-                meta: Some(Meta::Mdir {
+                meta: Some(Meta {
+                    hdlr: Hdlr {
+                        handler: FourCC::new(b"mdir"),
+                        name: "".into()
+                    },
+                    pitm: None,
+                    iloc: None,
+                    iinf: None,
+                    iref: None,
                     ilst: Some(Ilst {
                         name: None,
                         year: None,
                         covr: None,
                         desc: None
-                    })
+                    }),
+                    unknown: vec![]
                 }),
                 skip: None
             })
