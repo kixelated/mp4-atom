@@ -177,10 +177,10 @@ fn heif() {
                             matrix_coefficients: 6,
                             full_range_flag: true
                         }),
-                        Any::Unknown(
-                            FourCC::new(b"ispe"),
-                            vec![0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64]
-                        ),
+                        Any::Ispe(Ispe {
+                            width: 64,
+                            height: 64
+                        }),
                         Any::Unknown(
                             FourCC::new(b"clap"),
                             vec![

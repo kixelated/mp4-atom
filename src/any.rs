@@ -129,6 +129,7 @@ any! {
         Iinf,
         Iprp,
             Ipco,
+                Ispe,
                 Pixi,
             Ipma,
         Iref,
