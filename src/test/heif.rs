@@ -181,13 +181,16 @@ fn heif() {
                             width: 64,
                             height: 64
                         }),
-                        Any::Unknown(
-                            FourCC::new(b"clap"),
-                            vec![
-                                0, 0, 0, 8, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 255, 255, 255, 200,
-                                0, 0, 0, 2, 255, 255, 255, 193, 0, 0, 0, 2
-                            ]
-                        ),
+                        Any::Clap(Clap {
+                            clean_aperture_width_n: 8,
+                            clean_aperture_width_d: 1,
+                            clean_aperture_height_n: 1,
+                            clean_aperture_height_d: 1,
+                            horiz_off_n: -56,
+                            horiz_off_d: 2,
+                            vert_off_n: -63,
+                            vert_off_d: 2
+                        }),
                         Any::Pixi(Pixi {
                             bits_per_channel: vec![8, 8, 8]
                         }),
