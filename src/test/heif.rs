@@ -240,13 +240,10 @@ fn heif() {
                         Any::Pixi(Pixi {
                             bits_per_channel: vec![8]
                         }),
-                        Any::Unknown(
-                            FourCC::new(b"auxC"),
-                            vec![
-                                0, 0, 0, 0, 117, 114, 110, 58, 109, 112, 101, 103, 58, 104, 101,
-                                118, 99, 58, 50, 48, 49, 53, 58, 97, 117, 120, 105, 100, 58, 49, 0
-                            ]
-                        ),
+                        Any::Auxc(Auxc {
+                            aux_type: "urn:mpeg:hevc:2015:auxid:1".into(),
+                            aux_subtype: vec![]
+                        }),
                     ]
                 },
                 ipma: vec![Ipma {
