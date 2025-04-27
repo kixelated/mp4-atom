@@ -119,6 +119,7 @@ mod test {
                     pitm: None,
                     iloc: None,
                     iinf: None,
+                    iprp: None,
                     iref: None,
                     ilst: None,
                     unknown: vec![Any::Unknown(

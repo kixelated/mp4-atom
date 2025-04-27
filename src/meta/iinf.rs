@@ -1,5 +1,8 @@
 use crate::*;
 
+// ItemInformationBox. ISO/IEC 14496-12:2022 Section 8.11.6
+// This is used to work out what the items are
+
 ext! {
     name: Iinf,
     versions: [0, 1],

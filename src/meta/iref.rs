@@ -1,5 +1,8 @@
 use crate::*;
 
+// ItemReferenceBox. ISO/IEC 14496-12:2022 Section 8.11.12
+// This is used to work out how the items related to each other
+
 ext! {
     name: Iref,
     versions: [0, 1],

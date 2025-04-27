@@ -286,6 +286,7 @@ fn uncompressed() {
                     pitm: None,
                     iloc: None,
                     iinf: None,
+                    iprp: None,
                     iref: None,
                     ilst: Some(Ilst {
                         name: None,

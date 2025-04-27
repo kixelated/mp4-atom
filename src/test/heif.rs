@@ -125,6 +125,178 @@ fn heif() {
                 ]
                 .to_vec()
             }),
+            iprp: Some(Iprp {
+                ipco: Ipco {
+                    properties: vec![
+                        any::Any::Hvcc(Hvcc {
+                            configuration_version: 1,
+                            general_profile_space: 3,
+                            general_tier_flag: true,
+                            general_profile_idc: 3,
+                            general_profile_compatibility_flags: [112, 0, 0, 0],
+                            general_constraint_indicator_flags: [0, 0, 0, 0, 0, 0],
+                            general_level_idc: 30,
+                            min_spatial_segmentation_idc: 0,
+                            parallelism_type: 0,
+                            chroma_format_idc: 1,
+                            bit_depth_luma_minus8: 0,
+                            bit_depth_chroma_minus8: 0,
+                            avg_frame_rate: 0,
+                            constant_frame_rate: 3,
+                            num_temporal_layers: 7,
+                            temporal_id_nested: true,
+                            length_size_minus_one: 3,
+                            arrays: vec![
+                                HvcCArray {
+                                    completeness: false,
+                                    nal_unit_type: 32,
+                                    nalus: vec![vec![
+                                        64, 1, 12, 1, 255, 255, 3, 112, 0, 0, 3, 0, 144, 0, 0, 3,
+                                        0, 0, 3, 0, 30, 186, 2, 64
+                                    ]]
+                                },
+                                HvcCArray {
+                                    completeness: false,
+                                    nal_unit_type: 33,
+                                    nalus: vec![vec![
+                                        66, 1, 1, 3, 112, 0, 0, 3, 0, 144, 0, 0, 3, 0, 0, 3, 0, 30,
+                                        160, 32, 129, 5, 150, 234, 174, 154, 230, 224, 33, 160,
+                                        192, 128, 0, 0, 3, 0, 128, 0, 0, 3, 0, 132
+                                    ]]
+                                },
+                                HvcCArray {
+                                    completeness: false,
+                                    nal_unit_type: 34,
+                                    nalus: vec![vec![68, 1, 193, 115, 193, 137]]
+                                }
+                            ]
+                        }),
+                        any::Any::Colr(Colr::Nclx {
+                            colour_primaries: 1,
+                            transfer_characteristics: 13,
+                            matrix_coefficients: 6,
+                            full_range_flag: true
+                        }),
+                        Any::Unknown(
+                            FourCC::new(b"ispe"),
+                            vec![0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64]
+                        ),
+                        Any::Unknown(
+                            FourCC::new(b"clap"),
+                            vec![
+                                0, 0, 0, 8, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 255, 255, 255, 200,
+                                0, 0, 0, 2, 255, 255, 255, 193, 0, 0, 0, 2
+                            ]
+                        ),
+                        Any::Unknown(FourCC::new(b"pixi"), vec![0, 0, 0, 0, 3, 8, 8, 8]),
+                        Any::Hvcc(Hvcc {
+                            configuration_version: 1,
+                            general_profile_space: 0,
+                            general_tier_flag: false,
+                            general_profile_idc: 4,
+                            general_profile_compatibility_flags: [8, 0, 0, 0],
+                            general_constraint_indicator_flags: [0, 0, 0, 0, 0, 0],
+                            general_level_idc: 30,
+                            min_spatial_segmentation_idc: 0,
+                            parallelism_type: 0,
+                            chroma_format_idc: 0,
+                            bit_depth_luma_minus8: 0,
+                            bit_depth_chroma_minus8: 0,
+                            avg_frame_rate: 0,
+                            constant_frame_rate: 3,
+                            num_temporal_layers: 7,
+                            temporal_id_nested: true,
+                            length_size_minus_one: 3,
+                            arrays: vec![
+                                HvcCArray {
+                                    completeness: false,
+                                    nal_unit_type: 32,
+                                    nalus: vec![vec![
+                                        64, 1, 12, 1, 255, 255, 4, 8, 0, 0, 3, 0, 159, 248, 0, 0,
+                                        3, 0, 0, 30, 186, 2, 64
+                                    ]]
+                                },
+                                HvcCArray {
+                                    completeness: false,
+                                    nal_unit_type: 33,
+                                    nalus: vec![vec![
+                                        66, 1, 1, 4, 8, 0, 0, 3, 0, 159, 248, 0, 0, 3, 0, 0, 30,
+                                        192, 130, 4, 22, 91, 170, 186, 107, 155, 2, 0, 0, 3, 0, 2,
+                                        0, 0, 3, 0, 2, 16
+                                    ]]
+                                },
+                                HvcCArray {
+                                    completeness: false,
+                                    nal_unit_type: 34,
+                                    nalus: vec![vec![68, 1, 193, 115, 193, 137]]
+                                }
+                            ]
+                        }),
+                        Any::Unknown(FourCC::new(b"pixi"), vec![0, 0, 0, 0, 1, 8]),
+                        Any::Unknown(
+                            FourCC::new(b"auxC"),
+                            vec![
+                                0, 0, 0, 0, 117, 114, 110, 58, 109, 112, 101, 103, 58, 104, 101,
+                                118, 99, 58, 50, 48, 49, 53, 58, 97, 117, 120, 105, 100, 58, 49, 0
+                            ]
+                        ),
+                    ]
+                },
+                ipma: vec![Ipma {
+                    item_properties: vec![
+                        PropertyAssociations {
+                            item_id: 1,
+                            associations: vec![
+                                PropertyAssociation {
+                                    essential: true,
+                                    property_index: 1
+                                },
+                                PropertyAssociation {
+                                    essential: false,
+                                    property_index: 2
+                                },
+                                PropertyAssociation {
+                                    essential: false,
+                                    property_index: 3
+                                },
+                                PropertyAssociation {
+                                    essential: false,
+                                    property_index: 5
+                                },
+                                PropertyAssociation {
+                                    essential: true,
+                                    property_index: 4
+                                }
+                            ]
+                        },
+                        PropertyAssociations {
+                            item_id: 2,
+                            associations: vec![
+                                PropertyAssociation {
+                                    essential: true,
+                                    property_index: 6
+                                },
+                                PropertyAssociation {
+                                    essential: false,
+                                    property_index: 3
+                                },
+                                PropertyAssociation {
+                                    essential: false,
+                                    property_index: 7
+                                },
+                                PropertyAssociation {
+                                    essential: true,
+                                    property_index: 8
+                                },
+                                PropertyAssociation {
+                                    essential: true,
+                                    property_index: 4
+                                }
+                            ]
+                        }
+                    ]
+                }]
+            }),
             iref: Some(Iref {
                 references: vec![Reference {
                     reference_type: FourCC::new(b"auxl"),
@@ -133,31 +305,7 @@ fn heif() {
                 }]
             }),
             ilst: None,
-            unknown: vec![Any::Unknown(
-                b"iprp".into(),
-                vec![
-                    0, 0, 1, 131, 105, 112, 99, 111, 0, 0, 0, 118, 104, 118, 99, 67, 1, 3, 112, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 30, 240, 0, 252, 253, 248, 248, 0, 0, 15, 3, 32, 0, 1,
-                    0, 24, 64, 1, 12, 1, 255, 255, 3, 112, 0, 0, 3, 0, 144, 0, 0, 3, 0, 0, 3, 0,
-                    30, 186, 2, 64, 33, 0, 1, 0, 42, 66, 1, 1, 3, 112, 0, 0, 3, 0, 144, 0, 0, 3, 0,
-                    0, 3, 0, 30, 160, 32, 129, 5, 150, 234, 174, 154, 230, 224, 33, 160, 192, 128,
-                    0, 0, 3, 0, 128, 0, 0, 3, 0, 132, 34, 0, 1, 0, 6, 68, 1, 193, 115, 193, 137, 0,
-                    0, 0, 19, 99, 111, 108, 114, 110, 99, 108, 120, 0, 1, 0, 13, 0, 6, 128, 0, 0,
-                    0, 20, 105, 115, 112, 101, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64, 0, 0, 0, 40,
-                    99, 108, 97, 112, 0, 0, 0, 8, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 255, 255,
-                    255, 200, 0, 0, 0, 2, 255, 255, 255, 193, 0, 0, 0, 2, 0, 0, 0, 16, 112, 105,
-                    120, 105, 0, 0, 0, 0, 3, 8, 8, 8, 0, 0, 0, 113, 104, 118, 99, 67, 1, 4, 8, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 30, 240, 0, 252, 252, 248, 248, 0, 0, 15, 3, 32, 0, 1,
-                    0, 23, 64, 1, 12, 1, 255, 255, 4, 8, 0, 0, 3, 0, 159, 248, 0, 0, 3, 0, 0, 30,
-                    186, 2, 64, 33, 0, 1, 0, 38, 66, 1, 1, 4, 8, 0, 0, 3, 0, 159, 248, 0, 0, 3, 0,
-                    0, 30, 192, 130, 4, 22, 91, 170, 186, 107, 155, 2, 0, 0, 3, 0, 2, 0, 0, 3, 0,
-                    2, 16, 34, 0, 1, 0, 6, 68, 1, 193, 115, 193, 137, 0, 0, 0, 14, 112, 105, 120,
-                    105, 0, 0, 0, 0, 1, 8, 0, 0, 0, 39, 97, 117, 120, 67, 0, 0, 0, 0, 117, 114,
-                    110, 58, 109, 112, 101, 103, 58, 104, 101, 118, 99, 58, 50, 48, 49, 53, 58, 97,
-                    117, 120, 105, 100, 58, 49, 0, 0, 0, 0, 32, 105, 112, 109, 97, 0, 0, 0, 0, 0,
-                    0, 0, 2, 0, 1, 5, 129, 2, 3, 5, 132, 0, 2, 5, 134, 3, 7, 136, 132
-                ]
-            ),]
+            unknown: vec![],
         }
     );
 

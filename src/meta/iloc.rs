@@ -1,5 +1,8 @@
 use crate::*;
 
+// ItemInformationBox. ISO/IEC 14496-12:2022 Section 8.11.3
+// This is used to work out where the items are
+
 ext! {
     name: Iloc,
     versions: [0, 1, 2],

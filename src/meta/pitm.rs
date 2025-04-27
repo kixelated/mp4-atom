@@ -1,5 +1,8 @@
 use crate::*;
 
+// PrimaryItemBox, ISO/IEC 14496-12 Section 8.11.4
+// This is used in HEIF to indicate which photo to show
+
 ext! {
     name: Pitm,
     versions: [0, 1],
