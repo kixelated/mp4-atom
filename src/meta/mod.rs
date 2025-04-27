@@ -4,12 +4,15 @@ mod ilst;
 mod iprp;
 mod iref;
 mod pitm;
+mod properties;
+
 pub use iinf::*;
 pub use iloc::*;
 pub use ilst::*;
 pub use iprp::*;
 pub use iref::*;
 pub use pitm::*;
+pub use properties::*;
 
 use crate::*;
 

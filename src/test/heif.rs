@@ -188,7 +188,9 @@ fn heif() {
                                 0, 0, 0, 2, 255, 255, 255, 193, 0, 0, 0, 2
                             ]
                         ),
-                        Any::Unknown(FourCC::new(b"pixi"), vec![0, 0, 0, 0, 3, 8, 8, 8]),
+                        Any::Pixi(Pixi {
+                            bits_per_channel: vec![8, 8, 8]
+                        }),
                         Any::Hvcc(Hvcc {
                             configuration_version: 1,
                             general_profile_space: 0,
@@ -232,7 +234,9 @@ fn heif() {
                                 }
                             ]
                         }),
-                        Any::Unknown(FourCC::new(b"pixi"), vec![0, 0, 0, 0, 1, 8]),
+                        Any::Pixi(Pixi {
+                            bits_per_channel: vec![8]
+                        }),
                         Any::Unknown(
                             FourCC::new(b"auxC"),
                             vec![
