@@ -26,6 +26,7 @@ use crate::*;
 pub struct Meta {
     pub hdlr: Hdlr,
     pub pitm: Option<Pitm>,
+    pub dinf: Option<Dinf>,
     pub iloc: Option<Iloc>,
     pub iinf: Option<Iinf>,
     pub iprp: Option<Iprp>,
@@ -44,6 +45,7 @@ impl AtomExt for Meta {
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
         let mut pitm = None;
+        let mut dinf = None;
         let mut iloc = None;
         let mut iinf = None;
         let mut iprp = None;
@@ -53,6 +55,7 @@ impl AtomExt for Meta {
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Pitm(atom) => pitm = Some(atom),
+                Any::Dinf(atom) => dinf = Some(atom),
                 Any::Iloc(atom) => iloc = Some(atom),
                 Any::Iinf(atom) => iinf = Some(atom),
                 Any::Iprp(atom) => iprp = Some(atom),
@@ -67,6 +70,7 @@ impl AtomExt for Meta {
         Ok(Self {
             hdlr,
             pitm,
+            dinf,
             iloc,
             iinf,
             iprp,
@@ -81,8 +85,11 @@ impl AtomExt for Meta {
         if self.pitm.is_some() {
             self.pitm.encode(buf)?;
         }
+        if self.dinf.is_some() {
+            self.dinf.encode(buf)?;
+        }
         if self.iloc.is_some() {
-            self.iloc.encode(buf)?
+            self.iloc.encode(buf)?;
         }
         if self.iinf.is_some() {
             self.iinf.encode(buf)?;
@@ -115,6 +122,7 @@ mod tests {
                 name: "".into(),
             },
             pitm: None,
+            dinf: None,
             iloc: None,
             iinf: None,
             iprp: None,
@@ -138,6 +146,13 @@ mod tests {
                 name: "".into(),
             },
             pitm: Some(Pitm { item_id: 3 }),
+            dinf: Some(Dinf {
+                dref: Dref {
+                    urls: vec![Url {
+                        location: "".into(),
+                    }],
+                },
+            }),
             iloc: Some(Iloc {
                 item_locations: vec![ItemLocation {
                     item_id: 3,

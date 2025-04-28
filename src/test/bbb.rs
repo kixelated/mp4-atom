@@ -371,6 +371,7 @@ fn bbb() {
                 meta: Some(Meta {
                     hdlr: Hdlr{ handler: FourCC::new(b"mdir"), name: "".into() },
                     pitm: None,
+                    dinf: None,
                     iloc: None,
                     iinf: None,
                     iprp: None,

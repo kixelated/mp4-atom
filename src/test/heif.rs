@@ -76,6 +76,7 @@ fn heif() {
                 name: "".into()
             },
             pitm: Some(Pitm { item_id: 1 }),
+            dinf: None,
             iloc: Some(Iloc {
                 item_locations: vec![
                     ItemLocation {

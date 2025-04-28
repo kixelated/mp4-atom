@@ -49,6 +49,7 @@ mod tests {
                     name: "".into(),
                 },
                 pitm: None,
+                dinf: None,
                 iloc: None,
                 iinf: None,
                 iprp: None,
