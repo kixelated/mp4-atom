@@ -118,11 +118,21 @@ impl AtomExt for Iloc {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<IlocExt> {
+        let mut base_offset_size = 0u8;
         // TODO: work out which version and sizes we really need for this instance.
+        for item_location in &self.item_locations {
+            if item_location.base_offset > 0 {
+                if item_location.base_offset > u32::MAX as u64 {
+                    base_offset_size = 8u8;
+                } else if base_offset_size != 8 {
+                    base_offset_size = 4u8;
+                }
+            }
+        }
         let version = IlocVersion::V0;
         let offset_size = 4u8;
         let length_size = 4u8;
-        let base_offset_size = 4u8;
+
         let index_size = 0u8;
         let size0 = (offset_size << 4) | length_size;
         let size1 = (base_offset_size << 4) | index_size;
@@ -174,5 +184,57 @@ impl AtomExt for Iloc {
         Ok(IlocExt {
             version: IlocVersion::V0,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ENCODED_ILOC_LIBAVIF: &[u8] = &[
+        0x00, 0x00, 0x00, 0x1e, 0x69, 0x6c, 0x6f, 0x63, 0x00, 0x00, 0x00, 0x00, 0x44, 0x00, 0x00,
+        0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x38, 0x00, 0x00, 0x00, 0x1a,
+    ];
+
+    #[test]
+    fn test_iloc_libavif_decode() {
+        let buf: &mut std::io::Cursor<&&[u8]> = &mut std::io::Cursor::new(&ENCODED_ILOC_LIBAVIF);
+
+        let iloc: Iloc = Iloc {
+            item_locations: vec![ItemLocation {
+                item_id: 1,
+                construction_method: 0,
+                data_reference_index: 0,
+                base_offset: 0,
+                extents: vec![ItemLocationExtent {
+                    item_reference_index: 0,
+                    offset: 312,
+                    length: 26,
+                }],
+            }],
+        };
+        let decoded = Iloc::decode(buf).unwrap();
+        assert_eq!(decoded, iloc);
+    }
+
+    #[test]
+    fn test_iloc_avif_encode() {
+        let iloc: Iloc = Iloc {
+            item_locations: vec![ItemLocation {
+                item_id: 1,
+                construction_method: 0,
+                data_reference_index: 0,
+                base_offset: 0,
+                extents: vec![ItemLocationExtent {
+                    item_reference_index: 0,
+                    offset: 312,
+                    length: 26,
+                }],
+            }],
+        };
+        let mut buf = Vec::new();
+        iloc.encode(&mut buf).unwrap();
+
+        assert_eq!(buf.as_slice(), ENCODED_ILOC_LIBAVIF);
     }
 }

@@ -131,6 +131,7 @@ any! {
             Ipco,
                 Auxc,
                 Clap,
+                Irot,
                 Imir,
                 Ispe,
                 Pixi,

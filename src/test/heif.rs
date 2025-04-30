@@ -131,8 +131,8 @@ fn heif() {
                     properties: vec![
                         any::Any::Hvcc(Hvcc {
                             configuration_version: 1,
-                            general_profile_space: 3,
-                            general_tier_flag: true,
+                            general_profile_space: 0,
+                            general_tier_flag: false,
                             general_profile_idc: 3,
                             general_profile_compatibility_flags: [112, 0, 0, 0],
                             general_constraint_indicator_flags: [0, 0, 0, 0, 0, 0],
@@ -143,8 +143,8 @@ fn heif() {
                             bit_depth_luma_minus8: 0,
                             bit_depth_chroma_minus8: 0,
                             avg_frame_rate: 0,
-                            constant_frame_rate: 3,
-                            num_temporal_layers: 7,
+                            constant_frame_rate: 0,
+                            num_temporal_layers: 1,
                             temporal_id_nested: true,
                             length_size_minus_one: 3,
                             arrays: vec![
@@ -209,8 +209,8 @@ fn heif() {
                             bit_depth_luma_minus8: 0,
                             bit_depth_chroma_minus8: 0,
                             avg_frame_rate: 0,
-                            constant_frame_rate: 3,
-                            num_temporal_layers: 7,
+                            constant_frame_rate: 0,
+                            num_temporal_layers: 1,
                             temporal_id_nested: true,
                             length_size_minus_one: 3,
                             arrays: vec![
@@ -321,5 +321,174 @@ fn heif() {
     meta.encode(&mut buf).expect("failed to encode meta");
     mdat.encode(&mut buf).expect("failed to encode mdat");
 
-    // assert_eq!(buf, ENCODED);
+    assert_eq!(buf, ENCODED);
+}
+
+#[test]
+fn avif() {
+    // Complete image from libavif
+    const ENCODED: &[u8] = &[
+        0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x61, 0x76, 0x69, 0x66, 0x00, 0x00, 0x00,
+        0x00, 0x61, 0x76, 0x69, 0x66, 0x6d, 0x69, 0x66, 0x31, 0x6d, 0x69, 0x61, 0x66, 0x4d, 0x41,
+        0x31, 0x41, 0x00, 0x00, 0x01, 0x10, 0x6d, 0x65, 0x74, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x21, 0x68, 0x64, 0x6c, 0x72, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x70, 0x69, 0x63, 0x74, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x70, 0x69, 0x74, 0x6d, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x1e, 0x69, 0x6c, 0x6f, 0x63, 0x00, 0x00, 0x00, 0x00, 0x44, 0x00,
+        0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x38, 0x00, 0x00, 0x00,
+        0x1a, 0x00, 0x00, 0x00, 0x28, 0x69, 0x69, 0x6e, 0x66, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x1a, 0x69, 0x6e, 0x66, 0x65, 0x02, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+        0x00, 0x61, 0x76, 0x30, 0x31, 0x43, 0x6f, 0x6c, 0x6f, 0x72, 0x00, 0x00, 0x00, 0x00, 0x8f,
+        0x69, 0x70, 0x72, 0x70, 0x00, 0x00, 0x00, 0x6d, 0x69, 0x70, 0x63, 0x6f, 0x00, 0x00, 0x00,
+        0x14, 0x69, 0x73, 0x70, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00,
+        0x00, 0x12, 0x00, 0x00, 0x00, 0x10, 0x70, 0x69, 0x78, 0x69, 0x00, 0x00, 0x00, 0x00, 0x03,
+        0x08, 0x08, 0x08, 0x00, 0x00, 0x00, 0x0c, 0x61, 0x76, 0x31, 0x43, 0x81, 0x20, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x13, 0x63, 0x6f, 0x6c, 0x72, 0x6e, 0x63, 0x6c, 0x78, 0x00, 0x01, 0x00,
+        0x0d, 0x00, 0x06, 0x80, 0x00, 0x00, 0x00, 0x10, 0x70, 0x61, 0x73, 0x70, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x09, 0x69, 0x72, 0x6f, 0x74, 0x01, 0x00,
+        0x00, 0x00, 0x09, 0x69, 0x6d, 0x69, 0x72, 0x01, 0x00, 0x00, 0x00, 0x1a, 0x69, 0x70, 0x6d,
+        0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x07, 0x01, 0x02, 0x83,
+        0x04, 0x05, 0x86, 0x87, 0x00, 0x00, 0x00, 0x22, 0x6d, 0x64, 0x61, 0x74, 0x12, 0x00, 0x0a,
+        0x08, 0x38, 0x11, 0x31, 0x16, 0x10, 0x10, 0xd0, 0x69, 0x32, 0x0c, 0x16, 0x40, 0x06, 0x18,
+        0x61, 0x84, 0x00, 0x01, 0x2a, 0xbe, 0xff, 0x80,
+    ];
+
+    let buf = &mut std::io::Cursor::new(ENCODED);
+    let ftyp = Ftyp::decode(buf).expect("failed to decode ftyp");
+
+    assert_eq!(
+        ftyp,
+        Ftyp {
+            major_brand: b"avif".into(),
+            minor_version: 0,
+            compatible_brands: vec![
+                b"avif".into(),
+                b"mif1".into(),
+                b"miaf".into(),
+                b"MA1A".into()
+            ],
+        }
+    );
+
+    let meta = Meta::decode(buf).expect("failed to decode meta");
+    assert_eq!(
+        meta,
+        Meta {
+            hdlr: Hdlr {
+                handler: b"pict".into(),
+                name: "".into()
+            },
+            pitm: Some(Pitm { item_id: 1 }),
+            dinf: None,
+            iloc: Some(Iloc {
+                item_locations: vec![ItemLocation {
+                    item_id: 1,
+                    construction_method: 0,
+                    data_reference_index: 0,
+                    base_offset: 0,
+                    extents: vec![ItemLocationExtent {
+                        item_reference_index: 0,
+                        offset: 312,
+                        length: 26
+                    }]
+                }]
+            }),
+            iinf: Some(Iinf {
+                item_infos: vec![ItemInfoEntry {
+                    item_id: 1,
+                    item_protection_index: 0,
+                    item_type: Some(FourCC::new(b"av01")),
+                    item_name: "Color".into(),
+                    content_type: None,
+                    content_encoding: None,
+                    item_not_in_presentation: false
+                }]
+            }),
+            iprp: Some(Iprp {
+                ipco: Ipco {
+                    properties: vec![
+                        Any::Ispe(Ispe {
+                            width: 25,
+                            height: 18
+                        }),
+                        Any::Pixi(Pixi {
+                            bits_per_channel: vec![8, 8, 8]
+                        }),
+                        Any::Av1c(Av1c {
+                            seq_profile: 1,
+                            seq_level_idx_0: 0,
+                            seq_tier_0: false,
+                            high_bitdepth: false,
+                            twelve_bit: false,
+                            monochrome: false,
+                            chroma_subsampling_x: false,
+                            chroma_subsampling_y: false,
+                            chroma_sample_position: 0,
+                            initial_presentation_delay: None,
+                            config_obus: vec![]
+                        }),
+                        Any::Colr(Colr::Nclx {
+                            colour_primaries: 1,
+                            transfer_characteristics: 13,
+                            matrix_coefficients: 6,
+                            full_range_flag: true
+                        }),
+                        Any::Pasp(Pasp {
+                            h_spacing: 2,
+                            v_spacing: 3
+                        }),
+                        Any::Irot(Irot { angle: 1 }),
+                        Any::Imir(Imir { axis: 1 }),
+                    ]
+                },
+                ipma: vec![Ipma {
+                    item_properties: vec![PropertyAssociations {
+                        item_id: 1,
+                        associations: vec![
+                            PropertyAssociation {
+                                essential: false,
+                                property_index: 1
+                            },
+                            PropertyAssociation {
+                                essential: false,
+                                property_index: 2
+                            },
+                            PropertyAssociation {
+                                essential: true,
+                                property_index: 3
+                            },
+                            PropertyAssociation {
+                                essential: false,
+                                property_index: 4
+                            },
+                            PropertyAssociation {
+                                essential: false,
+                                property_index: 5
+                            },
+                            PropertyAssociation {
+                                essential: true,
+                                property_index: 6
+                            },
+                            PropertyAssociation {
+                                essential: true,
+                                property_index: 7
+                            }
+                        ]
+                    }]
+                }]
+            }),
+            iref: None,
+            ilst: None,
+            unknown: vec![]
+        }
+    );
+
+    let mdat = Mdat::decode(buf).expect("failed to decode mdat");
+
+    let mut buf = Vec::new();
+    ftyp.encode(&mut buf).expect("failed to encode ftyp");
+    meta.encode(&mut buf).expect("failed to encode meta");
+    mdat.encode(&mut buf).expect("failed to encode mdat");
+
+    assert_eq!(buf, ENCODED);
 }

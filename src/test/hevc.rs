@@ -319,7 +319,7 @@ fn hevc() {
                                         general_profile_space: 0,
                                         general_tier_flag: true,
                                         general_profile_idc: 1,
-                                        general_profile_compatibility_flags: [0x60, 0, 0, 0],
+                                        general_profile_compatibility_flags: [96, 0, 0, 0],
                                         general_constraint_indicator_flags: [144, 0, 0, 0, 0, 0],
                                         general_level_idc: 120,
                                         min_spatial_segmentation_idc: 0,
