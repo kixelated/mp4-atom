@@ -316,7 +316,7 @@ fn hevc() {
                                     },
                                     hvcc: Hvcc {
                                         configuration_version: 1,
-                                        general_profile_space: 1,
+                                        general_profile_space: 0,
                                         general_tier_flag: true,
                                         general_profile_idc: 1,
                                         general_profile_compatibility_flags: [0x60, 0, 0, 0],
@@ -328,8 +328,8 @@ fn hevc() {
                                         bit_depth_luma_minus8: 0,
                                         bit_depth_chroma_minus8: 0,
                                         avg_frame_rate: 0,
-                                        constant_frame_rate: 3,
-                                        num_temporal_layers: 7,
+                                        constant_frame_rate: 0,
+                                        num_temporal_layers: 1,
                                         temporal_id_nested: true,
                                         length_size_minus_one: 3,
                                         arrays: vec![
