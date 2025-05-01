@@ -9,6 +9,7 @@ mod opus;
 mod pasp;
 mod taic;
 mod tx3g;
+mod uncv;
 mod visual;
 mod vp9;
 
@@ -23,6 +24,7 @@ pub use opus::*;
 pub use pasp::*;
 pub use taic::*;
 pub use tx3g::*;
+pub use uncv::*;
 pub use visual::*;
 pub use vp9::*;
 
@@ -66,6 +68,9 @@ pub enum Codec {
     // Opus
     Opus(Opus),
 
+    // Uncompressed video
+    Uncv(Uncv),
+
     // Unknown
     Unknown(FourCC),
 }
@@ -83,6 +88,7 @@ impl Decode for Codec {
             Any::Tx3g(atom) => atom.into(),
             Any::Av01(atom) => atom.into(),
             Any::Opus(atom) => atom.into(),
+            Any::Uncv(atom) => atom.into(),
             Any::Unknown(kind, _) => Self::Unknown(kind),
             _ => return Err(Error::UnexpectedBox(atom.kind())),
         })
@@ -102,6 +108,7 @@ impl Encode for Codec {
             Self::Tx3g(atom) => atom.encode(buf),
             Self::Av01(atom) => atom.encode(buf),
             Self::Opus(atom) => atom.encode(buf),
+            Self::Uncv(atom) => atom.encode(buf),
         }
     }
 }
