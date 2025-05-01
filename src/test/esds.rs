@@ -250,11 +250,13 @@ fn esds() {
                         stbl: Stbl {
                             stsd: Stsd {
                                 codecs: vec![Mp4a {
-                                    data_reference_index: 1,
-                                    channelcount: 2,
-                                    samplesize: 16,
-                                    samplerate: 44100.into(),
-                                    esds: Some(Esds {
+                                    audio: Audio {
+                                        data_reference_index: 1,
+                                        channel_count: 2,
+                                        sample_size: 16,
+                                        sample_rate: 44100.into(),
+                                    },
+                                    esds: Esds {
                                         es_desc: esds::EsDescriptor {
                                             es_id: 2,
                                             dec_config: esds::DecoderConfig{
@@ -271,7 +273,7 @@ fn esds() {
                                             },
                                             sl_config: esds::SLConfig{},
                                         },
-                                    }),
+                                    },
                                     btrt: Some(Btrt { buffer_size_db: 0, max_bitrate: 128000, avg_bitrate: 128000 }),
                                     taic: None,
                                 }

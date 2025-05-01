@@ -7,49 +7,17 @@ pub use esds::Esds;
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mp4a {
-    pub data_reference_index: u16,
-    pub channelcount: u16,
-    pub samplesize: u16,
-    pub samplerate: FixedPoint<u16>,
-    pub esds: Option<Esds>,
+    pub audio: Audio,
+    pub esds: Esds,
     pub btrt: Option<Btrt>,
     pub taic: Option<Taic>,
-}
-
-impl Default for Mp4a {
-    fn default() -> Self {
-        Self {
-            data_reference_index: 0,
-            channelcount: 2,
-            samplesize: 16,
-            samplerate: 48000.into(),
-            esds: Some(Esds::default()),
-            btrt: None,
-            taic: None,
-        }
-    }
 }
 
 impl Atom for Mp4a {
     const KIND: FourCC = FourCC::new(b"mp4a");
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
-        u32::decode(buf)?; // reserved
-        u16::decode(buf)?; // reserved
-        let data_reference_index = u16::decode(buf)?;
-        let version = u16::decode(buf)?;
-        u16::decode(buf)?; // reserved
-        u32::decode(buf)?; // reserved
-        let channelcount = u16::decode(buf)?;
-        let samplesize = u16::decode(buf)?;
-        u32::decode(buf)?; // pre-defined, reserved
-        let samplerate = FixedPoint::decode(buf)?;
-
-        if version == 1 {
-            // Skip QTFF
-            u64::decode(buf)?;
-            u64::decode(buf)?;
-        }
+        let audio = Audio::decode(buf)?;
 
         let mut btrt = None;
         let mut esds = None;
@@ -66,28 +34,15 @@ impl Atom for Mp4a {
         }
 
         Ok(Mp4a {
-            data_reference_index,
-            channelcount,
-            samplesize,
-            samplerate,
-            esds,
+            audio,
+            esds: esds.ok_or(Error::MissingBox(Esds::KIND))?,
             btrt,
             taic,
         })
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        0u32.encode(buf)?; // reserved
-        0u16.encode(buf)?; // reserved
-        self.data_reference_index.encode(buf)?;
-        0u16.encode(buf)?; // version
-        0u16.encode(buf)?; // reserved
-        0u32.encode(buf)?; // reserved
-        self.channelcount.encode(buf)?;
-        self.samplesize.encode(buf)?;
-        0u32.encode(buf)?; // reserved
-        self.samplerate.encode(buf)?;
-
+        self.audio.encode(buf)?;
         self.esds.encode(buf)?;
         if self.btrt.is_some() {
             self.btrt.encode(buf)?;
@@ -104,11 +59,13 @@ mod tests {
     #[test]
     fn test_mp4a() {
         let expected = Mp4a {
-            data_reference_index: 1,
-            channelcount: 2,
-            samplesize: 16,
-            samplerate: 48000.into(),
-            esds: Some(Esds {
+            audio: Audio {
+                data_reference_index: 1,
+                channel_count: 2,
+                sample_size: 16,
+                sample_rate: 48000.into(),
+            },
+            esds: Esds {
                 es_desc: esds::EsDescriptor {
                     es_id: 2,
                     dec_config: esds::DecoderConfig {
@@ -126,31 +83,12 @@ mod tests {
                     },
                     sl_config: esds::SLConfig::default(),
                 },
-            }),
+            },
             btrt: Some(Btrt {
                 buffer_size_db: 1,
                 max_bitrate: 2,
                 avg_bitrate: 3,
             }),
-            taic: None,
-        };
-        let mut buf = Vec::new();
-        expected.encode(&mut buf).unwrap();
-
-        let mut buf = buf.as_ref();
-        let decoded = Mp4a::decode(&mut buf).unwrap();
-        assert_eq!(decoded, expected);
-    }
-
-    #[test]
-    fn test_mp4a_no_esds() {
-        let expected = Mp4a {
-            data_reference_index: 1,
-            channelcount: 2,
-            samplesize: 16,
-            samplerate: 48000.into(),
-            esds: None,
-            btrt: None,
             taic: None,
         };
         let mut buf = Vec::new();

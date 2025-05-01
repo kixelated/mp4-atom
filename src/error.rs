@@ -47,6 +47,12 @@ pub enum Error {
     #[error("unexpected eof")]
     UnexpectedEof,
 
+    #[error("unknown quicktime version: {0}")]
+    UnknownQuicktimeVersion(u16),
+
+    #[error("unsupported: {0}")]
+    Unsupported(&'static str),
+
     // Returned in the rare case when we can't represent a value in the desired type
     #[error("out of memory")]
     OutOfMemory,

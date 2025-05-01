@@ -155,6 +155,8 @@ any! {
                                 VpcC,
                             Av01,
                                 Av1c,
+                            Opus,
+                                Dops,
                             Uncv,
                                 Cmpd,
                                 UncC,

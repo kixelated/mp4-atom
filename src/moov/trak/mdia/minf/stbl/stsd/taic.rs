@@ -2,6 +2,7 @@ use crate::*;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[repr(u8)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ClockType {
     #[default]
     Unknown = 0,
