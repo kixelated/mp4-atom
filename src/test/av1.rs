@@ -263,6 +263,7 @@ fn av1() {
                     iinf: None,
                     iprp: None,
                     iref: None,
+                    idat: None,
                     ilst: Some(Ilst {
                         name: None,
                         year: None,

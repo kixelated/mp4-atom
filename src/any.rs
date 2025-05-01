@@ -137,6 +137,7 @@ any! {
                 Pixi,
             Ipma,
         Iref,
+        Idat,
         Ilst,
             Covr,
             Desc,

@@ -309,6 +309,7 @@ fn heif() {
                     to_item_ids: vec![1]
                 }]
             }),
+            idat: None,
             ilst: None,
             unknown: vec![],
         }
@@ -478,6 +479,7 @@ fn avif() {
                 }]
             }),
             iref: None,
+            idat: None,
             ilst: None,
             unknown: vec![]
         }

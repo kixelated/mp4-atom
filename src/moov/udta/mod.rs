@@ -54,6 +54,7 @@ mod tests {
                 iinf: None,
                 iprp: None,
                 iref: None,
+                idat: None,
                 ilst: None,
                 unknown: vec![],
             }),

@@ -187,6 +187,7 @@ fn vp9() {
                 iinf: None,
                 iprp: None,
                 iref: None,
+                idat: None,
                 ilst: None,
                 unknown: vec![Any::Unknown(
                     FourCC::new(b"ID32"),

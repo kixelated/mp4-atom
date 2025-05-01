@@ -1,3 +1,4 @@
+mod idat;
 mod iinf;
 mod iloc;
 mod ilst;
@@ -6,6 +7,7 @@ mod iref;
 mod pitm;
 mod properties;
 
+pub use idat::*;
 pub use iinf::*;
 pub use iloc::*;
 pub use ilst::*;
@@ -19,7 +21,7 @@ use crate::*;
 // MetaBox, ISO/IEC 14496:2022 Secion 8.11.1
 // Its like a container box, but derived from FullBox
 
-// TODO: add DataInformationBox, ItemProtectionBox, IPMPControlBox, ItemDataBox
+// TODO: add ItemProtectionBox, IPMPControlBox
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -31,6 +33,7 @@ pub struct Meta {
     pub iinf: Option<Iinf>,
     pub iprp: Option<Iprp>,
     pub iref: Option<Iref>,
+    pub idat: Option<Idat>,
     pub ilst: Option<Ilst>,
     pub unknown: Vec<crate::Any>,
 }
@@ -50,6 +53,7 @@ impl AtomExt for Meta {
         let mut iinf = None;
         let mut iprp = None;
         let mut iref = None;
+        let mut idat = None;
         let mut ilst = None;
         let mut unknown_boxes = vec![];
         while let Some(atom) = Any::decode_maybe(buf)? {
@@ -60,6 +64,7 @@ impl AtomExt for Meta {
                 Any::Iinf(atom) => iinf = Some(atom),
                 Any::Iprp(atom) => iprp = Some(atom),
                 Any::Iref(atom) => iref = Some(atom),
+                Any::Idat(atom) => idat = Some(atom),
                 Any::Ilst(atom) => ilst = Some(atom),
                 _ => {
                     unknown_boxes.push(atom);
@@ -75,6 +80,7 @@ impl AtomExt for Meta {
             iinf,
             iprp,
             iref,
+            idat,
             ilst,
             unknown: unknown_boxes,
         })
@@ -94,14 +100,17 @@ impl AtomExt for Meta {
         if self.iinf.is_some() {
             self.iinf.encode(buf)?;
         }
-        if self.ilst.is_some() {
-            self.ilst.encode(buf)?;
-        }
         if self.iprp.is_some() {
             self.iprp.encode(buf)?;
         }
         if self.iref.is_some() {
             self.iref.encode(buf)?;
+        }
+        if self.idat.is_some() {
+            self.idat.encode(buf)?;
+        }
+        if self.ilst.is_some() {
+            self.ilst.encode(buf)?;
         }
         for atom in &self.unknown {
             atom.encode(buf)?;
@@ -127,6 +136,7 @@ mod tests {
             iinf: None,
             iprp: None,
             iref: None,
+            idat: None,
             ilst: None,
             unknown: vec![],
         };
@@ -230,6 +240,9 @@ mod tests {
                     from_item_id: 2,
                     to_item_ids: vec![1, 3],
                 }],
+            }),
+            idat: Some(Idat {
+                data: vec![0x01, 0xFF, 0xFE, 0x03],
             }),
             ilst: Some(Ilst::default()),
             unknown: vec![],

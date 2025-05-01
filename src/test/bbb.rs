@@ -376,6 +376,7 @@ fn bbb() {
                     iinf: None,
                     iprp: None,
                     iref: None,
+                    idat: None,
                     ilst: Some(Ilst { name: None, year: None, covr: None, desc: None }),
                     unknown: vec![] }),
                 ..Default::default()
