@@ -9,6 +9,7 @@ pub struct Uncv {
     pub cmpd: Option<Cmpd>,
     pub uncc: UncC,
     pub btrt: Option<Btrt>,
+    pub ccst: Option<Ccst>,
     pub pasp: Option<Pasp>,
 }
 
@@ -18,7 +19,7 @@ impl Atom for Uncv {
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         let visual = Visual::decode(buf)?;
 
-        // let mut av1c = None;
+        let mut ccst = None;
         let mut cmpd = None;
         let mut uncc = None;
         let mut btrt = None;
@@ -28,6 +29,7 @@ impl Atom for Uncv {
                 Any::Cmpd(atom) => cmpd = atom.into(),
                 Any::UncC(atom) => uncc = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
+                Any::Ccst(atom) => ccst = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 _ => panic!("unknown atom: {:?}", atom),
             }
@@ -38,6 +40,7 @@ impl Atom for Uncv {
             cmpd,
             uncc: uncc.ok_or(Error::MissingBox(UncC::KIND))?,
             btrt,
+            ccst,
             pasp,
         })
     }
@@ -50,6 +53,9 @@ impl Atom for Uncv {
         self.uncc.encode(buf)?;
         if self.btrt.is_some() {
             self.btrt.encode(buf)?;
+        }
+        if self.ccst.is_some() {
+            self.ccst.encode(buf)?;
         }
         if self.pasp.is_some() {
             self.pasp.encode(buf)?;

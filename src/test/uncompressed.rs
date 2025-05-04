@@ -236,6 +236,7 @@ fn uncompressed() {
                                         max_bitrate: 48,
                                         avg_bitrate: 48
                                     }),
+                                    ccst: None,
                                     pasp: None
                                 })],
                             },
