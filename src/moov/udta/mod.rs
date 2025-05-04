@@ -1,7 +1,5 @@
-mod meta;
 mod skip;
 
-pub use meta::*;
 pub use skip::*;
 
 use crate::*;
@@ -45,7 +43,21 @@ mod tests {
     #[test]
     fn test_udta() {
         let expected = Udta {
-            meta: Some(Meta::default()),
+            meta: Some(Meta {
+                hdlr: Hdlr {
+                    handler: FourCC::new(b"fake"),
+                    name: "".into(),
+                },
+                pitm: None,
+                dinf: None,
+                iloc: None,
+                iinf: None,
+                iprp: None,
+                iref: None,
+                idat: None,
+                ilst: None,
+                unknown: vec![],
+            }),
             skip: None,
         };
 
