@@ -236,6 +236,7 @@ fn uncompressed() {
                                         max_bitrate: 48,
                                         avg_bitrate: 48
                                     }),
+                                    ccst: None,
                                     pasp: None
                                 })],
                             },
@@ -278,13 +279,25 @@ fn uncompressed() {
             }]
             .into(),
             udta: Some(Udta {
-                meta: Some(Meta::Mdir {
+                meta: Some(Meta {
+                    hdlr: Hdlr {
+                        handler: FourCC::new(b"mdir"),
+                        name: "".into()
+                    },
+                    pitm: None,
+                    dinf: None,
+                    iloc: None,
+                    iinf: None,
+                    iprp: None,
+                    iref: None,
+                    idat: None,
                     ilst: Some(Ilst {
                         name: None,
                         year: None,
                         covr: None,
                         desc: None
-                    })
+                    }),
+                    unknown: vec![]
                 }),
                 skip: None
             })

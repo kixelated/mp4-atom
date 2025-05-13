@@ -1,6 +1,7 @@
 mod audio;
 mod av01;
 mod btrt;
+mod ccst;
 mod colr;
 mod h264;
 mod hevc;
@@ -16,6 +17,7 @@ mod vp9;
 pub use audio::*;
 pub use av01::*;
 pub use btrt::*;
+pub use ccst::*;
 pub use colr::*;
 pub use h264::*;
 pub use hevc::*;
