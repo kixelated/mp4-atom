@@ -10,6 +10,7 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Reference {
     pub reference_type: FourCC,
     pub from_item_id: u32,
