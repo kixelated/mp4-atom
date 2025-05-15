@@ -10,6 +10,7 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ItemLocationExtent {
     pub item_reference_index: u64,
     pub offset: u64,
@@ -17,6 +18,7 @@ pub struct ItemLocationExtent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ItemLocation {
     pub item_id: u32,
     pub construction_method: u8, // enum?

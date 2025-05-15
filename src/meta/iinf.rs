@@ -16,6 +16,7 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ItemInfoEntry {
     pub item_id: u32,
     pub item_protection_index: u16,

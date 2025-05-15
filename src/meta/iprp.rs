@@ -47,6 +47,7 @@ impl Atom for Ipco {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PropertyAssociation {
     pub essential: bool,
     pub property_index: u16,
@@ -73,6 +74,7 @@ impl PropertyAssociation {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PropertyAssociations {
     pub item_id: u32,
     pub associations: Vec<PropertyAssociation>,

@@ -11,8 +11,8 @@ default:
 
 # Run the CI checks
 check:
-	cargo check --all-targets
-	cargo clippy --all-targets -- -D warnings
+	cargo check --all-targets --all-features
+	cargo clippy --all-targets --all-features -- -D warnings
 	cargo fmt -- --check
 	cargo shear # requires: cargo binstall cargo-shear
 
