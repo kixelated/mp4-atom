@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1](https://github.com/kixelated/mp4-atom/compare/v0.8.0...v0.8.1) - 2025-05-15
+
+### Other
+
+- Fix some missing serde attributes. ([#42](https://github.com/kixelated/mp4-atom/pull/42))
+
 ## [0.8.0](https://github.com/kixelated/mp4-atom/compare/v0.7.2...v0.8.0) - 2025-05-13
 
 ### Added
