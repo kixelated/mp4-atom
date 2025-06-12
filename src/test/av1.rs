@@ -245,8 +245,8 @@ fn av1() {
                             stsz: Stsz::default(),
                             stco: Some(Stco::default()),
                             co64: None,
-                            saio: None,
-                            saiz: None,
+                            saio: vec![],
+                            saiz: vec![],
                         }
                     }
                 }

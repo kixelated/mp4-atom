@@ -31,8 +31,8 @@ pub struct Stbl {
     pub stsz: Stsz,
     pub stco: Option<Stco>,
     pub co64: Option<Co64>,
-    pub saiz: Option<Saiz>,
-    pub saio: Option<Saio>,
+    pub saiz: Vec<Saiz>,
+    pub saio: Vec<Saio>,
 }
 
 impl Atom for Stbl {
@@ -40,7 +40,7 @@ impl Atom for Stbl {
 
     nested! {
         required: [ Stsd, Stts, Stsc, Stsz ],
-        optional: [ Ctts, Stss, Stco, Co64, Saiz, Saio ],
-        multiple: [],
+        optional: [ Ctts, Stss, Stco, Co64 ],
+        multiple: [ Saiz, Saio ],
     }
 }
