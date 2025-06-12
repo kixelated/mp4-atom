@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2](https://github.com/kixelated/mp4-atom/compare/v0.8.1...v0.8.2) - 2025-06-12
+
+### Fixed
+
+- support multiple saio and saiz boxes ([#44](https://github.com/kixelated/mp4-atom/pull/44))
+
+### Other
+
+- Optionally add the first-sample-flags ([#46](https://github.com/kixelated/mp4-atom/pull/46))
+
 ## [0.8.1](https://github.com/kixelated/mp4-atom/compare/v0.8.0...v0.8.1) - 2025-05-15
 
 ### Other
