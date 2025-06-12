@@ -111,7 +111,9 @@ impl AtomExt for Trun {
         (self.entries.len() as u32).encode(buf)?;
 
         self.data_offset.encode(buf)?;
-        0u32.encode(buf)?; // TODO first sample flags
+        if ext.first_sample_flags {
+            0u32.encode(buf)?; // TODO first sample flags
+        }
 
         for entry in &self.entries {
             ext.sample_duration.then_some(entry.duration).encode(buf)?;
