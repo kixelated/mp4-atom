@@ -181,15 +181,7 @@ fn vp9() {
                     handler: FourCC::new(b"ID32"),
                     name: "".into()
                 },
-                pitm: None,
-                dinf: None,
-                iloc: None,
-                iinf: None,
-                iprp: None,
-                iref: None,
-                idat: None,
-                ilst: None,
-                unknown: vec![Any::Unknown(
+                items: vec![Any::Unknown(
                     FourCC::new(b"ID32"),
                     vec![
                         0, 0, 0, 0, 21, 199, 73, 68, 51, 4, 0, 0, 0, 0, 0, 67, 80, 82, 73, 86, 0,
@@ -198,7 +190,8 @@ fn vp9() {
                         97, 107, 97, 45, 112, 97, 99, 107, 97, 103, 101, 114, 0, 53, 102, 99, 57,
                         48, 55, 54, 102, 57, 50, 45, 100, 101, 98, 117, 103
                     ]
-                )]
+                )
+                .into()]
             }),
             mvex: Some(Mvex {
                 mehd: Some(Mehd {

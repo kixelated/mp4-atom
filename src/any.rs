@@ -116,6 +116,54 @@ macro_rules! any {
                 Any::$kind(inner)
             }
         })*
+
+        $(impl TryFrom<Any> for $kind {
+            type Error = Any;
+
+            fn try_from(any: Any) -> std::result::Result<Self, Any> {
+                match any {
+                    Any::$kind(inner) => Ok(inner),
+                    _ => Err(any),
+                }
+            }
+        })*
+
+        /// A trait to help casting to/from Any.
+        /// From/TryFrom use concrete types, but if we want to use generics, then we need a trait.
+        pub trait AnyAtom: Atom {
+            fn from_any(any: Any) -> Option<Self>;
+            fn from_any_ref(any: &Any) -> Option<&Self>;
+            fn from_any_mut(any: &mut Any) -> Option<&mut Self>;
+
+            fn into_any(self) -> Any;
+        }
+
+        $(impl AnyAtom for $kind {
+            fn from_any(any: Any) -> Option<Self> {
+                match any {
+                    Any::$kind(inner) => Some(inner),
+                    _ => None,
+                }
+            }
+
+            fn from_any_ref(any: &Any) -> Option<&Self> {
+                match any {
+                    Any::$kind(inner) => Some(inner),
+                    _ => None,
+                }
+            }
+
+            fn from_any_mut(any: &mut Any) -> Option<&mut Self> {
+                match any {
+                    Any::$kind(inner) => Some(inner),
+                    _ => None,
+                }
+            }
+
+            fn into_any(self) -> Any {
+                Any::$kind(self)
+            }
+        })*
     };
 }
 
