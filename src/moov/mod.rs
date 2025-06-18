@@ -226,7 +226,8 @@ mod test {
                                 ..Default::default()
                             }
                         }
-                    }
+                    },
+                    udta: None
                 }],
                 udta: None,
             }

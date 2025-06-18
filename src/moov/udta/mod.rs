@@ -9,6 +9,7 @@ use crate::*;
 pub struct Udta {
     pub meta: Option<Meta>,
     pub skip: Option<Skip>,
+    pub name: Option<Name>,
 }
 
 impl Atom for Udta {
@@ -16,7 +17,7 @@ impl Atom for Udta {
 
     nested! {
         required: [ ],
-        optional: [ Meta, Skip ],
+        optional: [ Meta, Skip, Name ],
         multiple: [ ],
     }
 }
@@ -30,6 +31,7 @@ mod tests {
         let expected = Udta {
             meta: None,
             skip: None,
+            name: None,
         };
 
         let mut buf = Vec::new();
@@ -51,6 +53,7 @@ mod tests {
                 items: vec![],
             }),
             skip: None,
+            name: None,
         };
 
         let mut buf = Vec::new();
