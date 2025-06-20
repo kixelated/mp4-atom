@@ -27,18 +27,60 @@ use crate::*;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Meta {
     pub hdlr: Hdlr,
-    pub pitm: Option<Pitm>,
-    pub dinf: Option<Dinf>,
-    pub iloc: Option<Iloc>,
-    pub iinf: Option<Iinf>,
-    pub iprp: Option<Iprp>,
-    pub iref: Option<Iref>,
-    pub idat: Option<Idat>,
-    pub ilst: Option<Ilst>,
-    pub unknown: Vec<crate::Any>,
+    pub items: Vec<Any>,
 }
 
 impl Eq for Meta {}
+
+macro_rules! meta_atom {
+    ($($atom:ident),*,) => {
+        /// A trait to signify that this is a common meta atom.
+        pub trait MetaAtom: AnyAtom {}
+
+        $(impl MetaAtom for $atom {})*
+    };
+}
+
+meta_atom! {
+        Pitm,
+        Dinf,
+        Iloc,
+        Iinf,
+        Iprp,
+        Iref,
+        Idat,
+        Ilst,
+}
+
+// Implement helpers to make it easier to get these atoms.
+impl Meta {
+    /// A helper to get a common meta atom from the items vec.
+    pub fn get<T: MetaAtom>(&self) -> Option<&T> {
+        self.items.iter().find_map(T::from_any_ref)
+    }
+
+    /// A helper to get a common meta atom from the items vec.
+    pub fn get_mut<T: MetaAtom>(&mut self) -> Option<&mut T> {
+        self.items.iter_mut().find_map(T::from_any_mut)
+    }
+
+    /// A helper to insert a common meta atom into the items vec.
+    pub fn push<T: MetaAtom>(&mut self, atom: T) {
+        self.items.push(atom.into_any());
+    }
+
+    /// A helper to remove a common meta atom from the items vec.
+    ///
+    /// This removes the first instance of the atom from the vec.
+    pub fn remove<T: MetaAtom>(&mut self) -> Option<T> {
+        let pos = self.items.iter().position(|a| T::from_any_ref(a).is_some());
+        if let Some(pos) = pos {
+            Some(T::from_any(self.items.remove(pos)).unwrap())
+        } else {
+            None
+        }
+    }
+}
 
 impl AtomExt for Meta {
     type Ext = ();
@@ -47,72 +89,17 @@ impl AtomExt for Meta {
 
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
-        let mut pitm = None;
-        let mut dinf = None;
-        let mut iloc = None;
-        let mut iinf = None;
-        let mut iprp = None;
-        let mut iref = None;
-        let mut idat = None;
-        let mut ilst = None;
-        let mut unknown_boxes = vec![];
+        let mut items = Vec::new();
         while let Some(atom) = Any::decode_maybe(buf)? {
-            match atom {
-                Any::Pitm(atom) => pitm = Some(atom),
-                Any::Dinf(atom) => dinf = Some(atom),
-                Any::Iloc(atom) => iloc = Some(atom),
-                Any::Iinf(atom) => iinf = Some(atom),
-                Any::Iprp(atom) => iprp = Some(atom),
-                Any::Iref(atom) => iref = Some(atom),
-                Any::Idat(atom) => idat = Some(atom),
-                Any::Ilst(atom) => ilst = Some(atom),
-                _ => {
-                    unknown_boxes.push(atom);
-                }
-            }
+            items.push(atom);
         }
 
-        Ok(Self {
-            hdlr,
-            pitm,
-            dinf,
-            iloc,
-            iinf,
-            iprp,
-            iref,
-            idat,
-            ilst,
-            unknown: unknown_boxes,
-        })
+        Ok(Self { hdlr, items })
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.hdlr.encode(buf)?;
-        if self.pitm.is_some() {
-            self.pitm.encode(buf)?;
-        }
-        if self.dinf.is_some() {
-            self.dinf.encode(buf)?;
-        }
-        if self.iloc.is_some() {
-            self.iloc.encode(buf)?;
-        }
-        if self.iinf.is_some() {
-            self.iinf.encode(buf)?;
-        }
-        if self.iprp.is_some() {
-            self.iprp.encode(buf)?;
-        }
-        if self.iref.is_some() {
-            self.iref.encode(buf)?;
-        }
-        if self.idat.is_some() {
-            self.idat.encode(buf)?;
-        }
-        if self.ilst.is_some() {
-            self.ilst.encode(buf)?;
-        }
-        for atom in &self.unknown {
+        for atom in &self.items {
             atom.encode(buf)?;
         }
         Ok(())
@@ -130,15 +117,7 @@ mod tests {
                 handler: b"fake".into(),
                 name: "".into(),
             },
-            pitm: None,
-            dinf: None,
-            iloc: None,
-            iinf: None,
-            iprp: None,
-            iref: None,
-            idat: None,
-            ilst: None,
-            unknown: vec![],
+            items: Vec::new(),
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -150,103 +129,105 @@ mod tests {
 
     #[test]
     fn test_meta_mdir() {
-        let expected = Meta {
+        let mut expected = Meta {
             hdlr: Hdlr {
                 handler: b"mdir".into(),
                 name: "".into(),
             },
-            pitm: Some(Pitm { item_id: 3 }),
-            dinf: Some(Dinf {
-                dref: Dref {
-                    urls: vec![Url {
-                        location: "".into(),
-                    }],
-                },
-            }),
-            iloc: Some(Iloc {
-                item_locations: vec![ItemLocation {
-                    item_id: 3,
-                    construction_method: 0,
-                    data_reference_index: 0,
-                    base_offset: 0,
-                    extents: vec![ItemLocationExtent {
-                        item_reference_index: 0,
-                        offset: 200,
-                        length: 100,
-                    }],
-                }],
-            }),
-            iinf: Some(Iinf { item_infos: vec![] }),
-            iprp: Some(Iprp {
-                ipco: Ipco { properties: vec![] },
-                ipma: vec![Ipma {
-                    item_properties: vec![
-                        PropertyAssociations {
-                            item_id: 1,
-                            associations: vec![
-                                PropertyAssociation {
-                                    essential: true,
-                                    property_index: 1,
-                                },
-                                PropertyAssociation {
-                                    essential: false,
-                                    property_index: 2,
-                                },
-                                PropertyAssociation {
-                                    essential: false,
-                                    property_index: 3,
-                                },
-                                PropertyAssociation {
-                                    essential: false,
-                                    property_index: 5,
-                                },
-                                PropertyAssociation {
-                                    essential: true,
-                                    property_index: 4,
-                                },
-                            ],
-                        },
-                        PropertyAssociations {
-                            item_id: 2,
-                            associations: vec![
-                                PropertyAssociation {
-                                    essential: true,
-                                    property_index: 6,
-                                },
-                                PropertyAssociation {
-                                    essential: false,
-                                    property_index: 3,
-                                },
-                                PropertyAssociation {
-                                    essential: false,
-                                    property_index: 7,
-                                },
-                                PropertyAssociation {
-                                    essential: true,
-                                    property_index: 8,
-                                },
-                                PropertyAssociation {
-                                    essential: true,
-                                    property_index: 4,
-                                },
-                            ],
-                        },
-                    ],
-                }],
-            }),
-            iref: Some(Iref {
-                references: vec![Reference {
-                    reference_type: b"cdsc".into(),
-                    from_item_id: 2,
-                    to_item_ids: vec![1, 3],
-                }],
-            }),
-            idat: Some(Idat {
-                data: vec![0x01, 0xFF, 0xFE, 0x03],
-            }),
-            ilst: Some(Ilst::default()),
-            unknown: vec![],
+            items: Vec::new(),
         };
+
+        expected.push(Pitm { item_id: 3 });
+        expected.push(Dinf {
+            dref: Dref {
+                urls: vec![Url {
+                    location: "".into(),
+                }],
+            },
+        });
+        expected.push(Iloc {
+            item_locations: vec![ItemLocation {
+                item_id: 3,
+                construction_method: 0,
+                data_reference_index: 0,
+                base_offset: 0,
+                extents: vec![ItemLocationExtent {
+                    item_reference_index: 0,
+                    offset: 200,
+                    length: 100,
+                }],
+            }],
+        });
+        expected.push(Iinf { item_infos: vec![] });
+        expected.push(Iprp {
+            ipco: Ipco { properties: vec![] },
+            ipma: vec![Ipma {
+                item_properties: vec![
+                    PropertyAssociations {
+                        item_id: 1,
+                        associations: vec![
+                            PropertyAssociation {
+                                essential: true,
+                                property_index: 1,
+                            },
+                            PropertyAssociation {
+                                essential: false,
+                                property_index: 2,
+                            },
+                            PropertyAssociation {
+                                essential: false,
+                                property_index: 3,
+                            },
+                            PropertyAssociation {
+                                essential: false,
+                                property_index: 5,
+                            },
+                            PropertyAssociation {
+                                essential: true,
+                                property_index: 4,
+                            },
+                        ],
+                    },
+                    PropertyAssociations {
+                        item_id: 2,
+                        associations: vec![
+                            PropertyAssociation {
+                                essential: true,
+                                property_index: 6,
+                            },
+                            PropertyAssociation {
+                                essential: false,
+                                property_index: 3,
+                            },
+                            PropertyAssociation {
+                                essential: false,
+                                property_index: 7,
+                            },
+                            PropertyAssociation {
+                                essential: true,
+                                property_index: 8,
+                            },
+                            PropertyAssociation {
+                                essential: true,
+                                property_index: 4,
+                            },
+                        ],
+                    },
+                ],
+            }],
+        });
+        expected.push(Iref {
+            references: vec![Reference {
+                reference_type: b"cdsc".into(),
+                from_item_id: 2,
+                to_item_ids: vec![1, 3],
+            }],
+        });
+        expected.push(Idat {
+            data: vec![0x01, 0xFF, 0xFE, 0x03],
+        });
+        expected.push(Ilst::default());
+
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 

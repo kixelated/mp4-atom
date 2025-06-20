@@ -6,7 +6,7 @@ use crate::*;
 pub use num::rational::Ratio;
 
 /// A four-character code used to identify atoms.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 // TODO serialize as a string
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FourCC([u8; 4]);

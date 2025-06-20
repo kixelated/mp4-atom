@@ -181,15 +181,7 @@ fn vp9() {
                     handler: FourCC::new(b"ID32"),
                     name: "".into()
                 },
-                pitm: None,
-                dinf: None,
-                iloc: None,
-                iinf: None,
-                iprp: None,
-                iref: None,
-                idat: None,
-                ilst: None,
-                unknown: vec![Any::Unknown(
+                items: vec![Any::Unknown(
                     FourCC::new(b"ID32"),
                     vec![
                         0, 0, 0, 0, 21, 199, 73, 68, 51, 4, 0, 0, 0, 0, 0, 67, 80, 82, 73, 86, 0,

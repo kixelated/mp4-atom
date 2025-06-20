@@ -107,8 +107,6 @@ fn av1() {
         }
     );
 
-    //   left: Moov { mvhd: Mvhd { creation_time: 0, modification_time: 0, timescale: 1000, duration: 0, rate: 1, volume: 1, matrix: Matrix { a: 65536, b: 0, u: 0, c: 0, d: 65536, v: 0, x: 0, y: 0, w: 1073741824 }, next_track_id: 2 }, meta: None, mvex: Some(Mvex { mehd: None, trex: [Trex { track_id: 1, default_sample_description_index: 1, default_sample_duration: 0, default_sample_size: 0, default_sample_flags: 0 }] }), trak: [Trak { tkhd: Tkhd { creation_time: 0, modification_time: 0, track_id: 1, duration: 0, layer: 0, alternate_group: 0, enabled: true, volume: 0, matrix: Matrix { a: 65536, b: 0, u: 0, c: 0, d: 65536, v: 0, x: 0, y: 0, w: 1073741824 }, width: 1920, height: 1080 }, edts: None, meta: None, mdia: Mdia { mdhd: Mdhd { creation_time: 0, modification_time: 0, timescale: 25000, duration: 0, language: "und" }, hdlr: Hdlr { handler: vide, name: "obu@GPAC2.1-DEV-rev199-g8e29f6e8b-github_master" }, minf: Minf { vmhd: Some(Vmhd { graphics_mode: 0, op_color: RgbColor { red: 0, green: 0, blue: 0 } }), smhd: None, dinf: Dinf { dref: Dref { urls: [Url { location: "" }] } }, stbl: Stbl { stsd: Stsd { avc1: None, hev1: None, vp09: None, mp4a: None, tx3g: None, av01: Some(Av01 { visual: Visual { data_reference_index: 1, width: 1920, height: 1080, horizresolution: 72, vertresolution: 72, frame_count: 1, compressor: Compressor(""), depth: 24 }, av1c: Av1c { seq_profile: 0, seq_level_idx_0: 9, seq_tier_0: false, high_bitdepth: true, twelve_bit: false, monochrome: false, chroma_subsampling_x: true, chroma_subsampling_y: true, chroma_sample_position: 0, initial_presentation_delay: None, config_obus: [10, 11, 0, 0, 0, 74, 171, 191, 195, 119, 255, 231, 1] } }) }, stts: Stts { entries: [] }, ctts: None, stss: None, stsc: Stsc { entries: [] }, stsz: Stsz { samples: Different { sizes: [] } }, stco: Some(Stco { entries: [] }), co64: None } } } }], udta: Some(Udta { meta: Some(Mdir { ilst: Some(Ilst { name: None, year: None, covr: None, desc: None }) }), skip: None }) }
-
     let moov = Moov::decode(buf).expect("failed to decode moov");
     assert_eq!(
         moov,
@@ -257,20 +255,7 @@ fn av1() {
                         handler: FourCC::new(b"mdir"),
                         name: "".into()
                     },
-                    pitm: None,
-                    dinf: None,
-                    iloc: None,
-                    iinf: None,
-                    iprp: None,
-                    iref: None,
-                    idat: None,
-                    ilst: Some(Ilst {
-                        name: None,
-                        year: None,
-                        covr: None,
-                        desc: None
-                    }),
-                    unknown: vec![]
+                    items: vec![Ilst::default().into()],
                 }),
                 skip: None
             })
