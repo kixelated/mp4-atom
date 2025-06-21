@@ -297,7 +297,8 @@ fn vp9() {
                             saiz: vec![],
                         }
                     }
-                }
+                },
+                udta: None,
             }],
             udta: None
         }
