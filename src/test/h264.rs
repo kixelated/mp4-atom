@@ -379,7 +379,6 @@ fn avcc_ext() {
             skip: Some(Skip {
                 zeroed: Zeroed { size: 81 },
             }),
-            name: None,
         }),
     };
 

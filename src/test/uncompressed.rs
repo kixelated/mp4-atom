@@ -288,7 +288,6 @@ fn uncompressed() {
                     items: vec![Ilst::default().into()],
                 }),
                 skip: None,
-                name: None,
             })
         }
     );
