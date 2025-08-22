@@ -403,6 +403,8 @@ fn bbb() {
                         ..Default::default()
                     }],
                 }),
+                saiz: vec![],
+                saio: vec![],
             }],
         },
     );
@@ -453,6 +455,8 @@ fn bbb() {
                     data_offset: 112.into(),
                     entries: vec![Default::default()],
                 }),
+                saiz: vec![],
+                saio: vec![],
             }],
         },
     );

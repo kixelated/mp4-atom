@@ -331,6 +331,8 @@ fn esds() {
                         ..Default::default()
                     }],
                 }),
+                saiz: vec![],
+                saio: vec![],
             }],
         },
     );

@@ -287,7 +287,9 @@ fn av1() {
                         flags: Some(33554432),
                         cts: None
                     }]
-                })
+                }),
+                saiz: vec![],
+                saio: vec![],
             }]
         }
     );
