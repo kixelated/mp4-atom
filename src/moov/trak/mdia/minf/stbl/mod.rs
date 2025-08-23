@@ -1,6 +1,7 @@
 mod co64;
 mod ctts;
 mod saiz;
+mod sbgp;
 mod stco;
 mod stsc;
 mod stsd;
@@ -11,6 +12,7 @@ mod stts;
 pub use co64::*;
 pub use ctts::*;
 pub use saiz::*;
+pub use sbgp::*;
 pub use stco::*;
 pub use stsc::*;
 pub use stsd::*;
