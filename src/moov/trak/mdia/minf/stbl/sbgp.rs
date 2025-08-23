@@ -1,15 +1,15 @@
 use crate::*;
 
 /// SampleToGroupBox, ISO/IEC 14496-12:2024 Sect 8.9.2
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sbgp {
-    pub grouping_type: u32,
+    pub grouping_type: FourCC,
     pub grouping_type_parameter: Option<u32>,
     pub entries: Vec<SbgpEntry>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SbgpEntry {
     pub sample_count: u32,
@@ -28,7 +28,7 @@ impl AtomExt for Sbgp {
     const KIND_EXT: FourCC = FourCC::new(b"sbgp");
 
     fn decode_body_ext<B: Buf>(buf: &mut B, ext: Self::Ext) -> Result<Self> {
-        let grouping_type = u32::decode(buf)?;
+        let grouping_type = FourCC::decode(buf)?;
         let grouping_type_parameter = if ext.version == SbgpVersion::V1 {
             Some(u32::decode(buf)?)
         } else {
@@ -103,7 +103,7 @@ mod tests {
         assert_eq!(
             sbgp,
             Sbgp {
-                grouping_type: 1919904876,
+                grouping_type: FourCC::from(b"roll"),
                 grouping_type_parameter: None,
                 entries: vec![SbgpEntry {
                     sample_count: 48,
@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn sbgp_encodes_from_type_correctly() {
         let sbgp = Sbgp {
-            grouping_type: 1919904876,
+            grouping_type: FourCC::from(b"roll"),
             grouping_type_parameter: None,
             entries: vec![SbgpEntry {
                 sample_count: 48,
