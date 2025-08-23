@@ -573,7 +573,8 @@ fn hevc() {
                             ..Default::default()
                         }
                     }
-                }
+                },
+                udta: None,
             }],
             udta: Some(Udta {
                 meta: Some(Meta {
@@ -583,7 +584,7 @@ fn hevc() {
                     },
                     items: vec![Ilst::default().into(),],
                 }),
-                skip: None
+                skip: None,
             })
         }
     );
