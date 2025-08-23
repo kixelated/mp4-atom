@@ -677,7 +677,7 @@ fn avc_encrypted_segment() {
                 tfdt: Some(Tfdt {
                     base_media_decode_time: 342202323002237
                 }),
-                trun: None,
+                trun: vec![],
                 saiz: vec![Saiz {
                     aux_info: Some(AuxInfo {
                         aux_info_type: b"cbcs".into(),

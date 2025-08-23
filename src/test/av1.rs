@@ -279,7 +279,7 @@ fn av1() {
                 tfdt: Some(Tfdt {
                     base_media_decode_time: 0
                 }),
-                trun: Some(Trun {
+                trun: vec![Trun {
                     data_offset: Some(116),
                     entries: vec![TrunEntry {
                         duration: None,
@@ -287,7 +287,7 @@ fn av1() {
                         flags: Some(33554432),
                         cts: None
                     }]
-                }),
+                }],
                 saiz: vec![],
                 saio: vec![],
             }]

@@ -324,13 +324,13 @@ fn esds() {
                 tfdt: Some(Tfdt {
                     ..Default::default()
                 }),
-                trun: Some(Trun {
+                trun: vec![Trun {
                     data_offset: 116.into(),
                     entries: vec![TrunEntry {
                         flags: Some(33554432),
                         ..Default::default()
                     }],
-                }),
+                }],
                 saiz: vec![],
                 saio: vec![],
             }],
