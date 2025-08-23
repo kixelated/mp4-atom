@@ -333,6 +333,8 @@ fn esds() {
                 }],
                 saiz: vec![],
                 saio: vec![],
+                meta: None,
+                udta: None,
             }],
         },
     );

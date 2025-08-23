@@ -693,7 +693,9 @@ fn avc_encrypted_segment() {
                         aux_info_type_parameter: 0
                     }),
                     offsets: vec![3901],
-                }]
+                }],
+                meta: None,
+                udta: None,
             }]
         }
     );

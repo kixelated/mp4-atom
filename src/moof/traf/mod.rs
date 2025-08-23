@@ -16,6 +16,8 @@ pub struct Traf {
     pub trun: Vec<Trun>,
     pub saiz: Vec<Saiz>,
     pub saio: Vec<Saio>,
+    pub meta: Option<Meta>,
+    pub udta: Option<Udta>,
 }
 
 impl Atom for Traf {
@@ -23,7 +25,7 @@ impl Atom for Traf {
 
     nested! {
         required: [ Tfhd ],
-        optional: [ Tfdt ],
+        optional: [ Tfdt, Meta, Udta ],
         multiple: [ Trun, Saiz, Saio ],
     }
 }

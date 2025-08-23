@@ -405,6 +405,8 @@ fn bbb() {
                 }],
                 saiz: vec![],
                 saio: vec![],
+                meta: None,
+                udta: None,
             }],
         },
     );
@@ -457,6 +459,8 @@ fn bbb() {
                 }],
                 saiz: vec![],
                 saio: vec![],
+                meta: None,
+                udta: None,
             }],
         },
     );

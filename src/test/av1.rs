@@ -290,6 +290,8 @@ fn av1() {
                 }],
                 saiz: vec![],
                 saio: vec![],
+                meta: None,
+                udta: None,
             }]
         }
     );
