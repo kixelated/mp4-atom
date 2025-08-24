@@ -141,9 +141,7 @@ pub enum AnySampleGroupEntry {
 
 impl AnySampleGroupEntry {
     fn decode<B: Buf>(grouping_type: FourCC, buf: &mut B) -> Result<Self> {
-        match grouping_type {
-            unknown => Ok(Self::UnknownGroupingType(unknown, Vec::decode(buf)?)),
-        }
+        Ok(Self::UnknownGroupingType(grouping_type, Vec::decode(buf)?))
     }
 
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {

@@ -142,7 +142,7 @@ impl AtomExt for Subs {
             .entries
             .first()
             .and_then(|e| e.subsamples.first())
-            .and_then(|s| Some(&s.size))
+            .map(|s| &s.size)
         {
             Some(SubsSubsampleSize::U16(_)) => SubsExt {
                 version: SubsVersion::V0,
