@@ -331,6 +331,9 @@ fn esds() {
                         ..Default::default()
                     }],
                 }],
+                sbgp: vec![],
+                sgpd: vec![],
+                subs: vec![],
                 saiz: vec![],
                 saio: vec![],
                 meta: None,

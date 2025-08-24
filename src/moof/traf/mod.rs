@@ -14,6 +14,9 @@ pub struct Traf {
     pub tfhd: Tfhd,
     pub tfdt: Option<Tfdt>,
     pub trun: Vec<Trun>,
+    pub sbgp: Vec<Sbgp>,
+    pub sgpd: Vec<Sgpd>,
+    pub subs: Vec<Subs>,
     pub saiz: Vec<Saiz>,
     pub saio: Vec<Saio>,
     pub meta: Option<Meta>,
@@ -26,6 +29,6 @@ impl Atom for Traf {
     nested! {
         required: [ Tfhd ],
         optional: [ Tfdt, Meta, Udta ],
-        multiple: [ Trun, Saiz, Saio ],
+        multiple: [ Trun, Sbgp, Sgpd, Subs, Saiz, Saio ],
     }
 }

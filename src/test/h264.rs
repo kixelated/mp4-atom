@@ -269,6 +269,9 @@ fn avcc_ext() {
                             stsz: Stsz::default(),
                             stco: Some(Stco::default()),
                             co64: None,
+                            sbgp: vec![],
+                            sgpd: vec![],
+                            subs: vec![],
                             saio: vec![],
                             saiz: vec![],
                         },
@@ -365,6 +368,9 @@ fn avcc_ext() {
                             stsz: Stsz::default(),
                             stco: Some(Stco::default()),
                             co64: None,
+                            sbgp: vec![],
+                            sgpd: vec![],
+                            subs: vec![],
                             saio: vec![],
                             saiz: vec![],
                         },
@@ -678,6 +684,9 @@ fn avc_encrypted_segment() {
                     base_media_decode_time: 342202323002237
                 }),
                 trun: vec![],
+                sbgp: vec![],
+                sgpd: vec![],
+                subs: vec![],
                 saiz: vec![Saiz {
                     aux_info: Some(AuxInfo {
                         aux_info_type: b"cbcs".into(),

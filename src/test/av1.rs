@@ -243,6 +243,9 @@ fn av1() {
                             stsz: Stsz::default(),
                             stco: Some(Stco::default()),
                             co64: None,
+                            sbgp: vec![],
+                            sgpd: vec![],
+                            subs: vec![],
                             saio: vec![],
                             saiz: vec![],
                         }
@@ -288,6 +291,9 @@ fn av1() {
                         cts: None
                     }]
                 }],
+                sbgp: vec![],
+                sgpd: vec![],
+                subs: vec![],
                 saiz: vec![],
                 saio: vec![],
                 meta: None,
