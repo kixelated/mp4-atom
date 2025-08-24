@@ -9,6 +9,7 @@ mod stsd;
 mod stss;
 mod stsz;
 mod stts;
+mod subs;
 
 pub use co64::*;
 pub use ctts::*;
@@ -21,6 +22,7 @@ pub use stsd::*;
 pub use stss::*;
 pub use stsz::*;
 pub use stts::*;
+pub use subs::*;
 
 use crate::*;
 
