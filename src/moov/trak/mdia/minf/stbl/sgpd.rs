@@ -14,6 +14,7 @@ pub struct Sgpd {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SgpdEntry {
     pub description_length: Option<u32>,
     pub entry: AnySampleGroupEntry,
