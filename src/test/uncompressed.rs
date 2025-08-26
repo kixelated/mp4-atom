@@ -278,7 +278,8 @@ fn uncompressed() {
                             saio: vec![],
                         }
                     }
-                }
+                },
+                udta: None,
             }]
             .into(),
             udta: Some(Udta {
@@ -289,7 +290,7 @@ fn uncompressed() {
                     },
                     items: vec![Ilst::default().into()],
                 }),
-                skip: None
+                skip: None,
             })
         }
     );

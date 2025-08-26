@@ -250,7 +250,8 @@ fn av1() {
                             saiz: vec![],
                         }
                     }
-                }
+                },
+                udta: None,
             }],
             udta: Some(Udta {
                 meta: Some(Meta {
@@ -260,7 +261,7 @@ fn av1() {
                     },
                     items: vec![Ilst::default().into()],
                 }),
-                skip: None
+                skip: None,
             })
         }
     );

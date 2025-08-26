@@ -277,6 +277,7 @@ fn avcc_ext() {
                         },
                     },
                 },
+                udta: None,
             },
             Trak {
                 tkhd: Tkhd {
@@ -376,6 +377,7 @@ fn avcc_ext() {
                         },
                     },
                 },
+                udta: None,
             },
         ],
         udta: Some(Udta {
