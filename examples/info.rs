@@ -32,7 +32,7 @@ fn info<R: Read>(input: &mut R) -> anyhow::Result<()> {
                 println!("Unknown {{ kind: {:?}, size: {:?} }}", kind, data.len());
             }
             _ => {
-                println!("{:#?}", atom);
+                println!("{atom:#?}");
             }
         }
     }

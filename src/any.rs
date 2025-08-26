@@ -4,13 +4,14 @@ use std::fmt;
 use std::io::Read;
 
 macro_rules! any {
-    ($($kind:ident,)*) => {
+    (basic: [$($kind:ident,)* $(,)?], boxed: [$($boxed:ident,)* $(,)?]) => {
         /// Any of the supported atoms.
         #[derive(Clone, PartialEq)]
         #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         #[non_exhaustive]
         pub enum Any {
             $($kind($kind),)*
+            $($boxed(Box<$boxed>),)*
             Unknown(FourCC, Vec<u8>),
         }
 
@@ -19,6 +20,7 @@ macro_rules! any {
             pub fn kind(&self) -> FourCC {
                 match self {
                     $(Any::$kind(_) => $kind::KIND,)*
+                    $(Any::$boxed(_) => $boxed::KIND,)*
                     Any::Unknown(kind, _) => *kind,
                 }
             }
@@ -57,6 +59,7 @@ macro_rules! any {
 
                 match self {
                     $(Any::$kind(inner) => Atom::encode_body(inner, buf),)*
+                    $(Any::$boxed(boxed) => Atom::encode_body(boxed.as_ref(), buf),)*
                     Any::Unknown(_, data) => data.encode(buf),
                 }?;
 
@@ -86,6 +89,14 @@ macro_rules! any {
                             Err(err) => return Err(err),
                         })
                     },)*
+                    $(_ if header.kind == $boxed::KIND => {
+                        Any::$boxed(match $boxed::decode_body(&mut body) {
+                            Ok(atom) => Box::new(atom),
+                            Err(Error::OutOfBounds) => return Err(Error::OverDecode($boxed::KIND)),
+                            Err(Error::ShortRead) => return Err(Error::UnderDecode($boxed::KIND)),
+                            Err(err) => return Err(err),
+                        })
+                    },)*
                     _ => {
                         let body = Vec::decode(body)?;
                         Any::Unknown(header.kind, body)
@@ -106,6 +117,7 @@ macro_rules! any {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 match self {
                     $(Any::$kind(inner) => inner.fmt(f),)*
+                    $(Any::$boxed(boxed) => boxed.fmt(f),)*
                     Any::Unknown(kind, body) => write!(f, "Unknown {{ kind: {:?}, size: {:?}, bytes: {:?} }}", kind, body.len(), body),
                 }
             }
@@ -117,6 +129,12 @@ macro_rules! any {
             }
         })*
 
+        $(impl From<$boxed> for Any {
+            fn from(inner: $boxed) -> Self {
+                Any::$boxed(Box::new(inner))
+            }
+        })*
+
         $(impl TryFrom<Any> for $kind {
             type Error = Any;
 
@@ -125,6 +143,24 @@ macro_rules! any {
                     Any::$kind(inner) => Ok(inner),
                     _ => Err(any),
                 }
+            }
+        })*
+
+        $(impl TryFrom<Any> for $boxed {
+            type Error = Any;
+
+            fn try_from(any: Any) -> std::result::Result<Self, Any> {
+                match any {
+                    Any::$boxed(boxed) => Ok(*boxed),
+                    _ => Err(any),
+                }
+            }
+        })*
+
+        // So we can use .into() to automatically unbox
+        $(impl From<Box<$boxed>> for $boxed {
+            fn from(boxed: Box<$boxed>) -> Self {
+                *boxed
             }
         })*
 
@@ -164,10 +200,38 @@ macro_rules! any {
                 Any::$kind(self)
             }
         })*
+
+        $(impl AnyAtom for $boxed {
+            fn from_any(any: Any) -> Option<Self> {
+                match any {
+                    Any::$boxed(boxed) => Some(*boxed),
+                    _ => None,
+                }
+            }
+
+            fn from_any_ref(any: &Any) -> Option<&Self> {
+                match any {
+                    Any::$boxed(boxed) => Some(boxed),
+                    _ => None,
+                }
+            }
+
+            fn from_any_mut(any: &mut Any) -> Option<&mut Self> {
+                match any {
+                    Any::$boxed(boxed) => Some(boxed),
+                    _ => None,
+                }
+            }
+
+            fn into_any(self) -> Any {
+                Any::$boxed(Box::new(self))
+            }
+        })*
     };
 }
 
 any! {
+    basic: [
     Ftyp,
     Styp,
     Meta,
@@ -197,7 +261,7 @@ any! {
         Mvhd,
         Udta,
             Skip,
-        Trak,
+        // Trak, // boxed to avoid large size differences between variants
             Tkhd,
             Mdia,
                 Mdhd,
@@ -252,6 +316,10 @@ any! {
             Trun,
     Mdat,
     Free,
+    ],
+    boxed: [
+        Trak,
+    ]
 }
 
 impl ReadFrom for Any {
