@@ -52,14 +52,14 @@ impl From<&[u8; 4]> for FourCC {
 impl fmt::Display for FourCC {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = String::from_utf8_lossy(&self.0);
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
 impl fmt::Debug for FourCC {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = String::from_utf8_lossy(&self.0);
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
