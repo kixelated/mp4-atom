@@ -190,7 +190,7 @@ macro_rules! nested {
                             [<$optional:lower>] = Some(atom);
                         },)*
                         $(Any::$multiple(atom) => {
-                            [<$multiple:lower>].push(atom);
+                            [<$multiple:lower>].push(atom.into());
                         },)*
                         Any::Unknown(kind, _) => {
                             tracing::warn!("unknown box: {:?}", kind);
@@ -209,7 +209,7 @@ macro_rules! nested {
             fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
                 $( self.[<$required:lower>].encode(buf)?; )*
                 $( self.[<$optional:lower>].encode(buf)?; )*
-                $( self.[<$multiple:lower>].encode(buf)?; )*
+                $( self.[<$multiple:lower>].iter().map(|x| x.encode(buf)).collect::<Result<()>>()?; )*
 
                 Ok(())
             }
