@@ -35,15 +35,11 @@ impl AtomExt for Sbgp {
             None
         };
         let entry_count = u32::decode(buf)?;
-        let mut entries = if let Ok(count) = usize::try_from(entry_count) {
-            // with_capacity is hopefully more efficient, and given we know already how big the Vec
-            // will be, seems better to try and use it
-            Vec::with_capacity(count)
-        } else {
-            // but if for some reason the u32 value is larger than the system usize (super unlikely)
-            // then just fall back to using new
-            Vec::new()
-        };
+        // Use with_capacity to reduce the number of times that the Vec will reallocate to grow for
+        // more entries; however, limit to a max of 1024 entries to start with, as the `entry_count`
+        // is a number defined from outside data (that is being decoded), and so is an attack vector
+        // if a malicious actor set a very high number.
+        let mut entries = Vec::with_capacity((entry_count as usize).min(1024));
         for _ in 0..entry_count {
             let sample_count = u32::decode(buf)?;
             let group_description_index = u32::decode(buf)?;

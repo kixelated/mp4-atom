@@ -103,15 +103,11 @@ impl AtomExt for Subs {
     fn decode_body_ext<B: Buf>(buf: &mut B, ext: Self::Ext) -> Result<Self> {
         let flags = ext.flags;
         let entry_count = u32::decode(buf)?;
-        let mut entries = if let Ok(count) = usize::try_from(entry_count) {
-            Vec::with_capacity(count)
-        } else {
-            Vec::new()
-        };
+        let mut entries = Vec::with_capacity((entry_count as usize).min(1024));
         for _ in 0..entry_count {
             let sample_delta = u32::decode(buf)?;
             let subsample_count = u16::decode(buf)?;
-            let mut subsamples = Vec::with_capacity(usize::from(subsample_count));
+            let mut subsamples = Vec::with_capacity(usize::from(subsample_count).min(1024));
             for _ in 0..subsample_count {
                 let size = if ext.version == SubsVersion::V1 {
                     SubsSubsampleSize::U32(u32::decode(buf)?)

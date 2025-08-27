@@ -64,11 +64,7 @@ impl AtomExt for Sgpd {
             None
         };
         let entry_count = u32::decode(buf)?;
-        let mut entries = if let Ok(count) = usize::try_from(entry_count) {
-            Vec::with_capacity(count)
-        } else {
-            Vec::new()
-        };
+        let mut entries = Vec::with_capacity((entry_count as usize).min(1024));
         for _ in 0..entry_count {
             // Spec states: if version>=1 && default_length==0
             // But, default_length.is_some(), if and only if version>=1, so fine to just check for
