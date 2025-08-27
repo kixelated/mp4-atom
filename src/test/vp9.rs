@@ -293,6 +293,9 @@ fn vp9() {
                             stsz: Stsz::default(),
                             stco: Some(Stco { entries: vec![] }),
                             co64: None,
+                            sbgp: vec![],
+                            sgpd: vec![],
+                            subs: vec![],
                             saio: vec![],
                             saiz: vec![],
                         }

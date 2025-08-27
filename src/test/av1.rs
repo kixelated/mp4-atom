@@ -243,6 +243,9 @@ fn av1() {
                             stsz: Stsz::default(),
                             stco: Some(Stco::default()),
                             co64: None,
+                            sbgp: vec![],
+                            sgpd: vec![],
+                            subs: vec![],
                             saio: vec![],
                             saiz: vec![],
                         }
@@ -280,7 +283,7 @@ fn av1() {
                 tfdt: Some(Tfdt {
                     base_media_decode_time: 0
                 }),
-                trun: Some(Trun {
+                trun: vec![Trun {
                     data_offset: Some(116),
                     entries: vec![TrunEntry {
                         duration: None,
@@ -288,7 +291,14 @@ fn av1() {
                         flags: Some(33554432),
                         cts: None
                     }]
-                })
+                }],
+                sbgp: vec![],
+                sgpd: vec![],
+                subs: vec![],
+                saiz: vec![],
+                saio: vec![],
+                meta: None,
+                udta: None,
             }]
         }
     );

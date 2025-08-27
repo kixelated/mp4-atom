@@ -1,22 +1,28 @@
 mod co64;
 mod ctts;
 mod saiz;
+mod sbgp;
+mod sgpd;
 mod stco;
 mod stsc;
 mod stsd;
 mod stss;
 mod stsz;
 mod stts;
+mod subs;
 
 pub use co64::*;
 pub use ctts::*;
 pub use saiz::*;
+pub use sbgp::*;
+pub use sgpd::*;
 pub use stco::*;
 pub use stsc::*;
 pub use stsd::*;
 pub use stss::*;
 pub use stsz::*;
 pub use stts::*;
+pub use subs::*;
 
 use crate::*;
 
@@ -31,6 +37,9 @@ pub struct Stbl {
     pub stsz: Stsz,
     pub stco: Option<Stco>,
     pub co64: Option<Co64>,
+    pub sbgp: Vec<Sbgp>,
+    pub sgpd: Vec<Sgpd>,
+    pub subs: Vec<Subs>,
     pub saiz: Vec<Saiz>,
     pub saio: Vec<Saio>,
 }
@@ -41,6 +50,6 @@ impl Atom for Stbl {
     nested! {
         required: [ Stsd, Stts, Stsc, Stsz ],
         optional: [ Ctts, Stss, Stco, Co64 ],
-        multiple: [ Saiz, Saio ],
+        multiple: [ Sbgp, Sgpd, Subs, Saiz, Saio ],
     }
 }

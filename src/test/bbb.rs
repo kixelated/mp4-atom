@@ -396,13 +396,20 @@ fn bbb() {
                 tfdt: Some(Tfdt {
                     ..Default::default()
                 }),
-                trun: Some(Trun {
+                trun: vec![Trun {
                     data_offset: 116.into(),
                     entries: vec![TrunEntry {
                         flags: Some(33554432),
                         ..Default::default()
                     }],
-                }),
+                }],
+                sbgp: vec![],
+                sgpd: vec![],
+                subs: vec![],
+                saiz: vec![],
+                saio: vec![],
+                meta: None,
+                udta: None,
             }],
         },
     );
@@ -449,10 +456,17 @@ fn bbb() {
                 tfdt: Some(Tfdt {
                     ..Default::default()
                 }),
-                trun: Some(Trun {
+                trun: vec![Trun {
                     data_offset: 112.into(),
                     entries: vec![Default::default()],
-                }),
+                }],
+                sbgp: vec![],
+                sgpd: vec![],
+                subs: vec![],
+                saiz: vec![],
+                saio: vec![],
+                meta: None,
+                udta: None,
             }],
         },
     );

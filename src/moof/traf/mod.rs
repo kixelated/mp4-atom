@@ -13,7 +13,14 @@ use crate::*;
 pub struct Traf {
     pub tfhd: Tfhd,
     pub tfdt: Option<Tfdt>,
-    pub trun: Option<Trun>,
+    pub trun: Vec<Trun>,
+    pub sbgp: Vec<Sbgp>,
+    pub sgpd: Vec<Sgpd>,
+    pub subs: Vec<Subs>,
+    pub saiz: Vec<Saiz>,
+    pub saio: Vec<Saio>,
+    pub meta: Option<Meta>,
+    pub udta: Option<Udta>,
 }
 
 impl Atom for Traf {
@@ -21,7 +28,7 @@ impl Atom for Traf {
 
     nested! {
         required: [ Tfhd ],
-        optional: [ Tfdt, Trun ],
-        multiple: [],
+        optional: [ Tfdt, Meta, Udta ],
+        multiple: [ Trun, Sbgp, Sgpd, Subs, Saiz, Saio ],
     }
 }

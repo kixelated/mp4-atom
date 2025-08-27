@@ -271,6 +271,9 @@ fn uncompressed() {
                                 entries: [856, 862].into()
                             }),
                             co64: None,
+                            sbgp: vec![],
+                            sgpd: vec![],
+                            subs: vec![],
                             saiz: vec![],
                             saio: vec![],
                         }
