@@ -67,12 +67,9 @@ impl Atom for Avcc {
         let profile_compatibility = u8::decode(buf)?;
         let avc_level_indication = u8::decode(buf)?;
 
-        // The first 5 bits are reserved as 0b11111 and the value is encoded -1
+        // The first 6 bits are reserved and the value is encoded -1
         let mut length_size = u8::decode(buf)?;
-        length_size = match length_size {
-            0xfc..=0xff => (length_size & 0x03) + 1,
-            _ => return Err(Error::InvalidSize),
-        };
+        length_size = (length_size & 0x03) + 1;
 
         let num_of_spss = u8::decode(buf)? & 0x1F;
         let mut sequence_parameter_sets = Vec::with_capacity(num_of_spss as usize);
@@ -164,5 +161,87 @@ impl Atom for Avcc {
         }
 
         Ok(())
+    }
+}
+
+/// Returns the input `n` if it is within the provided `range`. Otherwise, it returns an
+/// [`Error::InvalidSize`] error.
+fn ok_in_range(n: u8, range: std::ops::Range<u8>) -> Result<u8> {
+    if range.contains(&n) {
+        Ok(n)
+    } else {
+        Err(Error::InvalidSize)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn ok_in_range_is_ok_when_in_range() {
+        assert_eq!(1, ok_in_range(1, 0..8).expect("should be Ok"));
+    }
+
+    #[test]
+    fn ok_in_range_is_err_when_out_of_range() {
+        match ok_in_range(9, 0..8) {
+            Err(Error::InvalidSize) => (),
+            Ok(n) => panic!("unexpected Ok value Ok({n})"),
+            Err(e) => panic!("unexpected error case {e}"),
+        }
+    }
+
+    // This example was taken from:
+    // https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/v8/main.mp4
+    //
+    // I just extracted the bytes for the avcc atom location.
+    //
+    // NOTE: this atom is badly configured, in that the reserved bits before lengthSizeMinusOne are
+    // supposed to be 0b111111 and the reserved bits before numOfSequenceParameterSets are supposed
+    // to be 0b111; however, in this example, they are 0b000000 and 0b000. The test therefore also
+    // validates relaxed validation in decoding.
+    const ENCODED: &[u8] = &[
+        0x00, 0x00, 0x00, 0x41, 0x61, 0x76, 0x63, 0x43, 0x01, 0x64, 0x00, 0x2A, 0x03, 0x01, 0x00,
+        0x26, 0x27, 0x64, 0x00, 0x2A, 0xAC, 0x24, 0x8C, 0x07, 0x80, 0x22, 0x7E, 0x5C, 0x04, 0x40,
+        0x00, 0x00, 0x03, 0x00, 0x40, 0x00, 0x00, 0x1E, 0x38, 0xA0, 0x00, 0x0B, 0x71, 0xB0, 0x00,
+        0x16, 0xE3, 0x7B, 0xDE, 0xE0, 0x3E, 0x11, 0x08, 0xA7, 0x01, 0x00, 0x04, 0x28, 0xDE, 0xBC,
+        0xB0, 0xFD, 0xF8, 0xF8, 0x00,
+    ];
+
+    #[test]
+    fn avcc_decodes_correctly() {
+        let mut buf = Cursor::new(ENCODED);
+        let avcc = Avcc {
+            configuration_version: 1,
+            avc_profile_indication: 100,
+            profile_compatibility: 0,
+            avc_level_indication: 42,
+            length_size: 4,
+            sequence_parameter_sets: vec![ENCODED[16..54].to_vec()],
+            picture_parameter_sets: vec![ENCODED[57..61].to_vec()],
+            ext: Some(AvccExt {
+                chroma_format: 1,
+                bit_depth_luma: 8,
+                bit_depth_chroma: 8,
+                sequence_parameter_sets_ext: Vec::new(),
+            }),
+        };
+        let decoded = Avcc::decode(&mut buf).expect("avcc should decode successfully");
+        assert_eq!(avcc, decoded);
+        let mut encoded = Vec::new();
+        avcc.encode(&mut encoded)
+            .expect("encode should be successful");
+        // Here we fix the encoded bytes so that the problem reserved bits are set properly to
+        // 0b111111 and 0b111.
+        let mut fixed_encoded = ENCODED.to_vec();
+        if let Some(length_size_minus_one) = fixed_encoded.get_mut(12) {
+            *length_size_minus_one += 0b11111100;
+        }
+        if let Some(num_of_sequence_parameter_sets) = fixed_encoded.get_mut(13) {
+            *num_of_sequence_parameter_sets += 0b11100000;
+        }
+        assert_eq!(fixed_encoded, encoded);
     }
 }
