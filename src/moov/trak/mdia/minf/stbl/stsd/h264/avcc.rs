@@ -150,9 +150,25 @@ impl Atom for Avcc {
         }
 
         if let Some(ext) = &self.ext {
-            ext.chroma_format.encode(buf)?;
-            ext.bit_depth_luma.encode(buf)?;
-            ext.bit_depth_chroma.encode(buf)?;
+            ok_in_range(ext.chroma_format, 0..4)
+                .map(|n| n | 0b11111100)?
+                .encode(buf)?;
+            ok_in_range(
+                ext.bit_depth_luma
+                    .checked_sub(8)
+                    .ok_or(Error::InvalidSize)?,
+                0..8,
+            )
+            .map(|n| n | 0b11111000)?
+            .encode(buf)?;
+            ok_in_range(
+                ext.bit_depth_chroma
+                    .checked_sub(8)
+                    .ok_or(Error::InvalidSize)?,
+                0..8,
+            )
+            .map(|n| n | 0b11111000)?
+            .encode(buf)?;
             (ext.sequence_parameter_sets_ext.len() as u8).encode(buf)?;
             for sps in &ext.sequence_parameter_sets_ext {
                 (sps.len() as u16).encode(buf)?;
