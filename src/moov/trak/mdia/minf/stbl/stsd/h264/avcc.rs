@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn ok_in_range_is_err_when_out_of_range() {
-        match ok_in_range(9, 0..8) {
+        match ok_in_range(8, 0..8) {
             Err(Error::InvalidSize) => (),
             Ok(n) => panic!("unexpected Ok value Ok({n})"),
             Err(e) => panic!("unexpected error case {e}"),
