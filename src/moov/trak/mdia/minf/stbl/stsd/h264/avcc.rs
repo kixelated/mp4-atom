@@ -244,7 +244,7 @@ mod tests {
                 sequence_parameter_sets_ext: Vec::new(),
             }),
         };
-        let decoded = Avcc::decode(&mut buf).expect("avcc should decode successfully");
+        let decoded = Avcc::decode(&mut buf).expect("avcC should decode successfully");
         assert_eq!(avcc, decoded);
         let mut encoded = Vec::new();
         avcc.encode(&mut encoded)
