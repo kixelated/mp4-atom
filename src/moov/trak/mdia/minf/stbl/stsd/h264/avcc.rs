@@ -67,9 +67,8 @@ impl Atom for Avcc {
         let profile_compatibility = u8::decode(buf)?;
         let avc_level_indication = u8::decode(buf)?;
 
-        // The first 6 bits are reserved and the value is encoded -1
-        let mut length_size = u8::decode(buf)?;
-        length_size = (length_size & 0x03) + 1;
+        // The first 6 bits are reserved and the value is encoded - 1
+        let length_size = (u8::decode(buf)? & 0b00000011) + 1;
 
         let num_of_spss = u8::decode(buf)? & 0x1F;
         let mut sequence_parameter_sets = Vec::with_capacity(num_of_spss as usize);
@@ -253,10 +252,10 @@ mod tests {
         // 0b111111 and 0b111.
         let mut fixed_encoded = ENCODED.to_vec();
         if let Some(length_size_minus_one) = fixed_encoded.get_mut(12) {
-            *length_size_minus_one += 0b11111100;
+            *length_size_minus_one |= 0b11111100;
         }
         if let Some(num_of_sequence_parameter_sets) = fixed_encoded.get_mut(13) {
-            *num_of_sequence_parameter_sets += 0b11100000;
+            *num_of_sequence_parameter_sets |= 0b11100000;
         }
         assert_eq!(fixed_encoded, encoded);
     }
