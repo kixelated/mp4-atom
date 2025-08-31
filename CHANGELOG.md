@@ -1,4 +1,30 @@
 # Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.9.0](https://github.com/kixelated/mp4-atom/compare/v0.8.1...v0.9.0) - 2025-08-31
+
+### Fixed
+
+- [**breaking**] add saiz and saio to traf ([#49](https://github.com/kixelated/mp4-atom/pull/49))
+- support multiple saio and saiz boxes ([#44](https://github.com/kixelated/mp4-atom/pull/44))
+
+### Other
+
+- minor code fixes ([#56](https://github.com/kixelated/mp4-atom/pull/56))
+- Relaxed reserved bits validation on `Avcc` decode ([#55](https://github.com/kixelated/mp4-atom/pull/55))
+- Fix some clippy warnings by boxing Trak. ([#52](https://github.com/kixelated/mp4-atom/pull/52))
+- Add claude.md ([#51](https://github.com/kixelated/mp4-atom/pull/51))
+- Add Claude Code GitHub Workflow ([#50](https://github.com/kixelated/mp4-atom/pull/50))
+- Add optional boxes used in fragmented mp4 ([#47](https://github.com/kixelated/mp4-atom/pull/47))
+- Shrink the size of the Meta struct. ([#48](https://github.com/kixelated/mp4-atom/pull/48))
+- Optionally add the first-sample-flags ([#46](https://github.com/kixelated/mp4-atom/pull/46))
+# Changelog
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
