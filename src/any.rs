@@ -291,6 +291,8 @@ any! {
                                 UncC,
                             Flac,
                                 Dfla,
+                            Ac3,
+                                Ac3SpecificBox,
                         Stts,
                         Stsc,
                         Stsz,
