@@ -1,6 +1,7 @@
 mod av1;
 mod bbb;
 mod esds;
+mod flac;
 mod h264;
 mod heif;
 mod hevc;

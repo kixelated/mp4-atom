@@ -62,6 +62,9 @@ pub enum Error {
 
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
+
+    #[error("missing required content: {0}")]
+    MissingContent(&'static str),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

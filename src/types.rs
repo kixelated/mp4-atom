@@ -4,6 +4,7 @@ use crate::*;
 
 // Re-export this common types.
 pub use num::rational::Ratio;
+pub use num::traits::ToBytes;
 
 /// A four-character code used to identify atoms.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -86,6 +87,12 @@ impl AsRef<[u8; 4]> for FourCC {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct u24([u8; 3]);
 
+impl From<[u8; 3]> for u24 {
+    fn from(value: [u8; 3]) -> Self {
+        Self(value)
+    }
+}
+
 impl Decode for u24 {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self(<[u8; 3]>::decode(buf)?))
@@ -109,6 +116,18 @@ impl TryFrom<u32> for u24 {
 
     fn try_from(value: u32) -> std::result::Result<Self, Self::Error> {
         Ok(Self(value.to_be_bytes()[1..].try_into()?))
+    }
+}
+
+impl ToBytes for u24 {
+    type Bytes = [u8; 3];
+
+    fn to_be_bytes(&self) -> Self::Bytes {
+        self.0
+    }
+
+    fn to_le_bytes(&self) -> Self::Bytes {
+        [self.0[2], self.0[1], self.0[0]]
     }
 }
 

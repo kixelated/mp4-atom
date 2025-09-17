@@ -3,6 +3,7 @@ mod av01;
 mod btrt;
 mod ccst;
 mod colr;
+mod flac;
 mod h264;
 mod hevc;
 mod mp4a;
@@ -19,6 +20,7 @@ pub use av01::*;
 pub use btrt::*;
 pub use ccst::*;
 pub use colr::*;
+pub use flac::*;
 pub use h264::*;
 pub use hevc::*;
 pub use mp4a::*;
@@ -73,6 +75,9 @@ pub enum Codec {
     // Uncompressed video
     Uncv(Uncv),
 
+    // FLAC audio
+    Flac(Flac),
+
     // Unknown
     Unknown(FourCC),
 }
@@ -91,6 +96,7 @@ impl Decode for Codec {
             Any::Av01(atom) => atom.into(),
             Any::Opus(atom) => atom.into(),
             Any::Uncv(atom) => atom.into(),
+            Any::Flac(atom) => atom.into(),
             Any::Unknown(kind, _) => Self::Unknown(kind),
             _ => return Err(Error::UnexpectedBox(atom.kind())),
         })
@@ -111,6 +117,7 @@ impl Encode for Codec {
             Self::Av01(atom) => atom.encode(buf),
             Self::Opus(atom) => atom.encode(buf),
             Self::Uncv(atom) => atom.encode(buf),
+            Self::Flac(atom) => atom.encode(buf),
         }
     }
 }

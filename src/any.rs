@@ -289,6 +289,8 @@ any! {
                             Uncv,
                                 Cmpd,
                                 UncC,
+                            Flac,
+                                Dfla,
                         Stts,
                         Stsc,
                         Stsz,
