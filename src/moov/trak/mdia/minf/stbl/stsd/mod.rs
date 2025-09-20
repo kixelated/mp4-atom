@@ -1,8 +1,10 @@
+mod ac3;
 mod audio;
 mod av01;
 mod btrt;
 mod ccst;
 mod colr;
+mod eac3;
 mod flac;
 mod h264;
 mod hevc;
@@ -15,11 +17,13 @@ mod uncv;
 mod visual;
 mod vp9;
 
+pub use ac3::*;
 pub use audio::*;
 pub use av01::*;
 pub use btrt::*;
 pub use ccst::*;
 pub use colr::*;
+pub use eac3::*;
 pub use flac::*;
 pub use h264::*;
 pub use hevc::*;
@@ -78,6 +82,12 @@ pub enum Codec {
     // FLAC audio
     Flac(Flac),
 
+    // AC-3 audio
+    Ac3(Ac3),
+
+    // EAC-3 audio
+    Eac3(Eac3),
+
     // Unknown
     Unknown(FourCC),
 }
@@ -97,6 +107,8 @@ impl Decode for Codec {
             Any::Opus(atom) => atom.into(),
             Any::Uncv(atom) => atom.into(),
             Any::Flac(atom) => atom.into(),
+            Any::Ac3(atom) => atom.into(),
+            Any::Eac3(atom) => atom.into(),
             Any::Unknown(kind, _) => Self::Unknown(kind),
             _ => return Err(Error::UnexpectedBox(atom.kind())),
         })
@@ -118,6 +130,8 @@ impl Encode for Codec {
             Self::Opus(atom) => atom.encode(buf),
             Self::Uncv(atom) => atom.encode(buf),
             Self::Flac(atom) => atom.encode(buf),
+            Self::Ac3(atom) => atom.encode(buf),
+            Self::Eac3(atom) => atom.encode(buf),
         }
     }
 }
