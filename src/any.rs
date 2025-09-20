@@ -293,6 +293,8 @@ any! {
                                 Dfla,
                             Ac3,
                                 Ac3SpecificBox,
+                            Eac3,
+                                Ec3SpecificBox,
                         Stts,
                         Stsc,
                         Stsz,
