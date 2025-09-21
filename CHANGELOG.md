@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0](https://github.com/kixelated/mp4-atom/compare/v0.8.1...v0.9.0) - 2025-09-21
+
+### Fixed
+
+- *(eac3)* make box members public ([#59](https://github.com/kixelated/mp4-atom/pull/59))
+- [**breaking**] add saiz and saio to traf ([#49](https://github.com/kixelated/mp4-atom/pull/49))
+- support multiple saio and saiz boxes ([#44](https://github.com/kixelated/mp4-atom/pull/44))
+
+### Other
+
+- add support for AC-3 sample entry and related dac3 box ([#58](https://github.com/kixelated/mp4-atom/pull/58))
+- implement basic FLAC support ([#57](https://github.com/kixelated/mp4-atom/pull/57))
+- minor code fixes ([#56](https://github.com/kixelated/mp4-atom/pull/56))
+- Relaxed reserved bits validation on `Avcc` decode ([#55](https://github.com/kixelated/mp4-atom/pull/55))
+- Fix some clippy warnings by boxing Trak. ([#52](https://github.com/kixelated/mp4-atom/pull/52))
+- Add claude.md ([#51](https://github.com/kixelated/mp4-atom/pull/51))
+- Add Claude Code GitHub Workflow ([#50](https://github.com/kixelated/mp4-atom/pull/50))
+- Add optional boxes used in fragmented mp4 ([#47](https://github.com/kixelated/mp4-atom/pull/47))
+- Shrink the size of the Meta struct. ([#48](https://github.com/kixelated/mp4-atom/pull/48))
+- Optionally add the first-sample-flags ([#46](https://github.com/kixelated/mp4-atom/pull/46))
+
 ## [0.8.1](https://github.com/kixelated/mp4-atom/compare/v0.8.0...v0.8.1) - 2025-05-15
 
 ### Other
