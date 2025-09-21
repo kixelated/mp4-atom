@@ -54,8 +54,8 @@ pub struct Ec3IndependentSubstream {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ec3SpecificBox {
-    data_rate: u16,
-    substreams: Vec<Ec3IndependentSubstream>,
+    pub data_rate: u16,
+    pub substreams: Vec<Ec3IndependentSubstream>,
 }
 
 impl Atom for Ec3SpecificBox {
