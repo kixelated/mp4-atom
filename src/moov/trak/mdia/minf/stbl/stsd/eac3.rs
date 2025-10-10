@@ -65,8 +65,8 @@ impl Atom for Ec3SpecificBox {
         let header = u16::decode(buf)?;
         let data_rate = header >> 3;
         let num_ind_sub = header & 0b111;
-        let mut substreams = Vec::with_capacity(num_ind_sub as usize);
-        for _ in 0..num_ind_sub {
+        let mut substreams = Vec::with_capacity(num_ind_sub as usize + 1);
+        for _ in 0..num_ind_sub + 1 {
             let b0 = u8::decode(buf)?;
             let fscod = b0 >> 6;
             let bsid = (b0 >> 1) & 0b11111;
@@ -113,7 +113,7 @@ impl Atom for Ec3SpecificBox {
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        let header = self.data_rate << 3 | self.substreams.len() as u16;
+        let header = self.data_rate << 3 | self.substreams.len().saturating_sub(1) as u16;
         header.encode(buf)?;
         for substream in &self.substreams {
             // low bit is reserved = 0
@@ -147,7 +147,7 @@ mod tests {
         0x00, 0x00, 0x00, 0x31, 0x65, 0x63, 0x2d, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x10, 0x00, 0x00,
         0x00, 0x00, 0xac, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0d, 0x64, 0x65, 0x63, 0x33, 0x5f,
-        0xc1, 0x60, 0x04, 0x00,
+        0xc0, 0x60, 0x04, 0x00,
     ];
 
     #[test]
