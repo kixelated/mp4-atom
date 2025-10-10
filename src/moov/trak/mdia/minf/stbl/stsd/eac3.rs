@@ -106,6 +106,9 @@ impl Atom for Ec3SpecificBox {
                 });
             }
         }
+
+        // reserved bits may follow
+        buf.advance(buf.remaining());
         Ok(Self {
             data_rate,
             substreams,
