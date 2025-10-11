@@ -166,6 +166,7 @@ fn uncompressed() {
                                 }],
                             }
                         },
+                        hdlr: None,
                         stbl: Stbl {
                             stsd: Stsd {
                                 codecs: vec![Codec::Uncv(Uncv {

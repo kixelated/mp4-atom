@@ -259,6 +259,7 @@ fn vp9() {
                                 }]
                             }
                         },
+                        hdlr: None,
                         stbl: Stbl {
                             stsd: Stsd {
                                 codecs: vec![Vp09 {

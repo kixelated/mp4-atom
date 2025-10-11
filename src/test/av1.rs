@@ -197,6 +197,7 @@ fn av1() {
                                 }]
                             }
                         },
+                        hdlr: None,
                         stbl: Stbl {
                             stsd: Stsd {
                                 codecs: vec![Av01 {

@@ -240,6 +240,7 @@ fn bbb() {
                                 }],
                             },
                         },
+                        hdlr: None,
                         stbl: Stbl {
                             stsd: Stsd {
                                 codecs: vec![Avc1 {
@@ -318,6 +319,7 @@ fn bbb() {
                                 }],
                             },
                         },
+                        hdlr: None,
                         stbl: Stbl {
                             stsd: Stsd {
                                 codecs: vec![Mp4a {

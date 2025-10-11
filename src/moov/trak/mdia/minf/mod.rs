@@ -17,6 +17,7 @@ pub struct Minf {
     pub smhd: Option<Smhd>,
     pub dinf: Dinf,
     pub stbl: Stbl,
+    pub hdlr: Option<Hdlr>,
 }
 
 impl Atom for Minf {
@@ -24,7 +25,7 @@ impl Atom for Minf {
 
     nested! {
         required: [ Dinf, Stbl ],
-        optional: [ Vmhd, Smhd ],
+        optional: [ Vmhd, Smhd, Hdlr ],
         multiple: [],
     }
 }

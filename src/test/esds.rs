@@ -169,6 +169,7 @@ fn esds() {
                                 }],
                             },
                         },
+                        hdlr: None,
                         stbl: Stbl {
                             stsd: Stsd {
                                 codecs: vec![Avc1 {
@@ -247,6 +248,7 @@ fn esds() {
                                 }],
                             },
                         },
+                        hdlr: None,
                         stbl: Stbl {
                             stsd: Stsd {
                                 codecs: vec![Mp4a {

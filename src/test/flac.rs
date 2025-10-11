@@ -318,6 +318,7 @@ fn flac() {
                                 }]
                             }
                         },
+                        hdlr: None,
                         stbl: Stbl {
                             stsd: Stsd {
                                 codecs: vec![Flac {

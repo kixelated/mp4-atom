@@ -186,6 +186,7 @@ mod test {
                                     urls: vec![Url::default()]
                                 }
                             },
+                            hdlr: None,
                             stbl: Stbl {
                                 stsd: Stsd {
                                     codecs: vec![Avc1 {

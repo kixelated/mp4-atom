@@ -301,6 +301,7 @@ fn hevc() {
                                 }]
                             }
                         },
+                        hdlr: None,
                         stbl: Stbl {
                             stsd: Stsd {
                                 codecs: vec![Hev1 {
