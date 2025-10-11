@@ -193,9 +193,12 @@ macro_rules! nested {
                             [<$multiple:lower>].push(atom.into());
                         },)*
                         Any::Unknown(kind, _) => {
-                            tracing::warn!("unknown box: {:?}", kind);
+                            tracing::warn!("unknown box {:?} in {}", kind, std::any::type_name::<Self>());
                         },
-                        _ => return Err(Error::UnexpectedBox(atom.kind())),
+                        _ => {
+                            tracing::trace!("unexpected box {:?} in {}", atom.kind(), std::any::type_name::<Self>());
+                            return Err(Error::UnexpectedBox(atom.kind()))
+                        },
                     }
                 }
 
