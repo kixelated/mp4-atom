@@ -29,7 +29,10 @@ impl AtomExt for Hdlr {
         let name = String::decode(buf)?;
 
         // Skip any trailing padding
-        //buf.advance(buf.remaining());
+        if buf.has_remaining() {
+            tracing::warn!("Skipped {} extra trailing bytes in hdlr", buf.remaining());
+            buf.advance(buf.remaining());
+        }
 
         Ok(Hdlr { handler, name })
     }
