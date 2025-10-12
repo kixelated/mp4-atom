@@ -82,12 +82,25 @@ impl Meta {
     }
 }
 
-impl AtomExt for Meta {
-    type Ext = ();
+impl Atom for Meta {
+    const KIND: FourCC = FourCC::new(b"meta");
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        // are we a full box?
+        // In Apple's QuickTime specification, the MetaBox is a regular Box.
+        // In ISO 14496-12, MetaBox extends FullBox.
+        
+        if buf.remaining() < 8 {
+            return Err(Error::OutOfBounds);
+        }
 
-    const KIND_EXT: FourCC = FourCC::new(b"meta");
+        if buf.slice(8)[4..8] == *b"hdlr".as_ref() {
+            // Apple QuickTime specification
+            tracing::trace!("meta box without fullbox header");
+        } else {
+            // ISO 14496-12
+            let _version_and_flags = u32::decode(buf)?; // version & flags
+        }
 
-    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
         let hdlr = Hdlr::decode(buf)?;
         let mut items = Vec::new();
         while let Some(atom) = Any::decode_maybe(buf)? {
@@ -97,7 +110,8 @@ impl AtomExt for Meta {
         Ok(Self { hdlr, items })
     }
 
-    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        0u32.encode(buf)?; // version & flags
         self.hdlr.encode(buf)?;
         for atom in &self.items {
             atom.encode(buf)?;
