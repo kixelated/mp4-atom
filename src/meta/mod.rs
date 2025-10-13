@@ -82,12 +82,25 @@ impl Meta {
     }
 }
 
-impl AtomExt for Meta {
-    type Ext = ();
+impl Atom for Meta {
+    const KIND: FourCC = FourCC::new(b"meta");
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        // are we a full box?
+        // In Apple's QuickTime specification, the MetaBox is a regular Box.
+        // In ISO 14496-12, MetaBox extends FullBox.
 
-    const KIND_EXT: FourCC = FourCC::new(b"meta");
+        if buf.remaining() < 8 {
+            return Err(Error::OutOfBounds);
+        }
 
-    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
+        if buf.slice(8)[4..8] == *b"hdlr".as_ref() {
+            // Apple QuickTime specification
+            tracing::trace!("meta box without fullbox header");
+        } else {
+            // ISO 14496-12
+            let _version_and_flags = u32::decode(buf)?; // version & flags
+        }
+
         let hdlr = Hdlr::decode(buf)?;
         let mut items = Vec::new();
         while let Some(atom) = Any::decode_maybe(buf)? {
@@ -97,7 +110,8 @@ impl AtomExt for Meta {
         Ok(Self { hdlr, items })
     }
 
-    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        0u32.encode(buf)?; // version & flags
         self.hdlr.encode(buf)?;
         for atom in &self.items {
             atom.encode(buf)?;
@@ -234,5 +248,137 @@ mod tests {
         let mut buf = buf.as_ref();
         let output = Meta::decode(&mut buf).unwrap();
         assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn test_meta_apple_quicktime() {
+        // Test Apple QuickTime format meta box (without FullBox header)
+        // In Apple's spec, meta box is a regular Box, not a FullBox
+        // So it starts directly with hdlr instead of version+flags
+
+        // Manually construct a meta box in Apple format
+        let mut buf = Vec::new();
+
+        // meta box header
+        buf.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // size (placeholder, will fix)
+        buf.extend_from_slice(b"meta");
+
+        // hdlr box directly (no version/flags before it)
+        let hdlr = Hdlr {
+            handler: b"mdir".into(),
+            name: "Apple".into(),
+        };
+
+        // Encode hdlr
+        let mut hdlr_buf = Vec::new();
+        hdlr.encode(&mut hdlr_buf).unwrap();
+        buf.extend_from_slice(&hdlr_buf);
+
+        // Add an ilst box
+        let ilst = Ilst::default();
+        let mut ilst_buf = Vec::new();
+        ilst.encode(&mut ilst_buf).unwrap();
+        buf.extend_from_slice(&ilst_buf);
+
+        // Fix the meta box size
+        let size = buf.len() as u32;
+        buf[0..4].copy_from_slice(&size.to_be_bytes());
+
+        // Skip the meta box header (8 bytes) to get to the body
+        let mut cursor = std::io::Cursor::new(&buf[8..]);
+
+        // Decode
+        let decoded = Meta::decode_body(&mut cursor).expect("failed to decode Apple meta box");
+
+        // Verify
+        assert_eq!(decoded.hdlr.handler, FourCC::new(b"mdir"));
+        assert_eq!(decoded.hdlr.name, "Apple");
+        assert_eq!(decoded.items.len(), 1);
+        assert!(decoded.get::<Ilst>().is_some());
+    }
+
+    #[test]
+    fn test_meta_apple_with_ilst() {
+        // Test a more complete Apple-style meta box with ilst containing iTunes metadata
+        let mut buf = Vec::new();
+
+        // meta box header
+        buf.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // size (placeholder)
+        buf.extend_from_slice(b"meta");
+
+        // hdlr box (no version/flags)
+        let hdlr = Hdlr {
+            handler: b"mdir".into(),
+            name: "".into(),
+        };
+        let mut hdlr_buf = Vec::new();
+        hdlr.encode(&mut hdlr_buf).unwrap();
+        buf.extend_from_slice(&hdlr_buf);
+
+        // ilst box with some metadata
+        let ilst = Ilst {
+            name: Some(Name("Test Song".into())),
+            year: Some(Year("2025".into())),
+            ..Default::default()
+        };
+
+        let mut ilst_buf = Vec::new();
+        ilst.encode(&mut ilst_buf).unwrap();
+        buf.extend_from_slice(&ilst_buf);
+
+        // Fix the meta box size
+        let size = buf.len() as u32;
+        buf[0..4].copy_from_slice(&size.to_be_bytes());
+
+        // Decode
+        let mut cursor = std::io::Cursor::new(&buf[8..]);
+        let decoded =
+            Meta::decode_body(&mut cursor).expect("failed to decode Apple meta with ilst");
+
+        // Verify
+        assert_eq!(decoded.hdlr.handler, FourCC::new(b"mdir"));
+        let decoded_ilst = decoded.get::<Ilst>().expect("ilst not found");
+        assert_eq!(decoded_ilst.name.as_ref().unwrap().0, "Test Song");
+        assert_eq!(decoded_ilst.year.as_ref().unwrap().0, "2025");
+    }
+
+    #[test]
+    fn test_meta_iso_vs_apple_roundtrip() {
+        // Test that we can decode both ISO (with FullBox) and Apple (without) formats
+        // and our encoder always produces ISO format
+
+        let meta = Meta {
+            hdlr: Hdlr {
+                handler: b"mdir".into(),
+                name: "Handler".into(),
+            },
+            items: vec![],
+        };
+
+        // Encode (produces ISO format with version/flags)
+        let mut encoded = Vec::new();
+        meta.encode(&mut encoded).unwrap();
+
+        // Decode should work
+        let mut cursor = std::io::Cursor::new(&encoded);
+        let decoded = Meta::decode(&mut cursor).expect("failed to decode ISO format");
+        assert_eq!(decoded, meta);
+
+        // Now manually create Apple format (without version/flags)
+        let mut apple_format = Vec::new();
+        apple_format.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // size placeholder
+        apple_format.extend_from_slice(b"meta");
+
+        let mut hdlr_buf = Vec::new();
+        meta.hdlr.encode(&mut hdlr_buf).unwrap();
+        apple_format.extend_from_slice(&hdlr_buf);
+
+        let size = apple_format.len() as u32;
+        apple_format[0..4].copy_from_slice(&size.to_be_bytes());
+
+        // Decode Apple format
+        let mut cursor = std::io::Cursor::new(&apple_format);
+        let decoded_apple = Meta::decode(&mut cursor).expect("failed to decode Apple format");
+        assert_eq!(decoded_apple, meta);
     }
 }
