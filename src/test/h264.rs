@@ -380,12 +380,7 @@ fn avcc_ext() {
                 udta: None,
             },
         ],
-        udta: Some(Udta {
-            meta: None,
-            skip: Some(Skip {
-                zeroed: Zeroed { size: 81 },
-            }),
-        }),
+        udta: Some(Udta { meta: None }),
     };
 
     assert_eq!(moov, expected, "different decoded result");

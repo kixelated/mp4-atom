@@ -261,7 +261,6 @@ fn av1() {
                     },
                     items: vec![Ilst::default().into()],
                 }),
-                skip: None,
             })
         }
     );

@@ -297,10 +297,7 @@ fn esds() {
                 ..Default::default()
             }],
             udta: Some(Udta {
-                skip: Some(Skip {
-                    zeroed: 82.into(),
-                }),
-                ..Default::default()
+                meta: None,
             }),
 
             ..Default::default()
