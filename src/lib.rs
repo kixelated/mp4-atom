@@ -16,6 +16,13 @@
 //! The simplest way to decode with this library is with [Any::decode], returning any supported atom in a giant enum.
 //! For encoding you will call encode on the atom directly, ex: [Moov::encode].
 //!
+//! ## Fault-Tolerant Parsing
+//! This library implements fault-tolerant parsing for container boxes. When decoding a container box (such as `moov`, `trak`, `mdia`, etc.), if an unexpected child box is encountered, instead of failing the entire parsing operation, the unexpected box is collected in an `unexpected` field as an `Any` atom.
+//!
+//! All container box structures include an `unexpected: Vec<Any>` field that collects these unrecognized boxes.
+//!
+//! Note that when encoding, the `unexpected` boxes are **not** written back - only the explicitly defined fields are encoded.
+//!
 //! ## Traits
 //! This library gates functionality behind quite a few traits:
 //!
