@@ -4,11 +4,12 @@ pub use skip::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Udta {
     pub meta: Option<Meta>,
     pub skip: Option<Skip>,
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Udta {
@@ -30,6 +31,7 @@ mod tests {
         let expected = Udta {
             meta: None,
             skip: None,
+            unexpected: vec![],
         };
 
         let mut buf = Vec::new();
@@ -51,6 +53,7 @@ mod tests {
                 items: vec![],
             }),
             skip: None,
+            unexpected: vec![],
         };
 
         let mut buf = Vec::new();

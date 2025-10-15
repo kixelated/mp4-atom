@@ -10,13 +10,14 @@ pub use vmhd::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Minf {
     pub vmhd: Option<Vmhd>,
     pub smhd: Option<Smhd>,
     pub dinf: Dinf,
     pub stbl: Stbl,
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Minf {

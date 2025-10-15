@@ -215,6 +215,7 @@ fn hevc() {
     assert_eq!(
         moov,
         Moov {
+            unexpected: vec![],
             mvhd: Mvhd {
                 creation_time: 0,
                 modification_time: 0,
@@ -237,6 +238,7 @@ fn hevc() {
             },
             meta: None,
             mvex: Some(Mvex {
+                unexpected: vec![],
                 mehd: None,
                 trex: vec![Trex {
                     track_id: 1,
@@ -247,6 +249,7 @@ fn hevc() {
                 }]
             }),
             trak: vec![Trak {
+                unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 0,
                     modification_time: 0,
@@ -273,6 +276,7 @@ fn hevc() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 0,
                         modification_time: 0,
@@ -285,6 +289,7 @@ fn hevc() {
                         name: "VideoHandler".into()
                     },
                     minf: Minf {
+                        unexpected: vec![],
                         vmhd: Some(Vmhd {
                             graphics_mode: 0,
                             op_color: RgbColor {
@@ -295,6 +300,7 @@ fn hevc() {
                         }),
                         smhd: None,
                         dinf: Dinf {
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".to_string()
@@ -577,6 +583,7 @@ fn hevc() {
                 udta: None,
             }],
             udta: Some(Udta {
+                unexpected: vec![],
                 meta: Some(Meta {
                     hdlr: Hdlr {
                         handler: FourCC::new(b"mdir"),

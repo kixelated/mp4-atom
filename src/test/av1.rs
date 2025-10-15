@@ -111,6 +111,7 @@ fn av1() {
     assert_eq!(
         moov,
         Moov {
+            unexpected: vec![],
             mvhd: Mvhd {
                 creation_time: 0,
                 modification_time: 0,
@@ -133,6 +134,7 @@ fn av1() {
             },
             meta: None,
             mvex: Some(Mvex {
+                unexpected: vec![],
                 mehd: None,
                 trex: vec![Trex {
                     track_id: 1,
@@ -143,6 +145,7 @@ fn av1() {
                 }]
             }),
             trak: vec![Trak {
+                unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 0,
                     modification_time: 0,
@@ -169,6 +172,7 @@ fn av1() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 0,
                         modification_time: 0,
@@ -181,6 +185,7 @@ fn av1() {
                         name: "obu@GPAC2.1-DEV-rev199-g8e29f6e8b-github_master".into()
                     },
                     minf: Minf {
+                        unexpected: vec![],
                         vmhd: Some(Vmhd {
                             graphics_mode: 0,
                             op_color: RgbColor {
@@ -191,6 +196,7 @@ fn av1() {
                         }),
                         smhd: None,
                         dinf: Dinf {
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into()
@@ -198,6 +204,7 @@ fn av1() {
                             }
                         },
                         stbl: Stbl {
+                            unexpected: vec![],
                             stsd: Stsd {
                                 codecs: vec![Av01 {
                                     visual: Visual {
@@ -254,6 +261,7 @@ fn av1() {
                 udta: None,
             }],
             udta: Some(Udta {
+                unexpected: vec![],
                 meta: Some(Meta {
                     hdlr: Hdlr {
                         handler: FourCC::new(b"mdir"),
@@ -270,8 +278,10 @@ fn av1() {
     assert_eq!(
         moof,
         Moof {
+            unexpected: vec![],
             mfhd: Mfhd { sequence_number: 1 },
             traf: vec![Traf {
+                unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 1,
                     base_data_offset: None,

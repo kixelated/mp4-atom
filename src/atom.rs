@@ -175,6 +175,9 @@ macro_rules! nested {
                 $( let mut [<$optional:lower>] = None;)*
                 $( let mut [<$multiple:lower>] = Vec::new();)*
 
+                // aggregate unexpected boxes, if any
+                let mut unexpected = Vec::new();
+
                 while let Some(atom) = Any::decode_maybe(buf)? {
                     match atom {
                         $(Any::$required(atom) => {
@@ -195,7 +198,10 @@ macro_rules! nested {
                         Any::Unknown(kind, _) => {
                             tracing::warn!("unknown box: {:?}", kind);
                         },
-                        _ => return Err(Error::UnexpectedBox(atom.kind())),
+                        _ => {
+                            tracing::warn!("unexpected box: {:?}", atom.kind());
+                            unexpected.push(atom);
+                        }
                     }
                 }
 
@@ -203,6 +209,7 @@ macro_rules! nested {
                     $([<$required:lower>]: [<$required:lower>].ok_or(Error::MissingBox($required::KIND))? ,)*
                     $([<$optional:lower>],)*
                     $([<$multiple:lower>],)*
+                    unexpected
                 })
             }
 

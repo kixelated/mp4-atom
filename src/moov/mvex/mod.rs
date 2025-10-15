@@ -6,11 +6,12 @@ pub use trex::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mvex {
     pub mehd: Option<Mehd>,
     pub trex: Vec<Trex>,
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Mvex {

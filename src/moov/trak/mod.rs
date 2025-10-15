@@ -8,7 +8,7 @@ pub use tkhd::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Trak {
     pub tkhd: Tkhd,
@@ -16,6 +16,7 @@ pub struct Trak {
     pub meta: Option<Meta>, // TODO is this suppose to be here?
     pub mdia: Mdia,
     pub udta: Option<Udta>,
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Trak {

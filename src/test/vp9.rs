@@ -156,6 +156,7 @@ fn vp9() {
     assert_eq!(
         moov,
         Moov {
+            unexpected: vec![],
             mvhd: Mvhd {
                 creation_time: 3576083626,
                 modification_time: 3576083626,
@@ -193,6 +194,7 @@ fn vp9() {
                 )]
             }),
             mvex: Some(Mvex {
+                unexpected: vec![],
                 mehd: Some(Mehd {
                     fragment_duration: 2736000
                 }),
@@ -205,6 +207,7 @@ fn vp9() {
                 }]
             }),
             trak: vec![Trak {
+                unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 3576083626,
                     modification_time: 3576083626,
@@ -231,6 +234,7 @@ fn vp9() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 3576083626,
                         modification_time: 3576083626,
@@ -243,6 +247,7 @@ fn vp9() {
                         name: "VideoHandler".to_string()
                     },
                     minf: Minf {
+                        unexpected: vec![],
                         vmhd: Some(Vmhd {
                             graphics_mode: 0,
                             op_color: RgbColor {
@@ -253,6 +258,7 @@ fn vp9() {
                         }),
                         smhd: None,
                         dinf: Dinf {
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".to_string()
@@ -260,6 +266,7 @@ fn vp9() {
                             }
                         },
                         stbl: Stbl {
+                            unexpected: vec![],
                             stsd: Stsd {
                                 codecs: vec![Vp09 {
                                     visual: Visual {
