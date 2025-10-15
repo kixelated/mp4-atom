@@ -158,6 +158,7 @@ mod tests {
                     location: "".into(),
                 }],
             },
+            unexpected: vec![],
         });
         expected.push(Iloc {
             item_locations: vec![ItemLocation {
@@ -229,6 +230,7 @@ mod tests {
                     },
                 ],
             }],
+            unexpected: vec![],
         });
         expected.push(Iref {
             references: vec![Reference {

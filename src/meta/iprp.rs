@@ -8,6 +8,7 @@ use crate::*;
 pub struct Iprp {
     pub ipco: Ipco,
     pub ipma: Vec<Ipma>,
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Iprp {

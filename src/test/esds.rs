@@ -147,6 +147,7 @@ fn esds() {
                     ..Default::default()
                 },
                 mdia: Mdia {
+                        unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 12288,
                         language: "und".into(),
@@ -157,12 +158,14 @@ fn esds() {
                         name: "(C) 2007 Google Inc. v08.13.2007.".into(),
                     },
                     minf: Minf {
+                        unexpected: vec![],
                         smhd: None,
                         vmhd: Vmhd {
                             ..Default::default()
                         }
                         .into(),
                         dinf: Dinf {
+                        unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into(),
@@ -227,6 +230,7 @@ fn esds() {
                     ..Default::default()
                 },
                 mdia: Mdia {
+                        unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 44100,
                         language: "und".into(),
@@ -241,6 +245,7 @@ fn esds() {
                             ..Default::default()
                         }),
                         dinf: Dinf {
+                        unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into(),
@@ -308,8 +313,10 @@ fn esds() {
     assert_eq!(
         moof,
         Moof {
+            unexpected: vec![],
             mfhd: Mfhd { sequence_number: 1 },
             traf: vec![Traf {
+                unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 1,
                     sample_description_index: 1.into(),

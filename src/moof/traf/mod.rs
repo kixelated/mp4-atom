@@ -8,7 +8,7 @@ pub use trun::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Traf {
     pub tfhd: Tfhd,
@@ -21,6 +21,7 @@ pub struct Traf {
     pub saio: Vec<Saio>,
     pub meta: Option<Meta>,
     pub udta: Option<Udta>,
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Traf {

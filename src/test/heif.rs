@@ -129,6 +129,7 @@ fn heif() {
                 }
                 .into(),
                 Iprp {
+                    unexpected: vec![],
                     ipco: Ipco {
                         properties: vec![
                             any::Any::Hvcc(Hvcc {
@@ -410,6 +411,7 @@ fn avif() {
                 }
                 .into(),
                 Iprp {
+                    unexpected: vec![],
                     ipco: Ipco {
                         properties: vec![
                             Any::Ispe(Ispe {

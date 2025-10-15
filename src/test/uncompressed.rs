@@ -89,6 +89,7 @@ fn uncompressed() {
     assert_eq!(
         moov,
         Moov {
+            unexpected: vec![],
             mvhd: Mvhd {
                 creation_time: 3827291266,
                 modification_time: 3827291266,
@@ -112,6 +113,7 @@ fn uncompressed() {
             meta: None,
             mvex: None,
             trak: [Trak {
+                unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 3827291266,
                     modification_time: 3827291266,
@@ -138,6 +140,7 @@ fn uncompressed() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 3827291266,
                         modification_time: 3827291266,
@@ -150,6 +153,7 @@ fn uncompressed() {
                         name: "GPAC ISO Video Handler".into(),
                     },
                     minf: Minf {
+                        unexpected: vec![],
                         vmhd: Some(Vmhd {
                             graphics_mode: 0,
                             op_color: RgbColor {
@@ -160,6 +164,7 @@ fn uncompressed() {
                         }),
                         smhd: None,
                         dinf: Dinf {
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into()
@@ -167,6 +172,7 @@ fn uncompressed() {
                             }
                         },
                         stbl: Stbl {
+                            unexpected: vec![],
                             stsd: Stsd {
                                 codecs: vec![Codec::Uncv(Uncv {
                                     visual: Visual {
@@ -283,6 +289,7 @@ fn uncompressed() {
             }]
             .into(),
             udta: Some(Udta {
+                unexpected: vec![],
                 meta: Some(Meta {
                     hdlr: Hdlr {
                         handler: FourCC::new(b"mdir"),

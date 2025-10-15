@@ -218,6 +218,7 @@ fn bbb() {
                     ..Default::default()
                 },
                 mdia: Mdia {
+                        unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 24000,
                         language: "und".into(),
@@ -228,12 +229,14 @@ fn bbb() {
                         name: "(C) 2007 Google Inc. v08.13.2007.".into(),
                     },
                     minf: Minf {
+                        unexpected: vec![],
                         smhd: None,
                         vmhd: Vmhd {
                             ..Default::default()
                         }
                         .into(),
                         dinf: Dinf {
+                        unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into(),
@@ -298,6 +301,7 @@ fn bbb() {
                     ..Default::default()
                 },
                 mdia: Mdia {
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 44100,
                         language: "und".into(),
@@ -312,6 +316,7 @@ fn bbb() {
                             ..Default::default()
                         }),
                         dinf: Dinf {
+                        unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into(),
@@ -382,8 +387,10 @@ fn bbb() {
     assert_eq!(
         moof,
         Moof {
+            unexpected: vec![],
             mfhd: Mfhd { sequence_number: 1 },
             traf: vec![Traf {
+                unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 1,
                     sample_description_index: 1.into(),
@@ -442,8 +449,10 @@ fn bbb() {
     assert_eq!(
         moof,
         Moof {
+            unexpected: vec![],
             mfhd: Mfhd { sequence_number: 2 },
             traf: vec![Traf {
+                unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 2,
                     sample_description_index: 1.into(),
