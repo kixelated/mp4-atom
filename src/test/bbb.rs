@@ -218,7 +218,7 @@ fn bbb() {
                     ..Default::default()
                 },
                 mdia: Mdia {
-                        unexpected: vec![],
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 24000,
                         language: "und".into(),
@@ -236,7 +236,7 @@ fn bbb() {
                         }
                         .into(),
                         dinf: Dinf {
-                        unexpected: vec![],
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into(),
@@ -316,7 +316,7 @@ fn bbb() {
                             ..Default::default()
                         }),
                         dinf: Dinf {
-                        unexpected: vec![],
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into(),

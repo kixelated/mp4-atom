@@ -147,7 +147,7 @@ fn esds() {
                     ..Default::default()
                 },
                 mdia: Mdia {
-                        unexpected: vec![],
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 12288,
                         language: "und".into(),
@@ -165,7 +165,7 @@ fn esds() {
                         }
                         .into(),
                         dinf: Dinf {
-                        unexpected: vec![],
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into(),
@@ -230,7 +230,7 @@ fn esds() {
                     ..Default::default()
                 },
                 mdia: Mdia {
-                        unexpected: vec![],
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 44100,
                         language: "und".into(),
@@ -245,7 +245,7 @@ fn esds() {
                             ..Default::default()
                         }),
                         dinf: Dinf {
-                        unexpected: vec![],
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into(),
