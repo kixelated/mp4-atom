@@ -89,6 +89,7 @@ fn uncompressed() {
     assert_eq!(
         moov,
         Moov {
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
             mvhd: Mvhd {
                 creation_time: 3827291266,
@@ -113,6 +114,7 @@ fn uncompressed() {
             meta: None,
             mvex: None,
             trak: [Trak {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 3827291266,
@@ -140,6 +142,7 @@ fn uncompressed() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 3827291266,
@@ -153,6 +156,7 @@ fn uncompressed() {
                         name: "GPAC ISO Video Handler".into(),
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
                         unexpected: vec![],
                         vmhd: Some(Vmhd {
                             graphics_mode: 0,
@@ -164,6 +168,7 @@ fn uncompressed() {
                         }),
                         smhd: None,
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
@@ -172,6 +177,7 @@ fn uncompressed() {
                             }
                         },
                         stbl: Stbl {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             stsd: Stsd {
                                 codecs: vec![Codec::Uncv(Uncv {
@@ -289,6 +295,7 @@ fn uncompressed() {
             }]
             .into(),
             udta: Some(Udta {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 meta: Some(Meta {
                     hdlr: Hdlr {

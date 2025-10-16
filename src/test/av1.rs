@@ -111,6 +111,7 @@ fn av1() {
     assert_eq!(
         moov,
         Moov {
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
             mvhd: Mvhd {
                 creation_time: 0,
@@ -134,6 +135,7 @@ fn av1() {
             },
             meta: None,
             mvex: Some(Mvex {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 mehd: None,
                 trex: vec![Trex {
@@ -145,6 +147,7 @@ fn av1() {
                 }]
             }),
             trak: vec![Trak {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 0,
@@ -172,6 +175,7 @@ fn av1() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 0,
@@ -185,6 +189,7 @@ fn av1() {
                         name: "obu@GPAC2.1-DEV-rev199-g8e29f6e8b-github_master".into()
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
                         unexpected: vec![],
                         vmhd: Some(Vmhd {
                             graphics_mode: 0,
@@ -196,6 +201,7 @@ fn av1() {
                         }),
                         smhd: None,
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
@@ -204,6 +210,7 @@ fn av1() {
                             }
                         },
                         stbl: Stbl {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             stsd: Stsd {
                                 codecs: vec![Av01 {
@@ -261,6 +268,7 @@ fn av1() {
                 udta: None,
             }],
             udta: Some(Udta {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 meta: Some(Meta {
                     hdlr: Hdlr {
@@ -277,9 +285,11 @@ fn av1() {
     assert_eq!(
         moof,
         Moof {
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
             mfhd: Mfhd { sequence_number: 1 },
             traf: vec![Traf {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 1,

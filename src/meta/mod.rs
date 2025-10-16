@@ -158,6 +158,7 @@ mod tests {
                     location: "".into(),
                 }],
             },
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
         });
         expected.push(Iloc {
@@ -230,6 +231,7 @@ mod tests {
                     },
                 ],
             }],
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
         });
         expected.push(Iref {

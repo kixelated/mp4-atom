@@ -215,6 +215,7 @@ fn hevc() {
     assert_eq!(
         moov,
         Moov {
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
             mvhd: Mvhd {
                 creation_time: 0,
@@ -238,6 +239,7 @@ fn hevc() {
             },
             meta: None,
             mvex: Some(Mvex {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 mehd: None,
                 trex: vec![Trex {
@@ -249,6 +251,7 @@ fn hevc() {
                 }]
             }),
             trak: vec![Trak {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 0,
@@ -276,6 +279,7 @@ fn hevc() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 0,
@@ -289,6 +293,7 @@ fn hevc() {
                         name: "VideoHandler".into()
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
                         unexpected: vec![],
                         vmhd: Some(Vmhd {
                             graphics_mode: 0,
@@ -300,6 +305,7 @@ fn hevc() {
                         }),
                         smhd: None,
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
@@ -583,6 +589,7 @@ fn hevc() {
                 udta: None,
             }],
             udta: Some(Udta {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 meta: Some(Meta {
                     hdlr: Hdlr {

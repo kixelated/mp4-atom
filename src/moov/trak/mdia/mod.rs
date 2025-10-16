@@ -14,6 +14,7 @@ pub struct Mdia {
     pub mdhd: Mdhd,
     pub hdlr: Hdlr,
     pub minf: Minf,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 

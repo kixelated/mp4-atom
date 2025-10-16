@@ -18,6 +18,7 @@ pub struct Moov {
     pub mvex: Option<Mvex>,
     pub trak: Vec<Trak>,
     pub udta: Option<Udta>,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 
@@ -139,6 +140,7 @@ mod test {
                         default_sample_duration: 3000,
                         ..Default::default()
                     }],
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                 }),
                 trak: vec![Trak {
@@ -159,6 +161,7 @@ mod test {
                                 ..Default::default()
                             }]
                         }),
+                        #[cfg(feature = "fault-tolerant")]
                         unexpected: vec![],
                     }),
                     meta: None,
@@ -188,6 +191,7 @@ mod test {
                                 dref: Dref {
                                     urls: vec![Url::default()]
                                 },
+                                #[cfg(feature = "fault-tolerant")]
                                 unexpected: vec![],
                             },
                             stbl: Stbl {
@@ -229,14 +233,18 @@ mod test {
                                 stco: Some(Stco::default()),
                                 ..Default::default()
                             },
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                         },
+                        #[cfg(feature = "fault-tolerant")]
                         unexpected: vec![],
                     },
                     udta: None,
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                 }],
                 udta: None,
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
             }
         )

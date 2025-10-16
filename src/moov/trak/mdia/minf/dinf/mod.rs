@@ -7,6 +7,7 @@ use crate::*;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Dinf {
     pub dref: Dref,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 

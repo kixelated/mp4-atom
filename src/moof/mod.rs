@@ -11,6 +11,7 @@ use crate::*;
 pub struct Moof {
     pub mfhd: Mfhd,
     pub traf: Vec<Traf>,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 

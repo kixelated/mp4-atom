@@ -16,6 +16,7 @@ pub struct Trak {
     pub meta: Option<Meta>, // TODO is this suppose to be here?
     pub mdia: Mdia,
     pub udta: Option<Udta>,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 

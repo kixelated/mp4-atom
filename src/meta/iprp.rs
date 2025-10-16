@@ -8,6 +8,7 @@ use crate::*;
 pub struct Iprp {
     pub ipco: Ipco,
     pub ipma: Vec<Ipma>,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 

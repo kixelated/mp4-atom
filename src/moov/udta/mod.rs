@@ -8,6 +8,7 @@ use crate::*;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Udta {
     pub meta: Option<Meta>,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 
@@ -29,6 +30,7 @@ mod tests {
     fn test_udta_empty() {
         let expected = Udta {
             meta: None,
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
         };
 
@@ -50,6 +52,7 @@ mod tests {
                 },
                 items: vec![],
             }),
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
         };
 
