@@ -17,6 +17,7 @@ pub struct Minf {
     pub smhd: Option<Smhd>,
     pub dinf: Dinf,
     pub stbl: Stbl,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 

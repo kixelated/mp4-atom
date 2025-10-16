@@ -18,9 +18,16 @@ Using this library does require some additional knowledge of the format otherwis
 See the [documentation](https://docs.rs/mp4-atom).
 
 ## Fault-Tolerant Parsing
-This library implements fault-tolerant parsing for container boxes. When decoding a container box (such as `moov`, `trak`, `mdia`, etc.), if an unexpected child box is encountered, instead of failing the entire parsing operation, the unexpected box is collected in an `unexpected` field as an `Any` atom.
+Enable the `fault-tolerant` feature to support parsing files with unexpected boxes.
 
-All container box structures include an `unexpected: Vec<Any>` field that collects these unrecognized boxes. 
+```toml
+[dependencies]
+mp4-atom = { version = "0.9", features = ["fault-tolerant"] }
+```
+
+When this feature is enabled, if a container box (such as `moov`, `trak`, `mdia`, etc.) encounters an unexpected child box during decoding, instead of returning an error, the unknown box is collected in an `unexpected: Vec<Any>` field.
+
+When the feature is **disabled** (default), encountering an unexpected box will return an `Error::UnexpectedBox` error, ensuring strict compliance with the expected structure.
 
 Note that when encoding, the `unexpected` boxes are **not** written back - only the explicitly defined fields are encoded.
 

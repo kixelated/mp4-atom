@@ -21,6 +21,7 @@ pub struct Traf {
     pub saio: Vec<Saio>,
     pub meta: Option<Meta>,
     pub udta: Option<Udta>,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 

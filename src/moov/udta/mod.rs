@@ -9,6 +9,7 @@ use crate::*;
 pub struct Udta {
     pub meta: Option<Meta>,
     pub skip: Option<Skip>,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 
@@ -31,6 +32,7 @@ mod tests {
         let expected = Udta {
             meta: None,
             skip: None,
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
         };
 
@@ -53,6 +55,7 @@ mod tests {
                 items: vec![],
             }),
             skip: None,
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
         };
 

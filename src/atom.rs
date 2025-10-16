@@ -175,7 +175,7 @@ macro_rules! nested {
                 $( let mut [<$optional:lower>] = None;)*
                 $( let mut [<$multiple:lower>] = Vec::new();)*
 
-                // aggregate unexpected boxes, if any
+                #[cfg(feature = "fault-tolerant")]
                 let mut unexpected = Vec::new();
 
                 while let Some(atom) = Any::decode_maybe(buf)? {
@@ -199,8 +199,15 @@ macro_rules! nested {
                             tracing::warn!("unknown box: {:?}", kind);
                         },
                         _ => {
-                            tracing::warn!("unexpected box: {:?}", atom.kind());
-                            unexpected.push(atom);
+                            #[cfg(feature = "fault-tolerant")]
+                            {
+                                tracing::warn!("unexpected box: {:?}", atom.kind());
+                                unexpected.push(atom);
+                            }
+                            #[cfg(not(feature = "fault-tolerant"))]
+                            {
+                                return Err(Error::UnexpectedBox(atom.kind()));
+                            }
                         }
                     }
                 }
@@ -209,6 +216,7 @@ macro_rules! nested {
                     $([<$required:lower>]: [<$required:lower>].ok_or(Error::MissingBox($required::KIND))? ,)*
                     $([<$optional:lower>],)*
                     $([<$multiple:lower>],)*
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected
                 })
             }

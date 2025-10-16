@@ -156,6 +156,7 @@ fn vp9() {
     assert_eq!(
         moov,
         Moov {
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
             mvhd: Mvhd {
                 creation_time: 3576083626,
@@ -194,6 +195,7 @@ fn vp9() {
                 )]
             }),
             mvex: Some(Mvex {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 mehd: Some(Mehd {
                     fragment_duration: 2736000
@@ -207,6 +209,7 @@ fn vp9() {
                 }]
             }),
             trak: vec![Trak {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 3576083626,
@@ -234,6 +237,7 @@ fn vp9() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 3576083626,
@@ -247,6 +251,7 @@ fn vp9() {
                         name: "VideoHandler".to_string()
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
                         unexpected: vec![],
                         vmhd: Some(Vmhd {
                             graphics_mode: 0,
@@ -258,6 +263,7 @@ fn vp9() {
                         }),
                         smhd: None,
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
@@ -266,6 +272,7 @@ fn vp9() {
                             }
                         },
                         stbl: Stbl {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             stsd: Stsd {
                                 codecs: vec![Vp09 {

@@ -11,6 +11,7 @@ use crate::*;
 pub struct Mvex {
     pub mehd: Option<Mehd>,
     pub trex: Vec<Trex>,
+    #[cfg(feature = "fault-tolerant")]
     pub unexpected: Vec<Any>,
 }
 

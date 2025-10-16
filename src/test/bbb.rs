@@ -218,6 +218,7 @@ fn bbb() {
                     ..Default::default()
                 },
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 24000,
@@ -229,6 +230,7 @@ fn bbb() {
                         name: "(C) 2007 Google Inc. v08.13.2007.".into(),
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
                         unexpected: vec![],
                         smhd: None,
                         vmhd: Vmhd {
@@ -236,6 +238,7 @@ fn bbb() {
                         }
                         .into(),
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
@@ -301,6 +304,7 @@ fn bbb() {
                     ..Default::default()
                 },
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 44100,
@@ -316,6 +320,7 @@ fn bbb() {
                             ..Default::default()
                         }),
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
@@ -388,9 +393,11 @@ fn bbb() {
     assert_eq!(
         moof,
         Moof {
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
             mfhd: Mfhd { sequence_number: 1 },
             traf: vec![Traf {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 1,
@@ -450,9 +457,11 @@ fn bbb() {
     assert_eq!(
         moof,
         Moof {
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
             mfhd: Mfhd { sequence_number: 2 },
             traf: vec![Traf {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 2,

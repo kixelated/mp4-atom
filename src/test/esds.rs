@@ -147,6 +147,7 @@ fn esds() {
                     ..Default::default()
                 },
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 12288,
@@ -158,6 +159,7 @@ fn esds() {
                         name: "(C) 2007 Google Inc. v08.13.2007.".into(),
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
                         unexpected: vec![],
                         smhd: None,
                         vmhd: Vmhd {
@@ -165,6 +167,7 @@ fn esds() {
                         }
                         .into(),
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
@@ -230,6 +233,7 @@ fn esds() {
                     ..Default::default()
                 },
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 44100,
@@ -245,6 +249,7 @@ fn esds() {
                             ..Default::default()
                         }),
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
                             unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
@@ -316,9 +321,11 @@ fn esds() {
     assert_eq!(
         moof,
         Moof {
+            #[cfg(feature = "fault-tolerant")]
             unexpected: vec![],
             mfhd: Mfhd { sequence_number: 1 },
             traf: vec![Traf {
+                #[cfg(feature = "fault-tolerant")]
                 unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 1,

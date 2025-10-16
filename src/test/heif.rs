@@ -129,6 +129,7 @@ fn heif() {
                 }
                 .into(),
                 Iprp {
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                     ipco: Ipco {
                         properties: vec![
@@ -411,6 +412,7 @@ fn avif() {
                 }
                 .into(),
                 Iprp {
+                    #[cfg(feature = "fault-tolerant")]
                     unexpected: vec![],
                     ipco: Ipco {
                         properties: vec![
