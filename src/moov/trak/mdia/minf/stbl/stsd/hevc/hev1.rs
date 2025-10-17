@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hev1 {
     pub visual: Visual,
@@ -9,6 +9,9 @@ pub struct Hev1 {
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
+
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Hev1 {
@@ -22,6 +25,10 @@ impl Atom for Hev1 {
         let mut colr = None;
         let mut pasp = None;
         let mut taic = None;
+
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
+
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Hvcc(atom) => hvcc = atom.into(),
@@ -29,7 +36,11 @@ impl Atom for Hev1 {
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom)
+                }
             }
         }
 
@@ -40,6 +51,8 @@ impl Atom for Hev1 {
             colr,
             pasp,
             taic,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 
@@ -57,6 +70,10 @@ impl Atom for Hev1 {
         }
         if self.taic.is_some() {
             self.taic.encode(buf)?
+        }
+        #[cfg(feature = "fault-tolerant")]
+        for atom in &self.unexpected {
+            atom.encode(buf)?;
         }
 
         Ok(())
@@ -84,10 +101,7 @@ mod tests {
                 configuration_version: 1,
                 ..Default::default()
             },
-            btrt: None,
-            colr: None,
-            pasp: None,
-            taic: None,
+            ..Default::default()
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();

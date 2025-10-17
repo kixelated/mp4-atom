@@ -2,11 +2,13 @@ use crate::*;
 
 // See ETSI TS 102 366 V1.4.1 (2017-09) for details of AC-3 and EAC-3
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Eac3 {
     pub audio: Audio,
     pub dec3: Ec3SpecificBox,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Eac3 {
@@ -16,17 +18,25 @@ impl Atom for Eac3 {
         let audio = Audio::decode(buf)?;
 
         let mut dec3 = None;
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
 
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Ec3SpecificBox(atom) => dec3 = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom);
+                }
             }
         }
 
         Ok(Self {
             audio,
             dec3: dec3.ok_or(Error::MissingBox(Ec3SpecificBox::KIND))?,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 
@@ -180,7 +190,9 @@ mod tests {
                         num_dep_sub: 0,
                         chan_loc: None
                     }]
-                }
+                },
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
             }
         );
     }
@@ -207,6 +219,8 @@ mod tests {
                     chan_loc: None,
                 }],
             },
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
         };
 
         let mut buf = Vec::new();
@@ -238,6 +252,8 @@ mod tests {
                     chan_loc: Some(0x1FF),
                 }],
             },
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
         };
 
         // Encode
@@ -287,6 +303,8 @@ mod tests {
                     },
                 ],
             },
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
         };
 
         // Encode
@@ -342,7 +360,9 @@ mod tests {
                         num_dep_sub: 0,
                         chan_loc: None
                     }]
-                }
+                },
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
             }
         );
     }

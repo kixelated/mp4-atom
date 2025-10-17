@@ -249,7 +249,9 @@ fn uncompressed() {
                                         avg_bitrate: 48
                                     }),
                                     ccst: None,
-                                    pasp: None
+                                    pasp: None,
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 })],
                             },
                             stts: Stts {

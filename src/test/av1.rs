@@ -247,6 +247,8 @@ fn av1() {
                                     colr: None,
                                     pasp: None,
                                     taic: None,
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 }
                                 .into()],
                             },

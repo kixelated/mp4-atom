@@ -296,7 +296,9 @@ fn vp9() {
                                         transfer_characteristics: 2,
                                         matrix_coefficients: 2,
                                         codec_initialization_data: vec![]
-                                    }
+                                    },
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 }
                                 .into()],
                             },

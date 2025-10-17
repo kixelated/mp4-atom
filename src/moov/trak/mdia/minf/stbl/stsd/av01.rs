@@ -3,7 +3,7 @@ use crate::{Any, Atom, Buf, BufMut, DecodeMaybe, Error, FourCC, Result};
 
 use super::{Btrt, Colr, Pasp, Taic, Visual};
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Av01 {
     pub visual: Visual,
@@ -12,6 +12,8 @@ pub struct Av01 {
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Av01 {
@@ -25,6 +27,9 @@ impl Atom for Av01 {
         let mut colr = None;
         let mut pasp = None;
         let mut taic = None;
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
+
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Av1c(atom) => av1c = atom.into(),
@@ -32,7 +37,11 @@ impl Atom for Av01 {
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom);
+                }
             }
         }
 
@@ -43,6 +52,8 @@ impl Atom for Av01 {
             colr,
             pasp,
             taic,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 

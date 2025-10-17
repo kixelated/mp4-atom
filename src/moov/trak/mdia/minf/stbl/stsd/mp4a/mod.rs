@@ -4,13 +4,15 @@ use crate::*;
 pub mod esds;
 pub use esds::Esds;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mp4a {
     pub audio: Audio,
     pub esds: Esds,
     pub btrt: Option<Btrt>,
     pub taic: Option<Taic>,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Mp4a {
@@ -23,13 +25,20 @@ impl Atom for Mp4a {
         let mut esds = None;
         let mut taic = None;
 
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
+
         // Find esds in mp4a or wave
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Esds(atom) => esds = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom);
+                }
             }
         }
 
@@ -38,6 +47,8 @@ impl Atom for Mp4a {
             esds: esds.ok_or(Error::MissingBox(Esds::KIND))?,
             btrt,
             taic,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 
@@ -90,6 +101,8 @@ mod tests {
                 avg_bitrate: 3,
             }),
             taic: None,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();

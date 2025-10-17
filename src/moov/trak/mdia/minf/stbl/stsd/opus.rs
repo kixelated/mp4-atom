@@ -1,10 +1,12 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Opus {
     pub audio: Audio,
     pub dops: Dops,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Opus {
@@ -14,18 +16,26 @@ impl Atom for Opus {
         let audio = Audio::decode(buf)?;
 
         let mut dops = None;
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
 
         // Find esds in mp4a or wave
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Dops(atom) => dops = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom);
+                }
             }
         }
 
         Ok(Self {
             audio,
             dops: dops.ok_or(Error::MissingBox(Dops::KIND))?,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 

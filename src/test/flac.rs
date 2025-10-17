@@ -367,6 +367,8 @@ fn flac() {
                                             },
                                         ],
                                     },
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 }
                                 .into(),]
                             },

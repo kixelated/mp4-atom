@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hvc1 {
     pub visual: Visual,
@@ -10,6 +10,9 @@ pub struct Hvc1 {
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
+
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Hvc1 {
@@ -23,6 +26,10 @@ impl Atom for Hvc1 {
         let mut colr = None;
         let mut pasp = None;
         let mut taic = None;
+
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
+
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Hvcc(atom) => hvcc = atom.into(),
@@ -30,7 +37,11 @@ impl Atom for Hvc1 {
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom)
+                }
             }
         }
 
@@ -41,6 +52,9 @@ impl Atom for Hvc1 {
             colr,
             pasp,
             taic,
+
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 

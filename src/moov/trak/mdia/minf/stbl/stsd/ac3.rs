@@ -2,11 +2,13 @@ use crate::*;
 
 // See ETSI TS 102 366 V1.4.1 (2017-09) for details of AC-3 and EAC-3
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ac3 {
     pub audio: Audio,
     pub dac3: Ac3SpecificBox,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Ac3 {
@@ -16,17 +18,25 @@ impl Atom for Ac3 {
         let audio = Audio::decode(buf)?;
 
         let mut dac3 = None;
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
 
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Ac3SpecificBox(atom) => dac3 = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom);
+                }
             }
         }
 
         Ok(Self {
             audio,
             dac3: dac3.ok_or(Error::MissingBox(Ac3SpecificBox::KIND))?,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 
@@ -120,7 +130,9 @@ mod tests {
                     acmod: 2,
                     lfeon: false,
                     bit_rate_code: 10
-                }
+                },
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
             }
         );
     }
@@ -142,6 +154,8 @@ mod tests {
                 lfeon: false,
                 bit_rate_code: 10,
             },
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
         };
 
         let mut buf = Vec::new();

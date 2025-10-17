@@ -227,6 +227,8 @@ mod test {
                                         colr: None,
                                         pasp: None,
                                         taic: None,
+                                        #[cfg(feature = "fault-tolerant")]
+                                        unexpected: vec![],
                                     }
                                     .into()],
                                 },
