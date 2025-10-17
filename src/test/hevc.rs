@@ -648,10 +648,10 @@ fn hevc() {
         }
         hev1_for_test.assert_encode_decode();
 
+        // Encode to verify encoding succeeds. Output will differ from ENCODED because
+        // unexpected boxes (like the `fiel` box) are not encoded back.
         let mut buf = Vec::new();
         ftyp.encode(&mut buf).expect("failed to encode ftyp");
         moov.encode(&mut buf).expect("failed to encode moov");
     }
-
-    // assert_eq!(buf, ENCODED);
 }
