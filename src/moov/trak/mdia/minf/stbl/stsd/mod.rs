@@ -39,14 +39,14 @@ pub use vp9::*;
 use crate::*;
 use derive_more::From;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stsd {
     pub codecs: Vec<Codec>,
 }
 
 /// Called a "sample entry" in the ISOBMFF specification.
-#[derive(Debug, Clone, PartialEq, Eq, From)]
+#[derive(Debug, Clone, PartialEq, From)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Codec {
     // H264

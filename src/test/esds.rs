@@ -205,6 +205,8 @@ fn esds() {
                                         v_spacing: 1
                                     }),
                                     taic: None,
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 }
                                 .into()],
                             },
@@ -286,6 +288,8 @@ fn esds() {
                                     },
                                     btrt: Some(Btrt { buffer_size_db: 0, max_bitrate: 128000, avg_bitrate: 128000 }),
                                     taic: None,
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 }
                                 .into()],
                             },

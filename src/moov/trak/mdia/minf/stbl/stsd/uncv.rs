@@ -2,7 +2,7 @@ use crate::*;
 
 use super::{Btrt, Pasp, Visual};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Uncv {
     pub visual: Visual,
@@ -11,6 +11,8 @@ pub struct Uncv {
     pub btrt: Option<Btrt>,
     pub ccst: Option<Ccst>,
     pub pasp: Option<Pasp>,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Uncv {
@@ -24,6 +26,9 @@ impl Atom for Uncv {
         let mut uncc = None;
         let mut btrt = None;
         let mut pasp = None;
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
+
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Cmpd(atom) => cmpd = atom.into(),
@@ -31,7 +36,11 @@ impl Atom for Uncv {
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Ccst(atom) => ccst = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom);
+                }
             }
         }
 
@@ -42,6 +51,8 @@ impl Atom for Uncv {
             btrt,
             ccst,
             pasp,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 

@@ -1,11 +1,13 @@
 use crate::*;
 
 // https://www.webmproject.org/vp9/mp4/
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vp08 {
     pub visual: Visual,
     pub vpcc: VpcC,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Vp08 {
@@ -15,16 +17,25 @@ impl Atom for Vp08 {
         let visual = Visual::decode(buf)?;
 
         let mut vpcc = None;
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
+
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::VpcC(atom) => vpcc = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom);
+                }
             }
         }
 
         Ok(Self {
             visual,
             vpcc: vpcc.ok_or(Error::MissingBox(VpcC::KIND))?,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 

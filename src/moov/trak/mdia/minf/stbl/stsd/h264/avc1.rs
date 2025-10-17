@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Avc1 {
     pub visual: Visual,
@@ -9,6 +9,9 @@ pub struct Avc1 {
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
+
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Avc1 {
@@ -22,6 +25,10 @@ impl Atom for Avc1 {
         let mut colr = None;
         let mut pasp = None;
         let mut taic = None;
+
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
+
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Avcc(atom) => avcc = atom.into(),
@@ -29,7 +36,11 @@ impl Atom for Avc1 {
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom)
+                }
             }
         }
 
@@ -40,6 +51,8 @@ impl Atom for Avc1 {
             colr,
             pasp,
             taic,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 
@@ -96,6 +109,8 @@ mod tests {
             colr: None,
             pasp: None,
             taic: None,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: Vec::new(),
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -147,6 +162,8 @@ mod tests {
                 clock_drift_rate: i32::MAX,
                 clock_type: ClockType::CanSync,
             }),
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: Vec::new(),
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();

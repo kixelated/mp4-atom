@@ -272,7 +272,7 @@ fn avcc_ext() {
                                         h_spacing: 1,
                                         v_spacing: 1,
                                     }),
-                                    taic: None,
+                                    ..Default::default()
                                 }
                                 .into()],
                             },
@@ -383,6 +383,8 @@ fn avcc_ext() {
                                         avg_bitrate: 160000,
                                     }),
                                     taic: None,
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 }
                                 .into()],
                             },

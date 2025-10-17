@@ -572,12 +572,17 @@ fn hevc() {
                                         max_bitrate: 25175730,
                                         avg_bitrate: 25175730
                                     }),
-                                    colr: None,
                                     pasp: Some(Pasp {
                                         h_spacing: 1,
                                         v_spacing: 1,
                                     }),
+                                    colr: None,
                                     taic: None,
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![Any::Unknown(
+                                        FourCC::new(b"fiel"),
+                                        vec![1, 0]
+                                    )],
                                 }
                                 .into()],
                             },
