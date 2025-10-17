@@ -22,7 +22,7 @@ Enable the `fault-tolerant` feature to support parsing files with unexpected box
 
 ```toml
 [dependencies]
-mp4-atom = { version = "0.9", features = ["fault-tolerant"] }
+mp4-atom = { version = "<VERSION>", features = ["fault-tolerant"] }
 ```
 
 When this feature is enabled, if a container box (such as `moov`, `trak`, `mdia`, etc.) encounters an unexpected child box during decoding, instead of returning an error, the unknown box is collected in an `unexpected: Vec<Any>` field.
