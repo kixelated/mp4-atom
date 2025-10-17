@@ -71,10 +71,6 @@ impl Atom for Hev1 {
         if self.taic.is_some() {
             self.taic.encode(buf)?
         }
-        #[cfg(feature = "fault-tolerant")]
-        for atom in &self.unexpected {
-            atom.encode(buf)?;
-        }
 
         Ok(())
     }
