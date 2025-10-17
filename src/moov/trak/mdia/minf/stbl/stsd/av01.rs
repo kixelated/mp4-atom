@@ -41,6 +41,9 @@ impl Atom for Av01 {
                     tracing::warn!("unknown atom: {:?}", atom);
                     #[cfg(feature = "fault-tolerant")]
                     unexpected.push(atom);
+
+                    #[cfg(not(feature = "fault-tolerant"))]
+                    return Err(Error::UnexpectedBox(atom.kind()));
                 }
             }
         }
