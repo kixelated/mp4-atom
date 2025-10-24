@@ -8,7 +8,6 @@ use crate::*;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Udta {
     pub meta: Option<Meta>,
-    pub skip: Option<Skip>,
 }
 
 impl Atom for Udta {
@@ -16,7 +15,7 @@ impl Atom for Udta {
 
     nested! {
         required: [ ],
-        optional: [ Meta, Skip ],
+        optional: [ Meta ],
         multiple: [ ],
     }
 }
@@ -27,10 +26,7 @@ mod tests {
 
     #[test]
     fn test_udta_empty() {
-        let expected = Udta {
-            meta: None,
-            skip: None,
-        };
+        let expected = Udta { meta: None };
 
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -50,7 +46,6 @@ mod tests {
                 },
                 items: vec![],
             }),
-            skip: None,
         };
 
         let mut buf = Vec::new();

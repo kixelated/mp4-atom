@@ -372,7 +372,6 @@ fn bbb() {
                     hdlr: Hdlr{ handler: FourCC::new(b"mdir"), name: "".into() },
                     items: vec![Ilst::default().into()],
                 }),
-                ..Default::default()
             }),
 
             ..Default::default()
