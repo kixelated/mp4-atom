@@ -218,6 +218,8 @@ fn bbb() {
                     ..Default::default()
                 },
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 24000,
                         language: "und".into(),
@@ -228,12 +230,16 @@ fn bbb() {
                         name: "(C) 2007 Google Inc. v08.13.2007.".into(),
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
+                        unexpected: vec![],
                         smhd: None,
                         vmhd: Vmhd {
                             ..Default::default()
                         }
                         .into(),
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into(),
@@ -270,6 +276,8 @@ fn bbb() {
                                         v_spacing: 1,
                                     }),
                                     taic: None,
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 }
                                 .into()],
                             },
@@ -298,6 +306,8 @@ fn bbb() {
                     ..Default::default()
                 },
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         timescale: 44100,
                         language: "und".into(),
@@ -312,6 +322,8 @@ fn bbb() {
                             ..Default::default()
                         }),
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into(),
@@ -347,6 +359,8 @@ fn bbb() {
                                     },
                                     btrt: Some(Btrt { buffer_size_db: 0, max_bitrate: 125587, avg_bitrate: 125587 }),
                                     taic: None,
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 }
                                 .into()],
                             },
@@ -383,8 +397,12 @@ fn bbb() {
     assert_eq!(
         moof,
         Moof {
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
             mfhd: Mfhd { sequence_number: 1 },
             traf: vec![Traf {
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 1,
                     sample_description_index: 1.into(),
@@ -443,8 +461,12 @@ fn bbb() {
     assert_eq!(
         moof,
         Moof {
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
             mfhd: Mfhd { sequence_number: 2 },
             traf: vec![Traf {
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 2,
                     sample_description_index: 1.into(),

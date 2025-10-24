@@ -26,7 +26,7 @@ pub use subs::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stbl {
     pub stsd: Stsd,
@@ -42,6 +42,8 @@ pub struct Stbl {
     pub subs: Vec<Subs>,
     pub saiz: Vec<Saiz>,
     pub saio: Vec<Saio>,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Stbl {

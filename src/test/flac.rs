@@ -239,6 +239,8 @@ fn flac() {
     assert_eq!(
         moov,
         Moov {
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
             mvhd: Mvhd {
                 creation_time: 3840517353,
                 modification_time: 3840517353,
@@ -261,6 +263,8 @@ fn flac() {
             },
             meta: None,
             mvex: Some(Mvex {
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
                 mehd: None,
                 trex: vec![Trex {
                     track_id: 1,
@@ -271,6 +275,8 @@ fn flac() {
                 }]
             }),
             trak: vec![Trak {
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 3840517353,
                     modification_time: 3840517353,
@@ -297,6 +303,8 @@ fn flac() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 3840517353,
                         modification_time: 3840517353,
@@ -309,9 +317,13 @@ fn flac() {
                         name: "SoundHandler".into(),
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
+                        unexpected: vec![],
                         vmhd: None,
                         smhd: Some(Smhd { balance: 0.into() }),
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into()
@@ -319,6 +331,8 @@ fn flac() {
                             }
                         },
                         stbl: Stbl {
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
                             stsd: Stsd {
                                 codecs: vec![Flac {
                                     audio: Audio {
@@ -353,6 +367,8 @@ fn flac() {
                                             },
                                         ],
                                     },
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 }
                                 .into(),]
                             },

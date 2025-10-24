@@ -18,6 +18,8 @@ pub struct Moov {
     pub mvex: Option<Mvex>,
     pub trak: Vec<Trak>,
     pub udta: Option<Udta>,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Moov {
@@ -137,7 +139,9 @@ mod test {
                         default_sample_description_index: 1,
                         default_sample_duration: 3000,
                         ..Default::default()
-                    }]
+                    }],
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected: vec![],
                 }),
                 trak: vec![Trak {
                     tkhd: Tkhd {
@@ -156,7 +160,9 @@ mod test {
                                 media_rate: 1,
                                 ..Default::default()
                             }]
-                        })
+                        }),
+                        #[cfg(feature = "fault-tolerant")]
+                        unexpected: vec![],
                     }),
                     meta: None,
                     mdia: Mdia {
@@ -184,7 +190,9 @@ mod test {
                             dinf: Dinf {
                                 dref: Dref {
                                     urls: vec![Url::default()]
-                                }
+                                },
+                                #[cfg(feature = "fault-tolerant")]
+                                unexpected: vec![],
                             },
                             stbl: Stbl {
                                 stsd: Stsd {
@@ -219,17 +227,27 @@ mod test {
                                         colr: None,
                                         pasp: None,
                                         taic: None,
+                                        #[cfg(feature = "fault-tolerant")]
+                                        unexpected: vec![],
                                     }
                                     .into()],
                                 },
                                 stco: Some(Stco::default()),
                                 ..Default::default()
-                            }
-                        }
+                            },
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
+                        },
+                        #[cfg(feature = "fault-tolerant")]
+                        unexpected: vec![],
                     },
-                    udta: None
+                    udta: None,
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected: vec![],
                 }],
                 udta: None,
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
             }
         )
     }
