@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1](https://github.com/kixelated/mp4-atom/compare/v0.9.0...v0.9.1) - 2025-11-09
+
+### Added
+
+- *(skip)* free and skip boxes are now automatically skipped during parsing ([#69](https://github.com/kixelated/mp4-atom/pull/69))
+- *(hdlr)* Skips trailing padding in hdlr ([#70](https://github.com/kixelated/mp4-atom/pull/70))
+- *(meta)* add support for QuickTime style meta box ([#68](https://github.com/kixelated/mp4-atom/pull/68))
+
+### Fixed
+
+- *(eac3)* uses the correct number of sub streams, consumes all remaining bytes by definition ([#61](https://github.com/kixelated/mp4-atom/pull/61))
+
 ## [0.9.0](https://github.com/kixelated/mp4-atom/compare/v0.8.1...v0.9.0) - 2025-09-21
 
 ### Fixed
