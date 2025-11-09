@@ -1,5 +1,9 @@
 use crate::*;
 
+///
+/// Free padding space, will be automatically skipped during parsing.
+/// Also see [`Skip`] for a similar atom.
+///
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Free {

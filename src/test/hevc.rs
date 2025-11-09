@@ -584,7 +584,6 @@ fn hevc() {
                     },
                     items: vec![Ilst::default().into(),],
                 }),
-                skip: None,
             })
         }
     );
