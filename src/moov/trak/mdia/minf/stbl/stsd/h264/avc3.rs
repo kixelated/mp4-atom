@@ -38,6 +38,48 @@ mod tests {
         }
     }
 
+    // Extracted from the initialization segment (`IS.mp4`) of the BBC Testcard
+    // HLS stream: https://vs-dash-ww-rd-live.akamaized.net/pl/testcard2020/192x108p25/media.m3u8
+    const BBC_AVC3_SAMPLE: &[u8; 136] =
+        include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data/bbc_avc3.bin"));
+
+    fn bbc_expected() -> Avc3 {
+        Avc3 {
+            visual: Visual {
+                data_reference_index: 1,
+                width: 192,
+                height: 108,
+                horizresolution: 0x48.into(),
+                vertresolution: 0x48.into(),
+                frame_count: 1,
+                compressor: "\x04h264".into(),
+                depth: 24,
+            },
+            avcc: Avcc {
+                configuration_version: 1,
+                avc_profile_indication: 0x42,
+                profile_compatibility: 0xC0,
+                avc_level_indication: 0x15,
+                length_size: 4,
+                sequence_parameter_sets: Vec::new(),
+                picture_parameter_sets: Vec::new(),
+                ext: None,
+            },
+            btrt: None,
+            colr: Some(Colr::Nclx {
+                colour_primaries: 1,
+                transfer_characteristics: 1,
+                matrix_coefficients: 1,
+                full_range_flag: false,
+            }),
+            pasp: Some(Pasp {
+                h_spacing: 1,
+                v_spacing: 1,
+            }),
+            taic: None,
+        }
+    }
+
     fn roundtrip(expected: Avc3) {
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -72,5 +114,31 @@ mod tests {
             clock_type: ClockType::CanSync,
         });
         roundtrip(avc3);
+    }
+
+    #[test]
+    fn test_avc3_decodes_real_bbc_stream() {
+        assert_eq!(BBC_AVC3_SAMPLE.len(), 136);
+        // Sanity-check the extracted box still contains the expected children.
+        let mut inspect = BBC_AVC3_SAMPLE.as_slice();
+        let header = Header::decode(&mut inspect).unwrap();
+        assert_eq!(header.kind, Avc3::KIND);
+        let mut body = inspect;
+        Visual::decode(&mut body).unwrap();
+        assert_eq!(body.remaining(), 50);
+        let mut child_kinds = Vec::new();
+        while let Some(atom) = Any::decode_maybe(&mut body).unwrap() {
+            child_kinds.push(atom.kind());
+        }
+        assert_eq!(
+            child_kinds,
+            vec![Avcc::KIND, Pasp::KIND, Colr::KIND],
+            "unexpected children: {:?}",
+            child_kinds
+        );
+
+        let mut buf = BBC_AVC3_SAMPLE.as_slice();
+        let decoded = Avc3::decode(&mut buf).unwrap();
+        assert_eq!(decoded, bbc_expected());
     }
 }

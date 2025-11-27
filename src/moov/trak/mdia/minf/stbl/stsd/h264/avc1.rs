@@ -1,6 +1,6 @@
 use crate::*;
 
-const AVC1_CODE: u32 = u32::from_be_bytes(*b"avc1");
+const AVC1_CODE: u32 = u32::from_be_bytes([b'a', b'v', b'c', b'1']);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
