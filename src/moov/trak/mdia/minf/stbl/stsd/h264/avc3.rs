@@ -40,8 +40,10 @@ mod tests {
 
     // Extracted from the initialization segment (`IS.mp4`) of the BBC Testcard
     // HLS stream: https://vs-dash-ww-rd-live.akamaized.net/pl/testcard2020/192x108p25/media.m3u8
-    const BBC_AVC3_SAMPLE: &[u8; 136] =
-        include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data/bbc_avc3.bin"));
+    const BBC_AVC3_SAMPLE: &[u8; 136] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/data/bbc_avc3.bin"
+    ));
 
     fn bbc_expected() -> Avc3 {
         Avc3 {
