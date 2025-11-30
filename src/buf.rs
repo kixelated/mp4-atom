@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 /// A contiguous buffer of bytes.
 // We're not using bytes::Buf because of some strange bugs with take().
-pub trait Buf: std::fmt::Debug {
+pub trait Buf {
     fn remaining(&self) -> usize;
     fn has_remaining(&self) -> bool {
         self.remaining() > 0
@@ -26,7 +26,7 @@ impl Buf for &[u8] {
     }
 }
 
-impl<T: AsRef<[u8]> + std::fmt::Debug> Buf for Cursor<T> {
+impl<T: AsRef<[u8]>> Buf for Cursor<T> {
     fn remaining(&self) -> usize {
         self.get_ref().as_ref().len() - self.position() as usize
     }
@@ -72,7 +72,7 @@ impl Buf for bytes::Bytes {
 
 /// A mutable contiguous buffer of bytes.
 // We're not using bytes::BufMut because it doesn't allow seeking backwards (to set the size).
-pub trait BufMut: std::fmt::Debug {
+pub trait BufMut {
     // Returns the current length.
     fn len(&self) -> usize;
 
