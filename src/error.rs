@@ -53,6 +53,9 @@ pub enum Error {
     #[error("unsupported: {0}")]
     Unsupported(&'static str),
 
+    #[error("invalid data: {0}")]
+    InvalidData(&'static str),
+
     // Returned in the rare case when we can't represent a value in the desired type
     #[error("out of memory")]
     OutOfMemory,

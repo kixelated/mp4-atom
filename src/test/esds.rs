@@ -265,9 +265,9 @@ fn esds() {
                                                 max_bitrate: 128000,
                                                 avg_bitrate: 128000,
                                                 dec_specific: esds::DecoderSpecific {
-                                                    profile: 2,
-                                                    freq_index: 4,
-                                                    chan_conf: 2,
+                                                    object_type: esds::AudioObjectType::AacLc,
+                                                    sample_rate: esds::SampleRate::Hz44100,
+                                                    channels: esds::ChannelConfig::Stereo,
                                                 },
                                                 ..Default::default()
                                             },

@@ -76,9 +76,9 @@ mod tests {
                         max_bitrate: 67695,
                         avg_bitrate: 67695,
                         dec_specific: esds::DecoderSpecific {
-                            profile: 2,
-                            freq_index: 4,
-                            chan_conf: 2,
+                            object_type: esds::AudioObjectType::AacLc,
+                            sample_rate: esds::SampleRate::Hz44100,
+                            channels: esds::ChannelConfig::Stereo,
                         },
                     },
                     sl_config: esds::SLConfig::default(),

@@ -247,12 +247,101 @@ impl Encode for DecoderConfig {
     }
 }
 
+/// Audio Object Types defined in ISO/IEC 14496-3.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default, num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(u8)]
+pub enum AudioObjectType {
+    #[default]
+    AacMain = 1,
+    AacLc = 2,
+    AacSsr = 3,
+    AacLtp = 4,
+    Sbr = 5,
+    AacScalable = 6,
+    TwinVq = 7,
+    Celp = 8,
+    Hvxc = 9,
+    Ps = 29,
+}
+
+/// Sample rates indexed by samplingFrequencyIndex (ISO/IEC 14496-3).
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default, num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(u8)]
+pub enum SampleRate {
+    #[default]
+    Hz96000 = 0,
+    Hz88200 = 1,
+    Hz64000 = 2,
+    Hz48000 = 3,
+    Hz44100 = 4,
+    Hz32000 = 5,
+    Hz24000 = 6,
+    Hz22050 = 7,
+    Hz16000 = 8,
+    Hz12000 = 9,
+    Hz11025 = 10,
+    Hz8000 = 11,
+    Hz7350 = 12,
+}
+
+impl SampleRate {
+    const TABLE: [u32; 13] = [
+        96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350,
+    ];
+
+    pub fn from_hz(hz: u32) -> Option<Self> {
+        Self::TABLE
+            .iter()
+            .position(|&h| h == hz)
+            .and_then(|i| Self::try_from(i as u8).ok())
+    }
+
+    pub fn as_hz(self) -> u32 {
+        Self::TABLE[u8::from(self) as usize]
+    }
+}
+
+/// Channel configuration (ISO/IEC 14496-3).
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default, num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(u8)]
+pub enum ChannelConfig {
+    #[default]
+    AotSpecific = 0,
+    Mono = 1,
+    Stereo = 2,
+    Three = 3,
+    Four = 4,
+    Five = 5,
+    FiveOne = 6,
+    SevenOne = 7,
+}
+
+impl ChannelConfig {
+    pub fn channel_count(self) -> Option<u8> {
+        Some(match self {
+            Self::AotSpecific => return None,
+            Self::Mono => 1,
+            Self::Stereo => 2,
+            Self::Three => 3,
+            Self::Four => 4,
+            Self::Five => 5,
+            Self::FiveOne => 6,
+            Self::SevenOne => 8,
+        })
+    }
+}
+
+/// DecoderSpecific descriptor (tag 0x05).
+/// Contains AudioSpecificConfig data (ISO/IEC 14496-3).
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DecoderSpecific {
-    pub profile: u8,
-    pub freq_index: u8,
-    pub chan_conf: u8,
+    pub object_type: AudioObjectType,
+    pub sample_rate: SampleRate,
+    pub channels: ChannelConfig,
 }
 
 impl DecoderSpecific {
@@ -264,47 +353,56 @@ impl Decode for DecoderSpecific {
         let byte_a = u8::decode(buf)?;
         let byte_b = u8::decode(buf)?;
 
-        let mut profile = byte_a >> 3;
-        if profile == 31 {
-            profile = 32 + ((byte_a & 7) | (byte_b >> 5));
+        let mut object_type_raw = byte_a >> 3;
+        if object_type_raw == 31 {
+            object_type_raw = 32 + ((byte_a & 7) | (byte_b >> 5));
         }
 
-        let freq_index = if profile > 31 {
+        let freq_index = if object_type_raw > 31 {
             (byte_b >> 1) & 0x0F
         } else {
             ((byte_a & 0x07) << 1) + (byte_b >> 7)
         };
 
-        let chan_conf;
-        if freq_index == 15 {
-            // Skip the 24 bit sample rate
-            // TODO this needs to be implemented in encode
+        let chan_conf = if freq_index == 15 {
+            // Explicit 24-bit sample rate - not yet supported
             let sample_rate = u24::decode(buf)?;
-            chan_conf = ((u32::from(sample_rate) >> 4) & 0x0F) as u8;
-        } else if profile > 31 {
+            ((u32::from(sample_rate) >> 4) & 0x0F) as u8
+        } else if object_type_raw > 31 {
             let byte_c = u8::decode(buf)?;
-            chan_conf = (byte_b & 1) | (byte_c & 0xE0);
+            (byte_b & 1) | (byte_c & 0xE0)
         } else {
-            chan_conf = (byte_b >> 3) & 0x0F;
-        }
+            (byte_b >> 3) & 0x0F
+        };
 
         if buf.has_remaining() {
-            tracing::warn!("PLEASE FIX: failed to consume all bytes in DecoderSpecificDescriptor");
+            tracing::warn!("unhandled {} bytes in DecoderSpecific", buf.remaining());
             buf.advance(buf.remaining());
         }
 
+        let object_type =
+            AudioObjectType::try_from(object_type_raw).map_err(|_| Error::InvalidData("object_type"))?;
+        let sample_rate =
+            SampleRate::try_from(freq_index).map_err(|_| Error::InvalidData("sample_rate"))?;
+        let channels =
+            ChannelConfig::try_from(chan_conf).map_err(|_| Error::InvalidData("channel_config"))?;
+
         Ok(DecoderSpecific {
-            profile,
-            freq_index,
-            chan_conf,
+            object_type,
+            sample_rate,
+            channels,
         })
     }
 }
 
 impl Encode for DecoderSpecific {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        ((self.profile << 3) + (self.freq_index >> 1)).encode(buf)?;
-        ((self.freq_index << 7) + (self.chan_conf << 3)).encode(buf)?;
+        let object_type: u8 = self.object_type.into();
+        let freq_index: u8 = self.sample_rate.into();
+        let chan_conf: u8 = self.channels.into();
+
+        ((object_type << 3) | (freq_index >> 1)).encode(buf)?;
+        ((freq_index << 7) | (chan_conf << 3)).encode(buf)?;
 
         Ok(())
     }

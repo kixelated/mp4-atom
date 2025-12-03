@@ -15,6 +15,7 @@ categories = ["multimedia::encoding"]
 paste = "1"
 thiserror = "1"
 num = "0.4"
+num_enum = "0.7"
 tracing = "0.1"
 derive_more = { version = "2", features = ["from"] }
 

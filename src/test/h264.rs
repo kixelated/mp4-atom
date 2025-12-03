@@ -345,9 +345,9 @@ fn avcc_ext() {
                                                 max_bitrate: 160000,
                                                 avg_bitrate: 160000,
                                                 dec_specific: esds::DecoderSpecific {
-                                                    profile: 2,
-                                                    freq_index: 3,
-                                                    chan_conf: 2,
+                                                    object_type: esds::AudioObjectType::AacLc,
+                                                    sample_rate: esds::SampleRate::Hz48000,
+                                                    channels: esds::ChannelConfig::Stereo,
                                                 },
                                             },
                                             sl_config: esds::SLConfig::default(),
