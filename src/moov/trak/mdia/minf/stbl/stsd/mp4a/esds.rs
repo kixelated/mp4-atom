@@ -248,7 +248,9 @@ impl Encode for DecoderConfig {
 }
 
 /// Audio Object Types defined in ISO/IEC 14496-3.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Default, num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, Default, num_enum::TryFromPrimitive, num_enum::IntoPrimitive,
+)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(u8)]
 pub enum AudioObjectType {
@@ -266,7 +268,9 @@ pub enum AudioObjectType {
 }
 
 /// Sample rates indexed by samplingFrequencyIndex (ISO/IEC 14496-3).
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Default, num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, Default, num_enum::TryFromPrimitive, num_enum::IntoPrimitive,
+)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(u8)]
 pub enum SampleRate {
@@ -304,7 +308,9 @@ impl SampleRate {
 }
 
 /// Channel configuration (ISO/IEC 14496-3).
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Default, num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, Default, num_enum::TryFromPrimitive, num_enum::IntoPrimitive,
+)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(u8)]
 pub enum ChannelConfig {
@@ -380,8 +386,8 @@ impl Decode for DecoderSpecific {
             buf.advance(buf.remaining());
         }
 
-        let object_type =
-            AudioObjectType::try_from(object_type_raw).map_err(|_| Error::InvalidData("object_type"))?;
+        let object_type = AudioObjectType::try_from(object_type_raw)
+            .map_err(|_| Error::InvalidData("object_type"))?;
         let sample_rate =
             SampleRate::try_from(freq_index).map_err(|_| Error::InvalidData("sample_rate"))?;
         let channels =
