@@ -3,6 +3,7 @@ mod audio;
 mod av01;
 mod btrt;
 mod ccst;
+mod chnl;
 mod colr;
 mod eac3;
 mod flac;
@@ -11,6 +12,7 @@ mod hevc;
 mod mp4a;
 mod opus;
 mod pasp;
+mod pcm;
 mod taic;
 mod tx3g;
 mod uncv;
@@ -22,6 +24,7 @@ pub use audio::*;
 pub use av01::*;
 pub use btrt::*;
 pub use ccst::*;
+pub use chnl::*;
 pub use colr::*;
 pub use eac3::*;
 pub use flac::*;
@@ -30,6 +33,7 @@ pub use hevc::*;
 pub use mp4a::*;
 pub use opus::*;
 pub use pasp::*;
+pub use pcm::*;
 pub use taic::*;
 pub use tx3g::*;
 pub use uncv::*;
@@ -88,6 +92,21 @@ pub enum Codec {
     // EAC-3 audio
     Eac3(Eac3),
 
+    // Uncompressed audio
+    // ipcm and fpcm are from 23003-5.
+    Ipcm(Ipcm),
+    Fpcm(Fpcm),
+    // sowt / twos and in24 / in32 / fl32 / fl64 / lpcm are Quicktime (QTFF-2001).
+    // s16l seems to be something that VLC produced at some point.
+    Sowt(Sowt),
+    Twos(Twos),
+    Lpcm(Lpcm),
+    In24(In24),
+    In32(In32),
+    Fl32(Fl32),
+    Fl64(Fl64),
+    S16l(S16l),
+
     // Unknown
     Unknown(FourCC),
 }
@@ -109,6 +128,16 @@ impl Decode for Codec {
             Any::Flac(atom) => atom.into(),
             Any::Ac3(atom) => atom.into(),
             Any::Eac3(atom) => atom.into(),
+            Any::Ipcm(atom) => atom.into(),
+            Any::Fpcm(atom) => atom.into(),
+            Any::Sowt(atom) => atom.into(),
+            Any::Twos(atom) => atom.into(),
+            Any::Lpcm(atom) => atom.into(),
+            Any::In24(atom) => atom.into(),
+            Any::In32(atom) => atom.into(),
+            Any::Fl32(atom) => atom.into(),
+            Any::Fl64(atom) => atom.into(),
+            Any::S16l(atom) => atom.into(),
             Any::Unknown(kind, _) => Self::Unknown(kind),
             _ => return Err(Error::UnexpectedBox(atom.kind())),
         })
@@ -132,6 +161,16 @@ impl Encode for Codec {
             Self::Flac(atom) => atom.encode(buf),
             Self::Ac3(atom) => atom.encode(buf),
             Self::Eac3(atom) => atom.encode(buf),
+            Self::Ipcm(atom) => atom.encode(buf),
+            Self::Fpcm(atom) => atom.encode(buf),
+            Self::Sowt(atom) => atom.encode(buf),
+            Self::Twos(atom) => atom.encode(buf),
+            Self::Lpcm(atom) => atom.encode(buf),
+            Self::In24(atom) => atom.encode(buf),
+            Self::In32(atom) => atom.encode(buf),
+            Self::Fl32(atom) => atom.encode(buf),
+            Self::Fl64(atom) => atom.encode(buf),
+            Self::S16l(atom) => atom.encode(buf),
         }
     }
 }
