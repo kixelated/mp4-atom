@@ -193,9 +193,12 @@ mod tests {
         let chnl = Chnl {
             channel_structure: Some(ChannelStructure::DefinedLayout {
                 layout: 2, // Stereo
-                omitted_channels_map: 0,
+                omitted_channels_map: Some(0),
+                channel_order_definition: None,
             }),
             object_count: None,
+            format_ordering: None,
+            base_channel_count: None,
         };
         let pcm = Pcm {
             fourcc: FourCC::new(b"fpcm"),
@@ -225,9 +228,12 @@ mod tests {
         let chnl = Chnl {
             channel_structure: Some(ChannelStructure::DefinedLayout {
                 layout: 2, // Stereo
-                omitted_channels_map: 0,
+                omitted_channels_map: Some(0),
+                channel_order_definition: None,
             }),
             object_count: Some(2),
+            format_ordering: None,
+            base_channel_count: None,
         };
         let pcm = Pcm {
             fourcc: FourCC::new(b"ipcm"),
@@ -262,6 +268,8 @@ mod tests {
                 ],
             }),
             object_count: Some(2),
+            format_ordering: None,
+            base_channel_count: None,
         };
         let pcm = Pcm {
             fourcc: FourCC::new(b"fpcm"),
@@ -296,6 +304,8 @@ mod tests {
                 ],
             }),
             object_count: None,
+            format_ordering: None,
+            base_channel_count: None,
         };
         let pcm = Pcm {
             fourcc: FourCC::new(b"fpcm"),
@@ -333,6 +343,8 @@ mod tests {
                 ],
             }),
             object_count: None,
+            format_ordering: None,
+            base_channel_count: None,
         };
         let pcm = Pcm {
             fourcc: FourCC::new(b"fpcm"),
@@ -350,6 +362,41 @@ mod tests {
         pcm.encode_with_fourcc(&mut buf).unwrap();
 
         let decoded = Pcm::decode_with_fourcc(FourCC::new(b"fpcm"), &mut &buf[..]).unwrap();
+        assert_eq!(pcm, decoded);
+    }
+
+    #[test]
+    fn test_pcm_v1_chnl() {
+        let pcmc = PcmC {
+            big_endian: false,
+            sample_size: 24,
+        };
+        let chnl = Chnl {
+            channel_structure: Some(ChannelStructure::ExplicitPositions {
+                positions: vec![
+                    SpeakerPosition::Standard(AudioChannelPosition::FrontLeft),
+                    SpeakerPosition::Standard(AudioChannelPosition::FrontRight),
+                ],
+            }),
+            object_count: Some(1),
+            format_ordering: Some(1),
+            base_channel_count: Some(3),
+        };
+        let pcm = Lpcm {
+            audio: Audio {
+                data_reference_index: 1,
+                channel_count: 2,
+                sample_size: 24,
+                sample_rate: 48000.into(),
+            },
+            pcmc,
+            chnl: Some(chnl),
+        };
+
+        let mut buf = Vec::new();
+        pcm.encode(&mut buf).unwrap();
+
+        let decoded = Lpcm::decode(&mut &buf[..]).unwrap();
         assert_eq!(pcm, decoded);
     }
 }
