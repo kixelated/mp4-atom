@@ -386,6 +386,8 @@ fn bbb() {
                     hdlr: Hdlr{ handler: FourCC::new(b"mdir"), name: "".into() },
                     items: vec![Ilst::default().into()],
                 }),
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
             }),
 
             ..Default::default()
