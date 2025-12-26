@@ -1,54 +1,151 @@
 use crate::*;
 
-// ISO/IEC 23091-3 Audio Channel Position
+/// ISO/IEC 23091-3 Audio Channel Position
+///
+/// Consistent with ISO/IEC 23091-3:2018/Amd. 1:2022(E) Table 2 changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(u8)]
 pub enum AudioChannelPosition {
+    /// Front left (L).
     FrontLeft = 0,
+
+    /// Front right (R).
     FrontRight = 1,
+
+    /// Centre front (C).
     FrontCenter = 2,
+
+    /// Low frequency enhancement (LFE).
     Lfe1 = 3,
+
+    /// Left surround (Ls).
     LeftSurround = 4,
+
+    /// Right surround (Rs).
     RightSurround = 5,
+
+    /// Left front centre (Lc).
     FrontLeftOfCenter = 6,
+
+    /// Right front centre (Rc).
     FrontRightOfCenter = 7,
+
+    /// Rear surround left (Lsr).
     RearLeft = 8,
+
+    /// Rear surround right (Rsr).
     RearRight = 9,
+
+    /// Rear centre (Cs).
     RearCenter = 10,
+
+    /// Left surround direct (Lsd).
     SurroundLeft = 11,
+
+    /// Right surround direct (Rsd).
     SurroundRight = 12,
+
+    /// Left side surround (Lss).
     SideLeft = 13,
+
+    /// Right side surround (Rss).
     SideRight = 14,
+
+    /// Left wide front (Lw).
     FrontLeftWide = 15,
+
+    /// Right wide front (Rw).
     FrontRightWide = 16,
+
+    /// Left front vertical height (Lv).
     TopFrontLeft = 17,
+
+    /// Right front vertical height (Rv).
     TopFrontRight = 18,
+
+    /// Centre front vertical height (Cv).
     TopFrontCenter = 19,
+
+    /// Left surround vertical height rear (Lvr).
     TopRearLeft = 20,
+
+    /// Right surround vertical height rear (Rvr).
     TopRearRight = 21,
+
+    /// Centre vertical height rear (Cvr).
     TopRearCenter = 22,
+
+    /// Left vertical height side surround (Lvss).
     TopSideLeft = 23,
+
+    /// Right vertical height side surround (Rvss).
     TopSideRight = 24,
+
+    /// Top centre surround (Ts).
     TopCenter = 25,
+
+    /// Low frequency enhancement 2 (LFE2).
     Lfe2 = 26,
+
+    /// Left front vertical bottom (Lb).
     BottomFrontLeft = 27,
+
+    /// Right front vertical bottom (Rb).
     BottomFrontRight = 28,
+
+    /// Centre front vertical bottom (Cb).
     BottomFrontCenter = 29,
+
+    /// Left vertical height surround (Lvs).
     TopSurroundLeft = 30,
+
+    /// Right vertical height surround (Rvs).
     TopSurroundRight = 31,
+
     // 32-35: reserved
+    /// Low frequency enhancement 3 (LFE3).
     Lfe3 = 36,
+
+    /// Left edge of screen (Leos).
     Leos = 37,
+
+    /// Right edge of screen (Reos).
     Reos = 38,
+
+    /// Half-way between centre of screen and left edge of screen (Hwbcal).
     Hwbcal = 39,
+
+    /// Half-way between centre of screen and right edge of screen (Hwbcar).
     Hwbcar = 40,
+
+    /// Left back surround (Lbs).
     Lbs = 41,
+
+    /// Right back surround (Rbs).
     Rbs = 42,
+
+    /// Left ear (Lear).
+    ///
+    /// Audio signals associated with this loudspeaker position are intended for
+    /// stereo headphone playback only. They can be unsuitable for loudspeaker
+    /// playback. This loudspeaker position is applicable for binaural signals
+    /// but it shall not be applied for traditional stereo signals.
+    LeftEar = 43,
+
+    /// Right ear (Rear).
+    ///
+    /// Audio signals associated with this loudspeaker position are intended for
+    /// stereo headphone playback only. They can be unsuitable for loudspeaker
+    /// playback. This loudspeaker position is applicable for binaural signals
+    /// but it shall not be applied for traditional stereo signals.
+    RightEar = 44,
+
     // 45-125: reserved
     // ExplicitPosition is handled separately with SpeakerPosition::Standard.
     // ExplicitPosition = 126, // Followed by azimuth (i16) and elevation (i8)
-    Unknown = 127, // Unknown/undefined position (unpositioned)
+    /// Unknown/undefined position (unpositioned).
+    Unknown = 127,
 }
 
 impl AudioChannelPosition {
@@ -93,13 +190,17 @@ impl AudioChannelPosition {
             40 => Some(Self::Hwbcar),
             41 => Some(Self::Lbs),
             42 => Some(Self::Rbs),
+            43 => Some(Self::LeftEar),
+            44 => Some(Self::RightEar),
             127 => Some(Self::Unknown),
             _ => None,
         }
     }
 }
 
-// Pre-defined channel layouts
+/// Pre-defined channel layouts.
+///
+/// Consistent with ISO/IEC 23091-3:2018/Amd. 1:2022(E) Table 3 changes
 const CHANNEL_LAYOUTS: &[&[AudioChannelPosition]] = &[
     // 0
     &[],
@@ -128,16 +229,16 @@ const CHANNEL_LAYOUTS: &[&[AudioChannelPosition]] = &[
         AudioChannelPosition::FrontCenter,
         AudioChannelPosition::FrontLeft,
         AudioChannelPosition::FrontRight,
-        AudioChannelPosition::SideLeft,
-        AudioChannelPosition::SideRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
     ],
     // 6
     &[
         AudioChannelPosition::FrontCenter,
         AudioChannelPosition::FrontLeft,
         AudioChannelPosition::FrontRight,
-        AudioChannelPosition::SideLeft,
-        AudioChannelPosition::SideRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
         AudioChannelPosition::Lfe1,
     ],
     // 7
@@ -147,8 +248,8 @@ const CHANNEL_LAYOUTS: &[&[AudioChannelPosition]] = &[
         AudioChannelPosition::FrontRightOfCenter,
         AudioChannelPosition::FrontLeft,
         AudioChannelPosition::FrontRight,
-        AudioChannelPosition::SideLeft,
-        AudioChannelPosition::SideRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
         AudioChannelPosition::Lfe1,
     ],
     // 8
@@ -163,16 +264,16 @@ const CHANNEL_LAYOUTS: &[&[AudioChannelPosition]] = &[
     &[
         AudioChannelPosition::FrontLeft,
         AudioChannelPosition::FrontRight,
-        AudioChannelPosition::SideLeft,
-        AudioChannelPosition::SideRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
     ],
     // 11
     &[
         AudioChannelPosition::FrontCenter,
         AudioChannelPosition::FrontLeft,
         AudioChannelPosition::FrontRight,
-        AudioChannelPosition::SideLeft,
-        AudioChannelPosition::SideRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
         AudioChannelPosition::RearCenter,
         AudioChannelPosition::Lfe1,
     ],
@@ -181,8 +282,8 @@ const CHANNEL_LAYOUTS: &[&[AudioChannelPosition]] = &[
         AudioChannelPosition::FrontCenter,
         AudioChannelPosition::FrontLeft,
         AudioChannelPosition::FrontRight,
-        AudioChannelPosition::SideLeft,
-        AudioChannelPosition::SideRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
         AudioChannelPosition::RearLeft,
         AudioChannelPosition::RearRight,
         AudioChannelPosition::Lfe1,
@@ -194,8 +295,8 @@ const CHANNEL_LAYOUTS: &[&[AudioChannelPosition]] = &[
         AudioChannelPosition::FrontRightOfCenter,
         AudioChannelPosition::FrontLeft,
         AudioChannelPosition::FrontRight,
-        AudioChannelPosition::SurroundLeft,
-        AudioChannelPosition::SurroundRight,
+        AudioChannelPosition::SideLeft,
+        AudioChannelPosition::SideRight,
         AudioChannelPosition::RearLeft,
         AudioChannelPosition::RearRight,
         AudioChannelPosition::RearCenter,
@@ -219,12 +320,110 @@ const CHANNEL_LAYOUTS: &[&[AudioChannelPosition]] = &[
         AudioChannelPosition::FrontCenter,
         AudioChannelPosition::FrontLeft,
         AudioChannelPosition::FrontRight,
-        AudioChannelPosition::SideLeft,
-        AudioChannelPosition::SideRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
         AudioChannelPosition::Lfe1,
         AudioChannelPosition::TopFrontLeft,
         AudioChannelPosition::TopFrontRight,
     ],
+    // 15
+    &[
+        AudioChannelPosition::FrontCenter,
+        AudioChannelPosition::FrontLeft,
+        AudioChannelPosition::FrontRight,
+        AudioChannelPosition::SideLeft,
+        AudioChannelPosition::SideRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
+        AudioChannelPosition::TopFrontLeft,
+        AudioChannelPosition::TopFrontRight,
+        AudioChannelPosition::TopRearCenter,
+        AudioChannelPosition::Lfe1,
+        AudioChannelPosition::Lfe2,
+    ],
+    // 16
+    &[
+        AudioChannelPosition::FrontCenter,
+        AudioChannelPosition::FrontLeft,
+        AudioChannelPosition::FrontRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
+        AudioChannelPosition::Lfe1,
+        AudioChannelPosition::TopFrontLeft,
+        AudioChannelPosition::TopFrontRight,
+        AudioChannelPosition::TopSurroundLeft,
+        AudioChannelPosition::TopSurroundRight,
+    ],
+    // 17
+    &[
+        AudioChannelPosition::FrontCenter,
+        AudioChannelPosition::FrontLeft,
+        AudioChannelPosition::FrontRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
+        AudioChannelPosition::Lfe1,
+        AudioChannelPosition::TopFrontLeft,
+        AudioChannelPosition::TopFrontRight,
+        AudioChannelPosition::TopFrontCenter,
+        AudioChannelPosition::TopSurroundLeft,
+        AudioChannelPosition::TopSurroundRight,
+        AudioChannelPosition::TopCenter,
+    ],
+    // 18
+    &[
+        AudioChannelPosition::FrontCenter,
+        AudioChannelPosition::FrontLeft,
+        AudioChannelPosition::FrontRight,
+        AudioChannelPosition::LeftSurround,
+        AudioChannelPosition::RightSurround,
+        AudioChannelPosition::Lbs,
+        AudioChannelPosition::Rbs,
+        AudioChannelPosition::Lfe1,
+        AudioChannelPosition::TopFrontLeft,
+        AudioChannelPosition::TopFrontRight,
+        AudioChannelPosition::TopFrontCenter,
+        AudioChannelPosition::TopSurroundLeft,
+        AudioChannelPosition::TopSurroundRight,
+        AudioChannelPosition::TopCenter,
+    ],
+    // 19
+    &[
+        AudioChannelPosition::FrontCenter,
+        AudioChannelPosition::FrontLeft,
+        AudioChannelPosition::FrontRight,
+        AudioChannelPosition::SideLeft,
+        AudioChannelPosition::SideRight,
+        AudioChannelPosition::RearLeft,
+        AudioChannelPosition::RearRight,
+        AudioChannelPosition::Lfe1,
+        AudioChannelPosition::TopFrontLeft,
+        AudioChannelPosition::TopFrontRight,
+        AudioChannelPosition::TopRearLeft,
+        AudioChannelPosition::TopRearRight,
+    ],
+    // 20
+    &[
+        AudioChannelPosition::FrontCenter,
+        AudioChannelPosition::Leos,
+        AudioChannelPosition::Reos,
+        AudioChannelPosition::FrontLeft,
+        AudioChannelPosition::FrontRight,
+        AudioChannelPosition::SideLeft,
+        AudioChannelPosition::SideRight,
+        AudioChannelPosition::RearLeft,
+        AudioChannelPosition::RearRight,
+        AudioChannelPosition::Lfe1,
+        AudioChannelPosition::TopFrontLeft,
+        AudioChannelPosition::TopFrontRight,
+        AudioChannelPosition::TopSurroundLeft,
+        AudioChannelPosition::TopSurroundRight,
+    ],
+    // 21
+    &[
+        AudioChannelPosition::LeftEar,
+        AudioChannelPosition::RightEar,
+    ],
+    // 22 to 63 reserved
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
