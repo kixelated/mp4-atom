@@ -50,6 +50,7 @@ pub struct Pcm {
     pub audio: Audio,
     pub pcmc: PcmC,
     pub chnl: Option<Chnl>,
+    pub btrt: Option<Btrt>,
 }
 
 impl Pcm {
@@ -57,6 +58,7 @@ impl Pcm {
         audio: &Audio,
         pcmc: &PcmC,
         chnl: Option<&Chnl>,
+        btrt: Option<&Btrt>,
         buf: &mut B,
     ) -> Result<()> {
         audio.encode(buf)?;
@@ -64,6 +66,10 @@ impl Pcm {
 
         if let Some(chnl) = chnl {
             chnl.encode(buf)?;
+        }
+
+        if let Some(btrt) = btrt {
+            btrt.encode(buf)?;
         }
 
         Ok(())
@@ -74,6 +80,7 @@ impl Pcm {
 
         let mut chnl = None;
         let mut pcmc = None;
+        let mut btrt = None;
 
         while buf.remaining() > 0 {
             let header = match Header::decode_maybe(buf)? {
@@ -99,6 +106,7 @@ impl Pcm {
             } else {
                 match Any::decode_atom(&header, &mut limited)? {
                     Any::PcmC(atom) => pcmc = Some(atom),
+                    Any::Btrt(atom) => btrt = Some(atom),
                     _ => tracing::warn!("unknown atom in PCM sample entry: {:?}", header.kind),
                 }
             }
@@ -111,18 +119,18 @@ impl Pcm {
             audio,
             pcmc: pcmc.ok_or(Error::MissingBox(PcmC::KIND))?,
             chnl,
+            btrt,
         })
     }
 
     pub fn encode_with_fourcc<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        self.audio.encode(buf)?;
-        self.pcmc.encode(buf)?;
-
-        if let Some(ref chnl) = self.chnl {
-            chnl.encode(buf)?;
-        }
-
-        Ok(())
+        Self::encode_fields(
+            &self.audio,
+            &self.pcmc,
+            self.chnl.as_ref(),
+            self.btrt.as_ref(),
+            buf,
+        )
     }
 }
 
@@ -134,6 +142,7 @@ macro_rules! define_pcm_sample_entry {
             pub audio: Audio,
             pub pcmc: PcmC,
             pub chnl: Option<Chnl>,
+            pub btrt: Option<Btrt>,
         }
 
         impl Atom for $name {
@@ -145,11 +154,18 @@ macro_rules! define_pcm_sample_entry {
                     audio: entry.audio,
                     pcmc: entry.pcmc,
                     chnl: entry.chnl,
+                    btrt: entry.btrt,
                 })
             }
 
             fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-                Pcm::encode_fields(&self.audio, &self.pcmc, self.chnl.as_ref(), buf)
+                Pcm::encode_fields(
+                    &self.audio,
+                    &self.pcmc,
+                    self.chnl.as_ref(),
+                    self.btrt.as_ref(),
+                    buf,
+                )
             }
         }
     };
@@ -210,6 +226,7 @@ mod tests {
             },
             pcmc,
             chnl: Some(chnl),
+            btrt: None,
         };
 
         let mut buf = Vec::new();
@@ -245,6 +262,7 @@ mod tests {
             },
             pcmc,
             chnl: Some(chnl),
+            btrt: None,
         };
 
         let mut buf = Vec::new();
@@ -281,6 +299,11 @@ mod tests {
             },
             pcmc,
             chnl: Some(chnl),
+            btrt: Some(Btrt {
+                buffer_size_db: 6,
+                max_bitrate: 2_304_096,
+                avg_bitrate: 2_304_000,
+            }),
         };
 
         let mut buf = Vec::new();
@@ -317,6 +340,7 @@ mod tests {
             },
             pcmc,
             chnl: Some(chnl),
+            btrt: None,
         };
 
         let mut buf = Vec::new();
@@ -356,6 +380,7 @@ mod tests {
             },
             pcmc,
             chnl: Some(chnl),
+            btrt: None,
         };
 
         let mut buf = Vec::new();
@@ -391,6 +416,7 @@ mod tests {
             },
             pcmc,
             chnl: Some(chnl),
+            btrt: None,
         };
 
         let mut buf = Vec::new();
@@ -398,5 +424,60 @@ mod tests {
 
         let decoded = Lpcm::decode(&mut &buf[..]).unwrap();
         assert_eq!(pcm, decoded);
+    }
+
+    const ENCODED_IPCM: &[u8] = &[
+        0x00, 0x00, 0x00, 0x5c, 0x69, 0x70, 0x63, 0x6d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x18, 0x00, 0x00,
+        0x00, 0x00, 0xbb, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x70, 0x63, 0x6d, 0x43, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x16, 0x63, 0x68, 0x6e, 0x6c, 0x00, 0x00,
+        0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x14, 0x62, 0x74, 0x72, 0x74, 0x00, 0x00, 0x00, 0x06, 0x00, 0x23, 0x28, 0x60, 0x00, 0x23,
+        0x28, 0x00,
+    ];
+
+    fn decoded_ipcm() -> Ipcm {
+        Ipcm {
+            audio: Audio {
+                data_reference_index: 1,
+                channel_count: 2,
+                sample_size: 24,
+                sample_rate: FixedPoint::new(48000, 0),
+            },
+            pcmc: PcmC {
+                big_endian: true,
+                sample_size: 24,
+            },
+            chnl: Some(Chnl {
+                channel_structure: Some(ChannelStructure::DefinedLayout {
+                    layout: 2,
+                    omitted_channels_map: Some(0),
+                    channel_order_definition: None,
+                }),
+                object_count: None,
+                format_ordering: None,
+                base_channel_count: None,
+            }),
+            btrt: Some(Btrt {
+                buffer_size_db: 6,
+                max_bitrate: 2_304_096,
+                avg_bitrate: 2_304_000,
+            }),
+        }
+    }
+
+    #[test]
+    fn test_ipcm_decode() {
+        let buf = &mut std::io::Cursor::new(ENCODED_IPCM);
+        let ipcm = Ipcm::decode(buf).expect("failed to decode ipcm");
+        assert_eq!(ipcm, decoded_ipcm());
+    }
+
+    #[test]
+    fn test_ipcm_encode() {
+        let ipcm = decoded_ipcm();
+        let mut buf = Vec::new();
+        ipcm.encode(&mut buf).unwrap();
+        assert_eq!(buf.as_slice(), ENCODED_IPCM);
     }
 }
