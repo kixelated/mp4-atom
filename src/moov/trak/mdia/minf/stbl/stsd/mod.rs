@@ -56,6 +56,9 @@ pub enum Codec {
     // H264
     Avc1(Avc1),
 
+    // H264: SPS/PPS/VPS is inline
+    Avc3(Avc3),
+
     // HEVC: SPS/PPS/VPS is inline
     Hev1(Hev1),
 
@@ -116,6 +119,7 @@ impl Decode for Codec {
         let atom = Any::decode(buf)?;
         Ok(match atom {
             Any::Avc1(atom) => atom.into(),
+            Any::Avc3(atom) => atom.into(),
             Any::Hev1(atom) => atom.into(),
             Any::Hvc1(atom) => atom.into(),
             Any::Vp08(atom) => atom.into(),
@@ -149,6 +153,7 @@ impl Encode for Codec {
         match self {
             Self::Unknown(kind) => kind.encode(buf),
             Self::Avc1(atom) => atom.encode(buf),
+            Self::Avc3(atom) => atom.encode(buf),
             Self::Hev1(atom) => atom.encode(buf),
             Self::Hvc1(atom) => atom.encode(buf),
             Self::Vp08(atom) => atom.encode(buf),
