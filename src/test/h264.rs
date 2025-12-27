@@ -118,6 +118,8 @@ fn avcc_ext() {
 
     let moov = Moov::decode(buf).expect("failed to decode moov");
     let expected = Moov {
+        #[cfg(feature = "fault-tolerant")]
+        unexpected: vec![],
         mvhd: Mvhd {
             creation_time: 0,
             modification_time: 0,
@@ -140,6 +142,8 @@ fn avcc_ext() {
         },
         meta: None,
         mvex: Some(Mvex {
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
             mehd: None,
             trex: vec![
                 Trex {
@@ -160,6 +164,8 @@ fn avcc_ext() {
         }),
         trak: vec![
             Trak {
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 0,
                     modification_time: 0,
@@ -186,6 +192,8 @@ fn avcc_ext() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 0,
                         modification_time: 0,
@@ -198,6 +206,8 @@ fn avcc_ext() {
                         name: "L-SMASH Video Handler".to_string(),
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
+                        unexpected: vec![],
                         vmhd: Some(Vmhd {
                             graphics_mode: 0,
                             op_color: RgbColor {
@@ -208,11 +218,15 @@ fn avcc_ext() {
                         }),
                         smhd: None,
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url::default()],
                             },
                         },
                         stbl: Stbl {
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
                             stsd: Stsd {
                                 codecs: vec![Avc1 {
                                     visual: Visual {
@@ -258,7 +272,7 @@ fn avcc_ext() {
                                         h_spacing: 1,
                                         v_spacing: 1,
                                     }),
-                                    taic: None,
+                                    ..Default::default()
                                 }
                                 .into()],
                             },
@@ -280,6 +294,8 @@ fn avcc_ext() {
                 udta: None,
             },
             Trak {
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 0,
                     modification_time: 0,
@@ -306,6 +322,8 @@ fn avcc_ext() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 0,
                         modification_time: 0,
@@ -318,14 +336,20 @@ fn avcc_ext() {
                         name: "L-SMASH Audio Handler".into(),
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
+                        unexpected: vec![],
                         vmhd: None,
                         smhd: Some(Smhd::default()),
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url::default()],
                             },
                         },
                         stbl: Stbl {
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
                             stsd: Stsd {
                                 codecs: vec![Mp4a {
                                     audio: Audio {
@@ -359,6 +383,8 @@ fn avcc_ext() {
                                         avg_bitrate: 160000,
                                     }),
                                     taic: None,
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 }
                                 .into()],
                             },
@@ -380,7 +406,11 @@ fn avcc_ext() {
                 udta: None,
             },
         ],
-        udta: Some(Udta { meta: None }),
+        udta: Some(Udta {
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
+            meta: None,
+        }),
     };
 
     assert_eq!(moov, expected, "different decoded result");
@@ -665,10 +695,14 @@ fn avc_encrypted_segment() {
     assert_eq!(
         moof,
         Moof {
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
             mfhd: Mfhd {
                 sequence_number: 4382715
             },
             traf: vec![Traf {
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
                 tfhd: Tfhd {
                     track_id: 1,
                     base_data_offset: None,

@@ -1,10 +1,12 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Flac {
     pub audio: Audio,
     pub dfla: Dfla,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Flac {
@@ -14,16 +16,28 @@ impl Atom for Flac {
         let audio = Audio::decode(buf)?;
 
         let mut dfla = None;
+        #[cfg(feature = "fault-tolerant")]
+        let mut unexpected = Vec::new();
+
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Dfla(atom) => dfla = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                _ => {
+                    tracing::warn!("unknown atom: {:?}", atom);
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected.push(atom);
+
+                    #[cfg(not(feature = "fault-tolerant"))]
+                    return Err(Error::UnexpectedBox(atom.kind()));
+                }
             }
         }
 
         Ok(Self {
             audio,
             dfla: dfla.ok_or(Error::MissingBox(Dfla::KIND))?,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected,
         })
     }
 

@@ -23,9 +23,11 @@ tokio = { version = "1", features = ["io-util"], optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 
 [features]
+default = ["fault-tolerant"]
 tokio = ["dep:tokio"]
 bytes = ["dep:bytes"]
 serde = ["dep:serde", "bytes/serde"]
+fault-tolerant = []
 
 [dev-dependencies]
 anyhow = "1"

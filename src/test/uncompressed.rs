@@ -89,6 +89,8 @@ fn uncompressed() {
     assert_eq!(
         moov,
         Moov {
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
             mvhd: Mvhd {
                 creation_time: 3827291266,
                 modification_time: 3827291266,
@@ -112,6 +114,8 @@ fn uncompressed() {
             meta: None,
             mvex: None,
             trak: [Trak {
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
                 tkhd: Tkhd {
                     creation_time: 3827291266,
                     modification_time: 3827291266,
@@ -138,6 +142,8 @@ fn uncompressed() {
                 edts: None,
                 meta: None,
                 mdia: Mdia {
+                    #[cfg(feature = "fault-tolerant")]
+                    unexpected: vec![],
                     mdhd: Mdhd {
                         creation_time: 3827291266,
                         modification_time: 3827291266,
@@ -150,6 +156,8 @@ fn uncompressed() {
                         name: "GPAC ISO Video Handler".into(),
                     },
                     minf: Minf {
+                        #[cfg(feature = "fault-tolerant")]
+                        unexpected: vec![],
                         vmhd: Some(Vmhd {
                             graphics_mode: 0,
                             op_color: RgbColor {
@@ -160,6 +168,8 @@ fn uncompressed() {
                         }),
                         smhd: None,
                         dinf: Dinf {
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
                             dref: Dref {
                                 urls: vec![Url {
                                     location: "".into()
@@ -167,6 +177,8 @@ fn uncompressed() {
                             }
                         },
                         stbl: Stbl {
+                            #[cfg(feature = "fault-tolerant")]
+                            unexpected: vec![],
                             stsd: Stsd {
                                 codecs: vec![Codec::Uncv(Uncv {
                                     visual: Visual {
@@ -237,7 +249,9 @@ fn uncompressed() {
                                         avg_bitrate: 48
                                     }),
                                     ccst: None,
-                                    pasp: None
+                                    pasp: None,
+                                    #[cfg(feature = "fault-tolerant")]
+                                    unexpected: vec![],
                                 })],
                             },
                             stts: Stts {
@@ -283,6 +297,8 @@ fn uncompressed() {
             }]
             .into(),
             udta: Some(Udta {
+                #[cfg(feature = "fault-tolerant")]
+                unexpected: vec![],
                 meta: Some(Meta {
                     hdlr: Hdlr {
                         handler: FourCC::new(b"mdir"),

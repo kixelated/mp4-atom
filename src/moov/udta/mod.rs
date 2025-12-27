@@ -4,10 +4,12 @@ pub use skip::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Udta {
     pub meta: Option<Meta>,
+    #[cfg(feature = "fault-tolerant")]
+    pub unexpected: Vec<Any>,
 }
 
 impl Atom for Udta {
@@ -26,7 +28,11 @@ mod tests {
 
     #[test]
     fn test_udta_empty() {
-        let expected = Udta { meta: None };
+        let expected = Udta {
+            meta: None,
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
+        };
 
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -46,6 +52,8 @@ mod tests {
                 },
                 items: vec![],
             }),
+            #[cfg(feature = "fault-tolerant")]
+            unexpected: vec![],
         };
 
         let mut buf = Vec::new();
