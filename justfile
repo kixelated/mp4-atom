@@ -11,6 +11,7 @@ default:
 
 # Run the CI checks
 check:
+	cargo check --all-targets --no-default-features
 	cargo check --all-targets --all-features
 	cargo clippy --all-targets --all-features -- -D warnings
 	cargo fmt -- --check
@@ -18,7 +19,8 @@ check:
 
 # Run any CI tests
 test:
-	cargo test --all-targets
+	cargo test --all-targets --all-features
+	cargo test --all-targets --no-default-features
 
 # Automatically fix some issues.
 fix:
