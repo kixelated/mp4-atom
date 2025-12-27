@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0](https://github.com/kixelated/mp4-atom/compare/v0.9.2...v0.10.0) - 2025-12-27
+
+### Other
+
+- fix taic encoding ([#83](https://github.com/kixelated/mp4-atom/pull/83))
+- minor comment fix ([#82](https://github.com/kixelated/mp4-atom/pull/82))
+- add support for btrt box in uncompressed audio ([#80](https://github.com/kixelated/mp4-atom/pull/80))
+- Add support for raw audio as per ISO/IEC 23003-5 ([#78](https://github.com/kixelated/mp4-atom/pull/78))
+
 ## [0.9.2](https://github.com/kixelated/mp4-atom/compare/v0.9.1...v0.9.2) - 2025-11-30
 
 ### Other
