@@ -15,7 +15,7 @@ impl Atom for Opus {
 
         let mut dops = None;
 
-        // Find esds in mp4a or wave
+        // Find d0ps in mp4a or wave
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Dops(atom) => dops = atom.into(),
