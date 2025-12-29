@@ -18,7 +18,7 @@ impl Atom for Vp08 {
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::VpcC(atom) => vpcc = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                unknown => crate::unexpected_atom(unknown)?,
             }
         }
 

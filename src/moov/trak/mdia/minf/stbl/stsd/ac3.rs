@@ -20,7 +20,7 @@ impl Atom for Ac3 {
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Ac3SpecificBox(atom) => dac3 = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                unknown => crate::unexpected_atom(unknown)?,
             }
         }
 

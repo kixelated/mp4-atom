@@ -17,7 +17,7 @@ impl Atom for Flac {
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Dfla(atom) => dfla = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                unknown => crate::unexpected_atom(unknown)?,
             }
         }
 

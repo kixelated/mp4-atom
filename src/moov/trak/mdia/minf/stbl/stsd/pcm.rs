@@ -107,7 +107,7 @@ impl Pcm {
                 match Any::decode_atom(&header, &mut limited)? {
                     Any::PcmC(atom) => pcmc = Some(atom),
                     Any::Btrt(atom) => btrt = Some(atom),
-                    _ => tracing::warn!("unknown atom in PCM sample entry: {:?}", header.kind),
+                    atom => crate::unexpected_atom(atom)?,
                 }
             }
 

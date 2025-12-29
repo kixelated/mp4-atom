@@ -68,3 +68,16 @@ pub enum Error {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+/// Either logs or returns an error depending on the environment/flag.
+pub(crate) fn unexpected_box(kind: FourCC) -> Result<()> {
+    // TODO return an error when the `strict` feature flag is enabled.
+    // TODO return an error when run as a unit test, after fixing them.
+    tracing::warn!(%kind, "unexpected box");
+    Ok(())
+}
+
+/// Either logs or returns an error depending on the environment/flag.
+pub(crate) fn unexpected_atom(atom: crate::Any) -> Result<()> {
+    unexpected_box(atom.kind())
+}

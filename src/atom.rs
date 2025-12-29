@@ -193,11 +193,11 @@ macro_rules! nested {
                             [<$multiple:lower>].push(atom.into());
                         },)*
                         Any::Unknown(kind, _) => {
-                            tracing::warn!("unknown box: {:?}", kind);
+                            tracing::warn!(%kind, "unknown box");
                         },
-                        Any::Skip(atom) => tracing::debug!("skipping skip box of size {}", atom.zeroed.size),
-                        Any::Free(atom) => tracing::debug!("skipping free box of size {}", atom.zeroed.size),
-                        _ => return Err(Error::UnexpectedBox(atom.kind())),
+                        Any::Skip(atom) => tracing::debug!(size = atom.zeroed.size, "skipping skip box"),
+                        Any::Free(atom) => tracing::debug!(size = atom.zeroed.size, "skipping free box"),
+                        _ => crate::unexpected_atom(atom)?,
                     }
                 }
 
