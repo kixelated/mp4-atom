@@ -29,7 +29,7 @@ impl Atom for Hev1 {
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
-                unknown => crate::unexpected_atom(unknown)?,
+                unknown => Self::decode_unknown(&unknown)?,
             }
         }
 

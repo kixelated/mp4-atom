@@ -20,7 +20,7 @@ impl Atom for Eac3 {
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Ec3SpecificBox(atom) => dec3 = atom.into(),
-                unknown => crate::unexpected_atom(unknown)?,
+                unknown => Self::decode_unknown(&unknown)?,
             }
         }
 

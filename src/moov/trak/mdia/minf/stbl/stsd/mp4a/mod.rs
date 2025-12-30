@@ -29,7 +29,7 @@ impl Atom for Mp4a {
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Esds(atom) => esds = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
-                unknown => crate::unexpected_atom(unknown)?,
+                unknown => Self::decode_unknown(&unknown)?,
             }
         }
 

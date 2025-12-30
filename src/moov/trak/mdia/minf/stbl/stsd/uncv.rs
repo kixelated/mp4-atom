@@ -31,7 +31,7 @@ impl Atom for Uncv {
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Ccst(atom) => ccst = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
-                unknown => crate::unexpected_atom(unknown)?,
+                unknown => Self::decode_unknown(&unknown)?,
             }
         }
 

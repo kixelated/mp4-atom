@@ -19,7 +19,7 @@ impl Atom for Opus {
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Dops(atom) => dops = atom.into(),
-                unknown => crate::unexpected_atom(unknown)?,
+                unknown => Self::decode_unknown(&unknown)?,
             }
         }
 

@@ -107,7 +107,7 @@ impl Pcm {
                 match Any::decode_atom(&header, &mut limited)? {
                     Any::PcmC(atom) => pcmc = Some(atom),
                     Any::Btrt(atom) => btrt = Some(atom),
-                    atom => crate::unexpected_atom(atom)?,
+                    atom => crate::decode_unknown(&atom, fourcc)?,
                 }
             }
 

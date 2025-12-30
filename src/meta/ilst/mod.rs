@@ -34,7 +34,7 @@ impl Atom for Ilst {
                 Any::Year(atom) => year = atom.into(),
                 Any::Covr(atom) => covr = atom.into(),
                 Any::Desc(atom) => desc = atom.into(),
-                atom => crate::unexpected_atom(atom)?,
+                atom => Self::decode_unknown(&atom)?,
             }
         }
 
