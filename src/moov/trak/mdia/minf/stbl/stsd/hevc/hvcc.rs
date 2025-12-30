@@ -173,6 +173,7 @@ mod tests {
             colr: None,
             pasp: None,
             taic: None,
+            fiel: None,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();

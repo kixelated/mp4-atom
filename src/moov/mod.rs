@@ -219,6 +219,7 @@ mod test {
                                         colr: None,
                                         pasp: None,
                                         taic: None,
+                                        fiel: None,
                                     }
                                     .into()],
                                 },
