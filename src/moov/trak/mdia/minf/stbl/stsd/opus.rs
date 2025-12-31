@@ -19,7 +19,7 @@ impl Atom for Opus {
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Dops(atom) => dops = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                unknown => Self::decode_unknown(&unknown)?,
             }
         }
 

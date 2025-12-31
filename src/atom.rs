@@ -8,6 +8,11 @@ pub trait Atom: Sized {
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self>;
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()>;
+
+    /// Either logs or returns an error depending on the environment/flag.
+    fn decode_unknown(atom: &crate::Any) -> Result<()> {
+        crate::decode_unknown(atom, Self::KIND)
+    }
 }
 
 impl<T: Atom> Encode for T {
@@ -192,12 +197,9 @@ macro_rules! nested {
                         $(Any::$multiple(atom) => {
                             [<$multiple:lower>].push(atom.into());
                         },)*
-                        Any::Unknown(kind, _) => {
-                            tracing::warn!("unknown box: {:?}", kind);
-                        },
-                        Any::Skip(atom) => tracing::debug!("skipping skip box of size {}", atom.zeroed.size),
-                        Any::Free(atom) => tracing::debug!("skipping free box of size {}", atom.zeroed.size),
-                        _ => return Err(Error::UnexpectedBox(atom.kind())),
+                        Any::Skip(atom) => tracing::debug!(size = atom.zeroed.size, "skipping skip box"),
+                        Any::Free(atom) => tracing::debug!(size = atom.zeroed.size, "skipping free box"),
+                        unknown => Self::decode_unknown(&unknown)?,
                     }
                 }
 

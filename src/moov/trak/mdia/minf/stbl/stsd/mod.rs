@@ -138,8 +138,10 @@ impl Decode for Codec {
             Any::Fl32(atom) => atom.into(),
             Any::Fl64(atom) => atom.into(),
             Any::S16l(atom) => atom.into(),
-            Any::Unknown(kind, _) => Self::Unknown(kind),
-            _ => return Err(Error::UnexpectedBox(atom.kind())),
+            unknown => {
+                crate::decode_unknown(&unknown, Stsd::KIND)?;
+                Self::Unknown(unknown.kind())
+            }
         })
     }
 }
