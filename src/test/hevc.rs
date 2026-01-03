@@ -566,6 +566,10 @@ fn hevc() {
                                         v_spacing: 1,
                                     }),
                                     taic: None,
+                                    fiel: Some(Fiel {
+                                        field_count: 1,
+                                        field_order: 0
+                                    }),
                                 }
                                 .into()],
                             },

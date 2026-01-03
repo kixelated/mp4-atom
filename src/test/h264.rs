@@ -259,6 +259,7 @@ fn avcc_ext() {
                                         v_spacing: 1,
                                     }),
                                     taic: None,
+                                    fiel: None,
                                 }
                                 .into()],
                             },

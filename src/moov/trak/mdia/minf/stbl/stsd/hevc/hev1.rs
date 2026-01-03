@@ -9,6 +9,7 @@ pub struct Hev1 {
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
+    pub fiel: Option<Fiel>,
 }
 
 impl Atom for Hev1 {
@@ -22,6 +23,7 @@ impl Atom for Hev1 {
         let mut colr = None;
         let mut pasp = None;
         let mut taic = None;
+        let mut fiel = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Hvcc(atom) => hvcc = atom.into(),
@@ -29,6 +31,7 @@ impl Atom for Hev1 {
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
+                Any::Fiel(atom) => fiel = atom.into(),
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
@@ -40,6 +43,7 @@ impl Atom for Hev1 {
             colr,
             pasp,
             taic,
+            fiel,
         })
     }
 
@@ -56,9 +60,11 @@ impl Atom for Hev1 {
             self.pasp.encode(buf)?;
         }
         if self.taic.is_some() {
-            self.taic.encode(buf)?
+            self.taic.encode(buf)?;
         }
-
+        if self.fiel.is_some() {
+            self.fiel.encode(buf)?;
+        }
         Ok(())
     }
 }
@@ -88,6 +94,7 @@ mod tests {
             colr: None,
             pasp: None,
             taic: None,
+            fiel: None,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
