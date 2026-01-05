@@ -1,9 +1,11 @@
 mod edts;
 mod mdia;
+mod senc;
 mod tkhd;
 
 pub use edts::*;
 pub use mdia::*;
+pub use senc::*;
 pub use tkhd::*;
 
 use crate::*;
@@ -15,6 +17,7 @@ pub struct Trak {
     pub edts: Option<Edts>,
     pub meta: Option<Meta>, // TODO is this suppose to be here?
     pub mdia: Mdia,
+    pub senc: Option<Senc>,
     pub udta: Option<Udta>,
 }
 
@@ -23,7 +26,7 @@ impl Atom for Trak {
 
     nested! {
         required: [ Tkhd, Mdia ],
-        optional: [ Edts, Meta, Udta ],
+        optional: [ Edts, Meta, Senc, Udta ],
         multiple: [],
     }
 }

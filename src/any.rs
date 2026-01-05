@@ -329,6 +329,7 @@ any! {
             Tfhd,
             Tfdt,
             Trun,
+            Senc,
     Mdat,
     Free,
     Sidx,

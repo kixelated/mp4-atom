@@ -240,6 +240,7 @@ fn esds() {
                 saiz: vec![],
                 saio: vec![],
                 meta: None,
+                senc: None,
                 udta: None,
             }],
         },
