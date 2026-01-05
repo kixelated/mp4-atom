@@ -372,6 +372,7 @@ fn flac() {
                         }
                     }
                 },
+                senc: None,
                 udta: None
             }],
             udta: None

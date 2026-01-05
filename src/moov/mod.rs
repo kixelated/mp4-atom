@@ -228,6 +228,7 @@ mod test {
                             }
                         }
                     },
+                    senc: None,
                     udta: None
                 }],
                 udta: None,

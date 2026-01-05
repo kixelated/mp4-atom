@@ -280,6 +280,7 @@ fn uncompressed() {
                         }
                     }
                 },
+                senc: None,
                 udta: None,
             }]
             .into(),

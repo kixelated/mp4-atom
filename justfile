@@ -4,6 +4,7 @@
 
 export RUST_BACKTRACE := "1"
 export RUST_LOG := "info"
+export MP4ATOM_STRICT := "1"
 
 # List all of the available commands.
 default:

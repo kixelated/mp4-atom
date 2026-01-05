@@ -71,8 +71,11 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// Either logs or returns an error depending on the environment/flag.
 pub(crate) fn decode_unknown(atom: &Any, parent: FourCC) -> Result<()> {
-    // TODO return an error when the `strict` feature flag is enabled.
-    // TODO return an error when run as a unit test, after fixing them.
-    tracing::warn!(kind = %atom.kind(), parent = %parent, "unexpected box");
+    if std::env::var("MP4ATOM_STRICT").is_ok() || cfg!(feature = "strict") {
+        tracing::error!(kind = %atom.kind(), parent = %parent, "unexpected box");
+        return Err(Error::UnexpectedBox(atom.kind()));
+    } else {
+        tracing::warn!(kind = %atom.kind(), parent = %parent, "unexpected box");
+    }
     Ok(())
 }

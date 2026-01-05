@@ -578,6 +578,7 @@ fn hevc() {
                         }
                     }
                 },
+                senc: None,
                 udta: None,
             }],
             udta: Some(Udta {
