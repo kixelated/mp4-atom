@@ -371,7 +371,7 @@ fn bbb() {
             udta: Some(Udta {
                 meta: Some(Meta {
                     hdlr: Hdlr{ handler: FourCC::new(b"mdir"), name: "".into() },
-                    items: vec![Ilst::default().into()],
+                    items: vec![Ilst { name: None, year: None, covr: None, desc: None, ctoo: Some(Tool { country_indicator: 0, language_indicator: 0, text: "Lavf61.1.100".into()}) }.into(),],
                 }),
             }),
 
