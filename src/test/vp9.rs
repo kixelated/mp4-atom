@@ -282,7 +282,10 @@ fn vp9() {
                                         transfer_characteristics: 2,
                                         matrix_coefficients: 2,
                                         codec_initialization_data: vec![]
-                                    }
+                                    },
+                                    btrt: None,
+                                    colr: None,
+                                    pasp: None,
                                 }
                                 .into()],
                             },
