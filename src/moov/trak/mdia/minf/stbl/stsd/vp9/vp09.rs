@@ -6,6 +6,9 @@ use crate::*;
 pub struct Vp09 {
     pub visual: Visual,
     pub vpcc: VpcC,
+    pub btrt: Option<Btrt>,
+    pub colr: Option<Colr>,
+    pub pasp: Option<Pasp>,
 }
 
 impl Atom for Vp09 {
@@ -15,9 +18,15 @@ impl Atom for Vp09 {
         let visual = Visual::decode(buf)?;
 
         let mut vpcc = None;
+        let mut btrt = None;
+        let mut colr = None;
+        let mut pasp = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::VpcC(atom) => vpcc = atom.into(),
+                Any::Btrt(atom) => btrt = atom.into(),
+                Any::Colr(atom) => colr = atom.into(),
+                Any::Pasp(atom) => pasp = atom.into(),
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
@@ -25,12 +34,18 @@ impl Atom for Vp09 {
         Ok(Self {
             visual,
             vpcc: vpcc.ok_or(Error::MissingBox(VpcC::KIND))?,
+            btrt,
+            colr,
+            pasp,
         })
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
         self.vpcc.encode(buf)?;
+        self.btrt.encode(buf)?;
+        self.colr.encode(buf)?;
+        self.pasp.encode(buf)?;
 
         Ok(())
     }
@@ -49,6 +64,9 @@ mod tests {
                 ..Default::default()
             },
             vpcc: VpcC::default(),
+            btrt: None,
+            colr: None,
+            pasp: None,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
