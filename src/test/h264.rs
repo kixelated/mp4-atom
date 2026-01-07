@@ -653,12 +653,19 @@ fn avc_encrypted_segment() {
     assert_eq!(&ENCODED[36..80], &sidx.1);
 
     let prft = match Any::decode(buf) {
-        Ok(Any::Unknown(kind, bytes)) => (kind, bytes),
+        Ok(Any::Prft(prft)) => prft,
         Ok(atom) => panic!("unexpected {} while decoding any prft", atom.kind()),
         Err(e) => panic!("failed to decode prft with error: {e}"),
     };
-    assert_eq!(FourCC::from(b"prft"), prft.0);
-    assert_eq!(&ENCODED[88..112], &prft.1);
+    assert_eq!(
+        prft,
+        Prft {
+            reference_track_id: 1,
+            ntp_timestamp: 17013886056065052993,
+            media_time: 342202323002237,
+            utc_time_semantics: ReferenceTime::Input,
+        }
+    );
 
     let moof = match Any::decode(buf) {
         Ok(Any::Moof(moof)) => moof,
