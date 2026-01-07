@@ -16,6 +16,7 @@ ext! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ReferenceTime {
     /// The UTC time is the time at which the frame belonging to
     /// the reference track in the following movie fragment and
