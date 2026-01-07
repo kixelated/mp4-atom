@@ -368,6 +368,7 @@ fn flac() {
                             subs: vec![],
                             saio: vec![],
                             saiz: vec![],
+                            cslg: None,
                         }
                     }
                 },

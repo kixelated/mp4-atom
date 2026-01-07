@@ -301,6 +301,7 @@ fn vp9() {
                             subs: vec![],
                             saio: vec![],
                             saiz: vec![],
+                            cslg: None,
                         }
                     }
                 },

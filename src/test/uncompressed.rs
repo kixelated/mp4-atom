@@ -276,6 +276,7 @@ fn uncompressed() {
                             subs: vec![],
                             saiz: vec![],
                             saio: vec![],
+                            cslg: None,
                         }
                     }
                 },

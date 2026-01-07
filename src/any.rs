@@ -306,6 +306,7 @@ any! {
                         Stss,
                         Stco,
                         Co64,
+                        Cslg,
                         Ctts,
                         Sbgp,
                         Sgpd,
