@@ -42,34 +42,39 @@ impl AtomExt for Cslg {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<CslgExt> {
-        if self.composition_to_dts_shift <= i32::MAX.into()
-            && self.composition_to_dts_shift >= i32::MIN.into()
-            && self.least_decode_to_display_shift <= i32::MAX.into()
-            && self.least_decode_to_display_shift >= i32::MIN.into()
-            && self.greatest_decode_to_display_delta <= i32::MAX.into()
-            && self.greatest_decode_to_display_delta >= i32::MIN.into()
-            && self.composition_start_time <= i32::MAX.into()
-            && self.composition_start_time >= i32::MIN.into()
-            && self.composition_end_time <= i32::MAX.into()
-            && self.composition_end_time >= i32::MIN.into()
-        {
-            (self.composition_to_dts_shift as i32).encode(buf)?;
-            (self.least_decode_to_display_shift as i32).encode(buf)?;
-            (self.greatest_decode_to_display_delta as i32).encode(buf)?;
-            (self.composition_start_time as i32).encode(buf)?;
-            (self.composition_end_time as i32).encode(buf)?;
-            Ok(CslgExt {
-                version: CslgVersion::V0,
-            })
-        } else {
-            self.composition_to_dts_shift.encode(buf)?;
-            self.least_decode_to_display_shift.encode(buf)?;
-            self.greatest_decode_to_display_delta.encode(buf)?;
-            self.composition_start_time.encode(buf)?;
-            self.composition_end_time.encode(buf)?;
-            Ok(CslgExt {
-                version: CslgVersion::V1,
-            })
+        match (
+            i32::try_from(self.composition_to_dts_shift),
+            i32::try_from(self.least_decode_to_display_shift),
+            i32::try_from(self.greatest_decode_to_display_delta),
+            i32::try_from(self.composition_start_time),
+            i32::try_from(self.composition_end_time),
+        ) {
+            (
+                Ok(composition_to_dts_shift),
+                Ok(least_decode_to_display_shift),
+                Ok(greatest_decode_to_display_delta),
+                Ok(composition_start_time),
+                Ok(composition_end_time),
+            ) => {
+                composition_to_dts_shift.encode(buf)?;
+                least_decode_to_display_shift.encode(buf)?;
+                greatest_decode_to_display_delta.encode(buf)?;
+                composition_start_time.encode(buf)?;
+                composition_end_time.encode(buf)?;
+                Ok(CslgExt {
+                    version: CslgVersion::V0,
+                })
+            }
+            _ => {
+                self.composition_to_dts_shift.encode(buf)?;
+                self.least_decode_to_display_shift.encode(buf)?;
+                self.greatest_decode_to_display_delta.encode(buf)?;
+                self.composition_start_time.encode(buf)?;
+                self.composition_end_time.encode(buf)?;
+                Ok(CslgExt {
+                    version: CslgVersion::V1,
+                })
+            }
         }
     }
 }
