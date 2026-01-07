@@ -288,7 +288,18 @@ fn uncompressed() {
                         handler: FourCC::new(b"mdir"),
                         name: "".into()
                     },
-                    items: vec![Ilst::default().into()],
+                    items: vec![Ilst {
+                        name: None,
+                        year: None,
+                        covr: None,
+                        desc: None,
+                        ctoo: Some(Tool {
+                            country_indicator: 0,
+                            language_indicator: 0,
+                            text: "GPAC-2.5-DEV-rev2076-gd245ba575-rawff_amd2_2024-07-06".into()
+                        })
+                    }
+                    .into(),],
                 }),
             })
         }

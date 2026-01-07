@@ -1,11 +1,13 @@
 mod covr;
 mod desc;
 mod name;
+mod tool;
 mod year;
 
 pub use covr::*;
 pub use desc::*;
 pub use name::*;
+pub use tool::*;
 pub use year::*;
 
 use crate::*;
@@ -17,6 +19,7 @@ pub struct Ilst {
     pub year: Option<Year>, // Called day in the spec
     pub covr: Option<Covr>,
     pub desc: Option<Desc>,
+    pub ctoo: Option<Tool>, // 4CC: "©too"
 }
 
 impl Atom for Ilst {
@@ -27,6 +30,7 @@ impl Atom for Ilst {
         let mut year = None;
         let mut covr = None;
         let mut desc = None;
+        let mut ctoo = None;
 
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
@@ -34,6 +38,7 @@ impl Atom for Ilst {
                 Any::Year(atom) => year = atom.into(),
                 Any::Covr(atom) => covr = atom.into(),
                 Any::Desc(atom) => desc = atom.into(),
+                Any::Tool(atom) => ctoo = atom.into(),
                 atom => Self::decode_unknown(&atom)?,
             }
         }
@@ -43,6 +48,7 @@ impl Atom for Ilst {
             year,
             covr,
             desc,
+            ctoo,
         })
     }
 
@@ -51,6 +57,7 @@ impl Atom for Ilst {
         self.year.encode(buf)?;
         self.covr.encode(buf)?;
         self.desc.encode(buf)?;
+        self.ctoo.encode(buf)?;
         Ok(())
     }
 }
