@@ -152,6 +152,7 @@ mod mdat;
 mod meta;
 mod moof;
 mod moov;
+mod prft;
 mod styp;
 mod types;
 
@@ -170,6 +171,7 @@ pub use mdat::*;
 pub use meta::*;
 pub use moof::*;
 pub use moov::*;
+pub use prft::*;
 pub use styp::*;
 pub use types::*;
 

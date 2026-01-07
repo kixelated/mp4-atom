@@ -331,6 +331,7 @@ any! {
             Trun,
     Mdat,
     Free,
+    Prft,
     ],
     boxed: [
         Trak,
