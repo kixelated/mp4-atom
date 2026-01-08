@@ -51,21 +51,11 @@ impl Atom for Hvc1 {
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
         self.hvcc.encode(buf)?;
-        if self.btrt.is_some() {
-            self.btrt.encode(buf)?;
-        }
-        if self.colr.is_some() {
-            self.colr.encode(buf)?;
-        }
-        if self.pasp.is_some() {
-            self.pasp.encode(buf)?;
-        }
-        if self.taic.is_some() {
-            self.taic.encode(buf)?;
-        }
-        if self.fiel.is_some() {
-            self.fiel.encode(buf)?;
-        }
+        self.btrt.encode(buf)?;
+        self.colr.encode(buf)?;
+        self.pasp.encode(buf)?;
+        self.taic.encode(buf)?;
+        self.fiel.encode(buf)?;
         Ok(())
     }
 }

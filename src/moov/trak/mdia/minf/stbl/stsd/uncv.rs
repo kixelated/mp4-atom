@@ -47,19 +47,11 @@ impl Atom for Uncv {
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
-        if self.cmpd.is_some() {
-            self.cmpd.encode(buf)?;
-        }
+        self.cmpd.encode(buf)?;
         self.uncc.encode(buf)?;
-        if self.btrt.is_some() {
-            self.btrt.encode(buf)?;
-        }
-        if self.ccst.is_some() {
-            self.ccst.encode(buf)?;
-        }
-        if self.pasp.is_some() {
-            self.pasp.encode(buf)?;
-        }
+        self.btrt.encode(buf)?;
+        self.ccst.encode(buf)?;
+        self.pasp.encode(buf)?;
 
         Ok(())
     }
