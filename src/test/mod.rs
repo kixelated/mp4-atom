@@ -3,7 +3,7 @@ mod bbb;
 mod esds;
 mod flac;
 mod h264;
-mod heif;
 mod hevc;
+mod image;
 mod uncompressed;
 mod vp9;
