@@ -44,12 +44,8 @@ impl Atom for Mp4a {
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.audio.encode(buf)?;
         self.esds.encode(buf)?;
-        if self.btrt.is_some() {
-            self.btrt.encode(buf)?;
-        }
-        if self.taic.is_some() {
-            self.taic.encode(buf)?;
-        }
+        self.btrt.encode(buf)?;
+        self.taic.encode(buf)?;
 
         Ok(())
     }
