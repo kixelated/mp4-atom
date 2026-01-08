@@ -94,7 +94,11 @@ impl AtomExt for Sidx {
             }
         };
         0u16.encode(buf)?; // reserved
-        let reference_count = self.references.len() as u16;
+        let reference_count: u16 = self
+            .references
+            .len()
+            .try_into()
+            .map_err(|_| Error::TooLarge(Self::KIND))?;
         reference_count.encode(buf)?;
         for reference in &self.references {
             let reference_type_and_size: u32 = match reference.reference_type {
