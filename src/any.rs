@@ -331,6 +331,7 @@ any! {
             Trun,
     Mdat,
     Free,
+    Sidx,
     Prft,
     ],
     boxed: [

@@ -344,12 +344,27 @@ fn avc_encrypted_segment() {
     );
 
     let sidx = match Any::decode(buf) {
-        Ok(Any::Unknown(kind, bytes)) => (kind, bytes),
+        Ok(Any::Sidx(sidx)) => sidx,
         Ok(atom) => panic!("unexpected {} while decoding any sidx", atom.kind()),
         Err(e) => panic!("failed to decode sidx with error: {e}"),
     };
-    assert_eq!(FourCC::from(b"sidx"), sidx.0);
-    assert_eq!(&ENCODED[36..80], &sidx.1);
+    assert_eq!(
+        sidx,
+        Sidx {
+            reference_id: 1,
+            timescale: 10000000,
+            earliest_presentation_time: 342202323002237,
+            first_offset: 32,
+            references: vec![SegmentReference {
+                reference_type: false,
+                reference_size: 345327,
+                subsegment_duration: 78078000,
+                starts_with_sap: true,
+                sap_type: 0,
+                sap_delta_time: 0
+            }]
+        }
+    );
 
     let prft = match Any::decode(buf) {
         Ok(Any::Prft(prft)) => prft,

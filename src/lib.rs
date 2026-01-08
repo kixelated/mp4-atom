@@ -153,6 +153,7 @@ mod meta;
 mod moof;
 mod moov;
 mod prft;
+mod sidx;
 mod styp;
 mod types;
 
@@ -172,6 +173,7 @@ pub use meta::*;
 pub use moof::*;
 pub use moov::*;
 pub use prft::*;
+pub use sidx::*;
 pub use styp::*;
 pub use types::*;
 
