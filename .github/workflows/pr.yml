@@ -13,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: true
 
       # Install Just to run CI scripts
       - uses: extractions/setup-just@v2
