@@ -428,6 +428,8 @@ fn avc_encrypted_segment() {
                 }],
                 meta: None,
                 senc: Some(Senc {
+                    version: SencBoxVersion::V0,
+                    use_subsamples: true,
                     data: vec![
                         0, 0, 0, 234, 0, 1, 0, 129, 0, 0, 46, 38, 0, 1, 0, 114, 0, 0, 2, 48, 0, 1,
                         0, 114, 0, 0, 4, 81, 0, 1, 0, 114, 0, 0, 3, 238, 0, 1, 0, 114, 0, 0, 3,
