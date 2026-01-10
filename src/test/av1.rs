@@ -166,6 +166,7 @@ fn av1() {
                         }
                     }
                 },
+                senc: None,
                 udta: None,
             }],
             udta: Some(Udta {
@@ -223,6 +224,7 @@ fn av1() {
                 saiz: vec![],
                 saio: vec![],
                 meta: None,
+                senc: None,
                 udta: None,
             }]
         }
