@@ -334,6 +334,9 @@ any! {
     Free,
     Sidx,
     Prft,
+    Mfra,
+        Tfra,
+        Mfro,
     ],
     boxed: [
         Trak,
