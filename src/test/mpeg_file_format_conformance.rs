@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::{Any, ReadFrom};
 
@@ -11,24 +11,51 @@ fn test_published() {
         "FileFormatConformance/data/file_features/published/isobmff/a7-tone-oddities.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/04_bifs_video.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/09_text.mp4".into(),
+        "FileFormatConformance/data/file_features/published/green/video_2500000bps_0.mp4".into(),
+        "FileFormatConformance/data/file_features/published/heif/C027.heic".into(),
+        "FileFormatConformance/data/file_features/published/heif/C028.heic".into(),
+        "FileFormatConformance/data/file_features/published/heif/C041.heic".into(),
+        "FileFormatConformance/data/file_features/published/isobmff/compact-no-code-fec-1.iso3"
+            .into(),
+        "FileFormatConformance/data/file_features/published/isobmff/compact-no-code-fec-2.iso3"
+            .into(),
+        "FileFormatConformance/data/file_features/published/isobmff/mbms-fec.iso3".into(),
     ];
 
-    let paths =
-        std::fs::read_dir("FileFormatConformance/data/file_features/published/isobmff/").unwrap();
-    for path in paths {
-        let direntry = path.unwrap();
-        let path = direntry.path().into_os_string().into_string().unwrap();
-        if path.ends_with(".mp4") {
-            println!("checking {:?}", direntry);
-            match check_one_file(&direntry.path()) {
-                true => assert!(
-                    !expected_fails.contains(&path),
-                    "expected {path} to fail, but it unexpectedly passed"
-                ),
-                false => assert!(
-                    expected_fails.contains(&path),
-                    "expected {path} to pass, but it unexpectedly failed"
-                ),
+    for entry in std::fs::read_dir("FileFormatConformance/data/file_features/published").unwrap() {
+        let direntry = entry.unwrap();
+        let path = direntry.path();
+        if path.is_dir() {
+            check_directory(&expected_fails, &path);
+        }
+    }
+}
+
+fn check_directory(expected_fails: &Vec<String>, directory: &Path) {
+    for entry in std::fs::read_dir(directory).unwrap() {
+        let direntry = entry.unwrap();
+        let path = direntry.path();
+        if path.is_dir() {
+            check_directory(expected_fails, &path);
+        } else {
+            let filepath = direntry.path().into_os_string().into_string().unwrap();
+            if !filepath.ends_with(".json")
+                && !filepath.ends_with(".dat")
+                && !filepath.ends_with(".zip")
+                && !filepath.ends_with(".txt")
+                && !filepath.ends_with(".xml")
+            {
+                println!("checking {:?}", direntry);
+                match check_one_file(&direntry.path()) {
+                    true => assert!(
+                        !expected_fails.contains(&filepath),
+                        "expected {filepath} to fail, but it unexpectedly passed"
+                    ),
+                    false => assert!(
+                        expected_fails.contains(&filepath),
+                        "expected {filepath} to pass, but it unexpectedly failed"
+                    ),
+                }
             }
         }
     }
