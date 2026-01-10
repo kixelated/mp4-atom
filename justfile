@@ -19,6 +19,7 @@ check:
 # Run any CI tests
 test:
 	cargo test --all-targets
+	cargo test --all-targets --features strict
 
 # Automatically fix some issues.
 fix:

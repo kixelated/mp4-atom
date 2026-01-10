@@ -103,3 +103,13 @@ Enable using the `tokio` feature.
 It's the same as the above two but using the `AsyncReadFrom`, `AsyncWriteTo`, and `AsyncReadAtom` traits instead.
 
 There's also the `bytes` features which enables encoding for `Bytes` and `BytesMut` from the `bytes` crate, often used with tokio.
+
+### Strict parsing
+
+Enable using the `strict` feature.
+
+Strict parsing turns unknown boxes into a hard error.
+
+In general, this is not desirable behaviour. ISO Base Media File Format parsing is meant to be at least somewhat tolerant of
+unknown boxes. It can be useful in some situations though, such as when using mp4-atom as a test tool, and when testing
+mp4-atom itself.
