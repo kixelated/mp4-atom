@@ -87,6 +87,10 @@ impl AsRef<[u8; 4]> for FourCC {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct u24([u8; 3]);
 
+impl u24 {
+    pub const MAX: u32 = 0x00FF_FFFF;
+}
+
 impl From<[u8; 3]> for u24 {
     fn from(value: [u8; 3]) -> Self {
         Self(value)
