@@ -28,7 +28,7 @@ impl Atom for Ftab {
             let font_id = u16::decode(buf)?;
             let font_name_length = u8::decode(buf)?;
             let font_bytes = Vec::decode_exact(buf, font_name_length as usize)?;
-            let font = if font_bytes[0] == 0xFF && font_bytes[1] == 0xFE {
+            let font = if font_bytes.len() >= 4 && font_bytes[0] == 0xFF && font_bytes[1] == 0xFE {
                 // UTF-16 little endian
                 if font_name_length % 2 != 0 {
                     return Err(Error::InvalidSize);
@@ -42,7 +42,7 @@ impl Atom for Ftab {
                 String::from_utf16(&utf_16).map_err(|_| {
                     Error::InvalidString("Failed to parse UTF-16 LE font id in ftab".into())
                 })?
-            } else if font_bytes[0] == 0xFE && font_bytes[1] == 0xFF {
+            } else if font_bytes.len() >= 4 && font_bytes[0] == 0xFE && font_bytes[1] == 0xFF {
                 // UTF-16 big endian
                 if font_name_length % 2 != 0 {
                     return Err(Error::InvalidSize);
