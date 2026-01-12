@@ -26,6 +26,7 @@ serde = { version = "1", features = ["derive"], optional = true }
 tokio = ["dep:tokio"]
 bytes = ["dep:bytes"]
 serde = ["dep:serde", "bytes/serde"]
+strict = []
 
 [dev-dependencies]
 anyhow = "1"
