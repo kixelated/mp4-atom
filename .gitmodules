@@ -1,0 +1,3 @@
+[submodule "FileFormatConformance"]
+	path = FileFormatConformance
+	url = https://github.com/MPEGGroup/FileFormatConformance.git
