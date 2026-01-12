@@ -71,7 +71,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// Either logs or returns an error depending on the strict feature flag.
 pub(crate) fn decode_unknown(atom: &Any, parent: FourCC) -> Result<()> {
-    if cfg!(feature = "strict") {
+    if cfg!(feature = "strict") || cfg!(test) {
         tracing::error!(kind = %atom.kind(), parent = %parent, "unexpected box");
         return Err(Error::UnexpectedBox(atom.kind()));
     } else {
