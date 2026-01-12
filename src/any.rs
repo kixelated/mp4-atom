@@ -282,6 +282,7 @@ any! {
                             Mp4a,
                                 Esds,
                             Tx3g,
+                                Ftab,
                             Vp08, Vp09,
                                 VpcC,
                             Av01,
