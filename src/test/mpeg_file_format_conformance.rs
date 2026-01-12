@@ -7,10 +7,8 @@ fn test_published() {
     let expected_fails: Vec<String> = vec![
         "FileFormatConformance/data/file_features/published/isobmff/02_dref_edts_img.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/timed-metadata.mp4".into(),
-        "FileFormatConformance/data/file_features/published/isobmff/22_tx3g.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/a7-tone-oddities.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/04_bifs_video.mp4".into(),
-        "FileFormatConformance/data/file_features/published/isobmff/09_text.mp4".into(),
         "FileFormatConformance/data/file_features/published/green/video_2500000bps_0.mp4".into(),
         "FileFormatConformance/data/file_features/published/heif/C027.heic".into(),
         "FileFormatConformance/data/file_features/published/heif/C028.heic".into(),
