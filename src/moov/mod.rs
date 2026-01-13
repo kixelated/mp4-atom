@@ -224,6 +224,7 @@ mod test {
                                     .into()],
                                 },
                                 stco: Some(Stco::default()),
+                                stsz: Some(Stsz::default()),
                                 ..Default::default()
                             }
                         }
