@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0](https://github.com/kixelated/mp4-atom/compare/v0.9.2...v0.10.0) - 2026-01-14
+
+### Other
+
+- add strict mode feature, enable on test ([#99](https://github.com/kixelated/mp4-atom/pull/99))
+- implement ftab box ([#100](https://github.com/kixelated/mp4-atom/pull/100))
+- implement mfra container and nested tfra and mfro boxes ([#98](https://github.com/kixelated/mp4-atom/pull/98))
+- add initial support for senc box ([#96](https://github.com/kixelated/mp4-atom/pull/96))
+- implement sidx box ([#94](https://github.com/kixelated/mp4-atom/pull/94))
+- avoid inlining a couple more test files ([#95](https://github.com/kixelated/mp4-atom/pull/95))
+- avoid checking for is_some() on encode, since encode is supported on Option<..> ([#93](https://github.com/kixelated/mp4-atom/pull/93))
+- Stop manually inlining test files. ([#90](https://github.com/kixelated/mp4-atom/pull/90))
+- implement prft box ([#91](https://github.com/kixelated/mp4-atom/pull/91))
+- add cslg box ([#89](https://github.com/kixelated/mp4-atom/pull/89))
+- add support for ilst "tool" box ([#86](https://github.com/kixelated/mp4-atom/pull/86))
+- add btrt, colr and pasp support for VP8 and VP9 codecs ([#88](https://github.com/kixelated/mp4-atom/pull/88))
+- add btrt box for Opus codec ([#87](https://github.com/kixelated/mp4-atom/pull/87))
+- implement box ([#85](https://github.com/kixelated/mp4-atom/pull/85))
+- Log unknown atoms instead of (sometimes) returning an error. ([#84](https://github.com/kixelated/mp4-atom/pull/84))
+- fix taic encoding ([#83](https://github.com/kixelated/mp4-atom/pull/83))
+- minor comment fix ([#82](https://github.com/kixelated/mp4-atom/pull/82))
+- add support for btrt box in uncompressed audio ([#80](https://github.com/kixelated/mp4-atom/pull/80))
+- Add support for raw audio as per ISO/IEC 23003-5 ([#78](https://github.com/kixelated/mp4-atom/pull/78))
+
 ## [0.9.2](https://github.com/kixelated/mp4-atom/compare/v0.9.1...v0.9.2) - 2025-11-30
 
 ### Other
