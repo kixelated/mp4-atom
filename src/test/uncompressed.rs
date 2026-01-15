@@ -93,7 +93,6 @@ fn uncompressed() {
                                 blue: 0
                             }
                         }),
-                        smhd: None,
                         dinf: Dinf {
                             dref: Dref {
                                 urls: vec![Url {
@@ -212,7 +211,8 @@ fn uncompressed() {
                             saiz: vec![],
                             saio: vec![],
                             cslg: None,
-                        }
+                        },
+                        ..Default::default()
                     }
                 },
                 senc: None,

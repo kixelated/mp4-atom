@@ -180,7 +180,6 @@ mod test {
                                     blue: 0
                                 }
                             }),
-                            smhd: None,
                             dinf: Dinf {
                                 dref: Dref {
                                     urls: vec![Url::default()]
@@ -225,7 +224,8 @@ mod test {
                                 },
                                 stco: Some(Stco::default()),
                                 ..Default::default()
-                            }
+                            },
+                            ..Default::default()
                         }
                     },
                     senc: None,
