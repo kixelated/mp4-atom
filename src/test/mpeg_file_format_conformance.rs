@@ -5,11 +5,7 @@ use crate::{Any, ReadFrom};
 #[test]
 fn test_published() {
     let expected_fails: Vec<String> = vec![
-        "FileFormatConformance/data/file_features/published/nalu/l-hevc/shvc_hvc1_single_track.mp4".into(),
-        "FileFormatConformance/data/file_features/published/nalu/l-hevc/mhvc_hev2_single_track.mp4".into(),
-        "FileFormatConformance/data/file_features/published/nalu/l-hevc/shvc_hev1_lhe1_multiple_tracks_implicit.mp4".into(),
-        "FileFormatConformance/data/file_features/published/nalu/l-hevc/shvc_hvc1_hvc2_multiple_tracks_extractors.mp4".into(),
-        "FileFormatConformance/data/file_features/published/nalu/l-hevc/mhvc_hvc2_single_track.mp4".into(),
+
         "FileFormatConformance/data/file_features/published/3gp/pdin_example.3gp".into(),
         "FileFormatConformance/data/file_features/published/3gp/female_amr67DTX_hinted.3gp".into(),
         "FileFormatConformance/data/file_features/published/3gp/female_amr67_hinted.3gp".into(),
@@ -23,7 +19,6 @@ fn test_published() {
         "FileFormatConformance/data/file_features/published/isobmff/03_hinted.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/06_bifs.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/07_bifs_sprite.mp4".into(),
-        "FileFormatConformance/data/file_features/published/isobmff/09_text.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/timed-metadata.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/a5-foreman-AVC.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/a6_tone_multifile.mp4".into(),
@@ -38,23 +33,14 @@ fn test_published() {
         "FileFormatConformance/data/file_features/published/isobmff/20_stxt.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/a4-tone-fragmented.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/21_segment.mp4".into(),
-        // "FileFormatConformance/data/file_features/published/isobmff/22_tx3g.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/sg-tl-st.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/restricted.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/17_negative_ctso.mp4".into(),
         "FileFormatConformance/data/file_features/published/green/meta_2500000bps_0.mp4m".into(),
         "FileFormatConformance/data/file_features/published/green/video_2500000bps_0.mp4".into(),
-        // "FileFormatConformance/data/file_features/published/heif/C001.heic".into(),
-        // "FileFormatConformance/data/file_features/published/heif/C026.heic".into(),
         "FileFormatConformance/data/file_features/published/heif/C027.heic".into(),
         "FileFormatConformance/data/file_features/published/heif/C028.heic".into(),
-        // "FileFormatConformance/data/file_features/published/heif/C029.heic".into(),
-        // "FileFormatConformance/data/file_features/published/heif/C030.heic".into(),
-        // "FileFormatConformance/data/file_features/published/heif/C031.heic".into(),
         "FileFormatConformance/data/file_features/published/heif/C032.heic".into(),
-        // "FileFormatConformance/data/file_features/published/heif/C036.heic".into(),
-        // "FileFormatConformance/data/file_features/published/heif/C037.heic".into(),
-        // "FileFormatConformance/data/file_features/published/heif/C038.heic".into(),
         "FileFormatConformance/data/file_features/published/heif/C041.heic".into(),
         "FileFormatConformance/data/file_features/published/isobmff/compact-no-code-fec-1.iso3"
             .into(),
@@ -89,7 +75,6 @@ fn test_published() {
         "FileFormatConformance/data/file_features/published/nalu/hevc/aggr_hvc1.mp4".into(),
         "FileFormatConformance/data/file_features/published/nalu/hevc/hevc_hvc1_hvc2_extractors.mp4".into(),
         "FileFormatConformance/data/file_features/published/nalu/hevc/hevc_hvc1_hvc2_implicit.mp4".into(),
-        "FileFormatConformance/data/file_features/published/nalu/hevc/hev1_clg1_header.mp4".into(),
         "FileFormatConformance/data/file_features/published/nalu/hevc/hevc_hev1_hev2_extractors.mp4".into(),
         "FileFormatConformance/data/file_features/published/nalu/hevc/hevc_hev1_hev2_implicit.mp4".into(),
         "FileFormatConformance/data/file_features/published/nalu/hevc/hevc_tiles_single_track_nalm.mp4".into(),
@@ -115,6 +100,11 @@ fn test_published() {
         "FileFormatConformance/data/file_features/published/nalu/l-hevc/shvc_hev1_hev2_multiple_tracks_extractors.mp4".into(),
         "FileFormatConformance/data/file_features/published/nalu/l-hevc/mhvc_hev1_hev2_multiple_tracks_extractors.mp4".into(),
         "FileFormatConformance/data/file_features/published/nalu/l-hevc/lhevc_avc1_lhv1.mp4".into(),
+        "FileFormatConformance/data/file_features/published/nalu/l-hevc/shvc_hvc1_single_track.mp4".into(),
+        "FileFormatConformance/data/file_features/published/nalu/l-hevc/mhvc_hev2_single_track.mp4".into(),
+        "FileFormatConformance/data/file_features/published/nalu/l-hevc/shvc_hev1_lhe1_multiple_tracks_implicit.mp4".into(),
+        "FileFormatConformance/data/file_features/published/nalu/l-hevc/shvc_hvc1_hvc2_multiple_tracks_extractors.mp4".into(),
+        "FileFormatConformance/data/file_features/published/nalu/l-hevc/mhvc_hvc2_single_track.mp4".into(),
 
     ];
 
