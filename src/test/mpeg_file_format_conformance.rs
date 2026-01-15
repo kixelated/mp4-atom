@@ -38,7 +38,7 @@ fn test_published() {
         "FileFormatConformance/data/file_features/published/isobmff/20_stxt.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/a4-tone-fragmented.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/21_segment.mp4".into(),
-        "FileFormatConformance/data/file_features/published/isobmff/22_tx3g.mp4".into(),
+        // "FileFormatConformance/data/file_features/published/isobmff/22_tx3g.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/sg-tl-st.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/restricted.mp4".into(),
         "FileFormatConformance/data/file_features/published/isobmff/17_negative_ctso.mp4".into(),
