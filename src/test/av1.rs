@@ -188,6 +188,7 @@ fn av1() {
                     }
                     .into(),],
                 }),
+                ..Default::default()
             })
         }
     );

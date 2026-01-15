@@ -261,6 +261,8 @@ any! {
     Moov,
         Mvhd,
         Udta,
+            Cprt,
+            Kind,
             Skip,
         // Trak, // boxed to avoid large size differences between variants
             Tkhd,
