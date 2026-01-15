@@ -239,6 +239,7 @@ fn uncompressed() {
                     }
                     .into(),],
                 }),
+                ..Default::default()
             })
         }
     );

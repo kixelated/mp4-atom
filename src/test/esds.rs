@@ -198,10 +198,7 @@ fn esds() {
                 },
                 ..Default::default()
             }],
-            udta: Some(Udta {
-                meta: None,
-            }),
-
+            udta: Some(Udta::default()),
             ..Default::default()
         },
     );

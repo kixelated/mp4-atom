@@ -289,7 +289,7 @@ fn avcc_ext() {
                 udta: None,
             },
         ],
-        udta: Some(Udta { meta: None }),
+        udta: Some(Udta::default()),
     };
 
     assert_eq!(moov, expected, "different decoded result");
