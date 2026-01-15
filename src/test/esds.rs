@@ -62,7 +62,6 @@ fn esds() {
                         name: "(C) 2007 Google Inc. v08.13.2007.".into(),
                     },
                     minf: Minf {
-                        smhd: None,
                         vmhd: Vmhd {
                             ..Default::default()
                         }
@@ -118,6 +117,7 @@ fn esds() {
                             stco: Some(Stco { ..Default::default() }),
                             ..Default::default()
                         },
+                        ..Default::default()
                     },
                 },
                 ..Default::default()

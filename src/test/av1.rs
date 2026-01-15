@@ -103,7 +103,6 @@ fn av1() {
                                 blue: 0
                             }
                         }),
-                        smhd: None,
                         dinf: Dinf {
                             dref: Dref {
                                 urls: vec![Url {
@@ -164,7 +163,8 @@ fn av1() {
                             saio: vec![],
                             saiz: vec![],
                             cslg: None,
-                        }
+                        },
+                        ..Default::default()
                     }
                 },
                 senc: None,

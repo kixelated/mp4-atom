@@ -91,7 +91,6 @@ fn flac() {
                         name: "SoundHandler".into(),
                     },
                     minf: Minf {
-                        vmhd: None,
                         smhd: Some(Smhd { balance: 0.into() }),
                         dinf: Dinf {
                             dref: Dref {
@@ -152,7 +151,8 @@ fn flac() {
                             saio: vec![],
                             saiz: vec![],
                             cslg: None,
-                        }
+                        },
+                        ..Default::default()
                     }
                 },
                 senc: None,

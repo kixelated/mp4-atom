@@ -122,7 +122,6 @@ fn vp9() {
                                 blue: 0
                             }
                         }),
-                        smhd: None,
                         dinf: Dinf {
                             dref: Dref {
                                 urls: vec![Url {
@@ -174,7 +173,8 @@ fn vp9() {
                             saio: vec![],
                             saiz: vec![],
                             cslg: None,
-                        }
+                        },
+                        ..Default::default()
                     }
                 },
                 senc: None,

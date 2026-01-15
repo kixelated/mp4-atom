@@ -98,7 +98,6 @@ fn hevc() {
                                 blue: 0
                             }
                         }),
-                        smhd: None,
                         dinf: Dinf {
                             dref: Dref {
                                 urls: vec![Url {
@@ -381,7 +380,8 @@ fn hevc() {
                             stco: Some(Stco { entries: vec![] }),
                             stsz: Some(Stsz::default()),
                             ..Default::default()
-                        }
+                        },
+                        ..Default::default()
                     }
                 },
                 senc: None,

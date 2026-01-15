@@ -108,7 +108,6 @@ fn avcc_ext() {
                                 blue: 0,
                             },
                         }),
-                        smhd: None,
                         dinf: Dinf {
                             dref: Dref {
                                 urls: vec![Url::default()],
@@ -180,6 +179,7 @@ fn avcc_ext() {
                             saiz: vec![],
                             cslg: None,
                         },
+                        ..Default::default()
                     },
                 },
                 senc: None,
@@ -224,7 +224,6 @@ fn avcc_ext() {
                         name: "L-SMASH Audio Handler".into(),
                     },
                     minf: Minf {
-                        vmhd: None,
                         smhd: Some(Smhd::default()),
                         dinf: Dinf {
                             dref: Dref {
@@ -283,6 +282,7 @@ fn avcc_ext() {
                             saiz: vec![],
                             cslg: None,
                         },
+                        ..Default::default()
                     },
                 },
                 senc: None,
