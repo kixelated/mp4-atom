@@ -38,10 +38,7 @@ fn test_published() {
         "FileFormatConformance/data/file_features/published/isobmff/17_negative_ctso.mp4".into(),
         "FileFormatConformance/data/file_features/published/green/meta_2500000bps_0.mp4m".into(),
         "FileFormatConformance/data/file_features/published/green/video_2500000bps_0.mp4".into(),
-        "FileFormatConformance/data/file_features/published/heif/C027.heic".into(),
-        "FileFormatConformance/data/file_features/published/heif/C028.heic".into(),
         "FileFormatConformance/data/file_features/published/heif/C032.heic".into(),
-        "FileFormatConformance/data/file_features/published/heif/C041.heic".into(),
         "FileFormatConformance/data/file_features/published/isobmff/compact-no-code-fec-1.iso3"
             .into(),
         "FileFormatConformance/data/file_features/published/isobmff/compact-no-code-fec-2.iso3"
