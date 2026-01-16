@@ -405,6 +405,7 @@ fn hevc() {
                     }
                     .into(),],
                 }),
+                ..Default::default()
             })
         }
     );
