@@ -62,7 +62,6 @@ fn bbb() {
                         name: "(C) 2007 Google Inc. v08.13.2007.".into(),
                     },
                     minf: Minf {
-                        smhd: None,
                         vmhd: Vmhd {
                             ..Default::default()
                         }
@@ -114,12 +113,11 @@ fn bbb() {
                             stsc: Stsc {
                                 ..Default::default()
                             },
-                            stsz: Stsz {
-                                ..Default::default()
-                            },
+                            stsz: Some(Stsz::default()),
                             stco: Some(Stco { ..Default::default() }),
                             ..Default::default()
                         },
+                        ..Default::default()
                     },
                 },
                 ..Default::default()
@@ -191,9 +189,7 @@ fn bbb() {
                             stsc: Stsc {
                                 ..Default::default()
                             },
-                            stsz: Stsz {
-                                ..Default::default()
-                            },
+                            stsz: Some(Stsz::default()),
                             stco: Some(Stco { ..Default::default() }),
                             ..Default::default()
                         },
@@ -207,6 +203,7 @@ fn bbb() {
                     hdlr: Hdlr{ handler: FourCC::new(b"mdir"), name: "".into() },
                     items: vec![Ilst { name: None, year: None, covr: None, desc: None, ctoo: Some(Tool { country_indicator: 0, language_indicator: 0, text: "Lavf61.1.100".into()}) }.into(),],
                 }),
+                ..Default::default()
             }),
 
             ..Default::default()

@@ -62,7 +62,6 @@ fn esds() {
                         name: "(C) 2007 Google Inc. v08.13.2007.".into(),
                     },
                     minf: Minf {
-                        smhd: None,
                         vmhd: Vmhd {
                             ..Default::default()
                         }
@@ -114,12 +113,11 @@ fn esds() {
                             stsc: Stsc {
                                 ..Default::default()
                             },
-                            stsz: Stsz {
-                                ..Default::default()
-                            },
+                            stsz: Some(Stsz::default()),
                             stco: Some(Stco { ..Default::default() }),
                             ..Default::default()
                         },
+                        ..Default::default()
                     },
                 },
                 ..Default::default()
@@ -191,9 +189,7 @@ fn esds() {
                             stsc: Stsc {
                                 ..Default::default()
                             },
-                            stsz: Stsz {
-                                ..Default::default()
-                            },
+                            stsz: Some(Stsz::default()),
                             stco: Some(Stco { ..Default::default() }),
                             ..Default::default()
                         },
@@ -202,10 +198,7 @@ fn esds() {
                 },
                 ..Default::default()
             }],
-            udta: Some(Udta {
-                meta: None,
-            }),
-
+            udta: Some(Udta::default()),
             ..Default::default()
         },
     );

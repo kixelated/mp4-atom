@@ -219,6 +219,56 @@ macro_rules! nested {
             }
         }
     };
+    (required: [$($required:ident),*$(,)?], optional: [$($optional:ident),*$(,)?], multiple: [$($multiple:ident),*$(,)?], post_parse: $some_fn:ident, ) => {
+        paste::paste! {
+            fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+                $( let mut [<$required:lower>] = None;)*
+                $( let mut [<$optional:lower>] = None;)*
+                $( let mut [<$multiple:lower>] = Vec::new();)*
+
+                while let Some(atom) = Any::decode_maybe(buf)? {
+                    match atom {
+                        $(Any::$required(atom) => {
+                            if [<$required:lower>].is_some() {
+                                return Err(Error::DuplicateBox($required::KIND));
+                            }
+                            [<$required:lower>] = Some(atom);
+                        },)*
+                        $(Any::$optional(atom) => {
+                            if [<$optional:lower>].is_some() {
+                                return Err(Error::DuplicateBox($optional::KIND));
+                            }
+                            [<$optional:lower>] = Some(atom);
+                        },)*
+                        $(Any::$multiple(atom) => {
+                            [<$multiple:lower>].push(atom.into());
+                        },)*
+                        Any::Skip(atom) => tracing::debug!(size = atom.zeroed.size, "skipping skip box"),
+                        Any::Free(atom) => tracing::debug!(size = atom.zeroed.size, "skipping free box"),
+                        unknown => Self::decode_unknown(&unknown)?,
+                    }
+                }
+
+                let result = Self {
+                    $([<$required:lower>]: [<$required:lower>].ok_or(Error::MissingBox($required::KIND))? ,)*
+                    $([<$optional:lower>],)*
+                    $([<$multiple:lower>],)*
+                };
+
+                result.[<$some_fn>]()?;
+
+                Ok(result)
+            }
+
+            fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+                $( self.[<$required:lower>].encode(buf)?; )*
+                $( self.[<$optional:lower>].encode(buf)?; )*
+                $( self.[<$multiple:lower>].iter().map(|x| x.encode(buf)).collect::<Result<()>>()?; )*
+
+                Ok(())
+            }
+        }
+    };
 }
 
 pub(crate) use nested;

@@ -103,7 +103,6 @@ fn av1() {
                                 blue: 0
                             }
                         }),
-                        smhd: None,
                         dinf: Dinf {
                             dref: Dref {
                                 urls: vec![Url {
@@ -154,7 +153,8 @@ fn av1() {
                             ctts: None,
                             stss: None,
                             stsc: Stsc::default(),
-                            stsz: Stsz::default(),
+                            stsz: Some(Stsz::default()),
+                            stz2: None,
                             stco: Some(Stco::default()),
                             co64: None,
                             sbgp: vec![],
@@ -163,7 +163,8 @@ fn av1() {
                             saio: vec![],
                             saiz: vec![],
                             cslg: None,
-                        }
+                        },
+                        ..Default::default()
                     }
                 },
                 senc: None,
@@ -188,6 +189,7 @@ fn av1() {
                     }
                     .into(),],
                 }),
+                ..Default::default()
             })
         }
     );

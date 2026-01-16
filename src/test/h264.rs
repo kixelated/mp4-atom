@@ -108,7 +108,6 @@ fn avcc_ext() {
                                 blue: 0,
                             },
                         }),
-                        smhd: None,
                         dinf: Dinf {
                             dref: Dref {
                                 urls: vec![Url::default()],
@@ -169,7 +168,8 @@ fn avcc_ext() {
                             ctts: None,
                             stss: None,
                             stsc: Stsc::default(),
-                            stsz: Stsz::default(),
+                            stsz: Some(Stsz::default()),
+                            stz2: None,
                             stco: Some(Stco::default()),
                             co64: None,
                             sbgp: vec![],
@@ -179,6 +179,7 @@ fn avcc_ext() {
                             saiz: vec![],
                             cslg: None,
                         },
+                        ..Default::default()
                     },
                 },
                 senc: None,
@@ -223,7 +224,6 @@ fn avcc_ext() {
                         name: "L-SMASH Audio Handler".into(),
                     },
                     minf: Minf {
-                        vmhd: None,
                         smhd: Some(Smhd::default()),
                         dinf: Dinf {
                             dref: Dref {
@@ -271,7 +271,8 @@ fn avcc_ext() {
                             ctts: None,
                             stss: None,
                             stsc: Stsc::default(),
-                            stsz: Stsz::default(),
+                            stsz: Some(Stsz::default()),
+                            stz2: None,
                             stco: Some(Stco::default()),
                             co64: None,
                             sbgp: vec![],
@@ -281,13 +282,14 @@ fn avcc_ext() {
                             saiz: vec![],
                             cslg: None,
                         },
+                        ..Default::default()
                     },
                 },
                 senc: None,
                 udta: None,
             },
         ],
-        udta: Some(Udta { meta: None }),
+        udta: Some(Udta::default()),
     };
 
     assert_eq!(moov, expected, "different decoded result");

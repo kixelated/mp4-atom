@@ -93,7 +93,6 @@ fn uncompressed() {
                                 blue: 0
                             }
                         }),
-                        smhd: None,
                         dinf: Dinf {
                             dref: Dref {
                                 urls: vec![Url {
@@ -199,9 +198,10 @@ fn uncompressed() {
                                 ]
                                 .into()
                             },
-                            stsz: Stsz {
+                            stsz: Some(Stsz {
                                 samples: StszSamples::Identical { count: 2, size: 6 },
-                            },
+                            }),
+                            stz2: None,
                             stco: Some(Stco {
                                 entries: [856, 862].into()
                             }),
@@ -212,7 +212,8 @@ fn uncompressed() {
                             saiz: vec![],
                             saio: vec![],
                             cslg: None,
-                        }
+                        },
+                        ..Default::default()
                     }
                 },
                 senc: None,
@@ -238,6 +239,7 @@ fn uncompressed() {
                     }
                     .into(),],
                 }),
+                ..Default::default()
             })
         }
     );
