@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0](https://github.com/kixelated/mp4-atom/compare/v0.10.0...v0.11.0) - 2026-01-16
+
+### Other
+
+- add support for the refs sample groups ([#106](https://github.com/kixelated/mp4-atom/pull/106))
+- add cprt and kind child boxes ([#104](https://github.com/kixelated/mp4-atom/pull/104))
+- add support for ccst child in hvc1 ([#102](https://github.com/kixelated/mp4-atom/pull/102))
+- add nmhd and sthd boxes ([#103](https://github.com/kixelated/mp4-atom/pull/103))
+
 ## [0.10.0](https://github.com/kixelated/mp4-atom/compare/v0.9.2...v0.10.0) - 2026-01-14
 
 ### Other
