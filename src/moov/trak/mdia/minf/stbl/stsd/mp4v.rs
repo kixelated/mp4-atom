@@ -67,12 +67,13 @@ mod tests {
                 es_desc: esds::EsDescriptor {
                     es_id: 2,
                     dec_config: esds::DecoderConfig {
-                        object_type_indication: 0x40,
-                        stream_type: 0x05,
+                        object_type_indication: 0x20,
+                        stream_type: 0x04,
                         up_stream: 0,
                         buffer_size_db: Default::default(),
-                        max_bitrate: 67695,
-                        avg_bitrate: 67695,
+                        max_bitrate: 4000000,
+                        avg_bitrate: 2000000,
+                        // TODO: rework this to be a video version
                         dec_specific: esds::DecoderSpecific {
                             profile: 2,
                             freq_index: 4,
