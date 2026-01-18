@@ -279,7 +279,7 @@ any! {
                                 Pasp,
                                 Taic,
                                 Fiel,
-                            Hev1, Hvc1,
+                            Hev1, Hvc1, Hev2, Hvc2,
                                 Hvcc,
                             Mp4a,
                                 Esds,
