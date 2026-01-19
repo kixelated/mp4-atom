@@ -63,10 +63,8 @@ impl<T: Atom> DecodeMaybe for T {
             Err(err) => return Err(err),
         };
 
-        if cfg!(feature = "strict") || cfg!(test) {
-            if body.has_remaining() {
-                return Err(Error::UnderDecode(T::KIND));
-            }
+        if (cfg!(feature = "strict") || cfg!(test)) && body.has_remaining() {
+            return Err(Error::UnderDecode(T::KIND));
         }
 
         buf.advance(size);
@@ -144,10 +142,8 @@ impl<T: Atom> DecodeAtom for T {
             Err(err) => return Err(err),
         };
 
-        if cfg!(feature = "strict") || cfg!(test) {
-            if body.has_remaining() {
-                return Err(Error::UnderDecode(T::KIND));
-            }
+        if (cfg!(feature = "strict") || cfg!(test)) && body.has_remaining() {
+            return Err(Error::UnderDecode(T::KIND));
         }
 
         buf.advance(size);
