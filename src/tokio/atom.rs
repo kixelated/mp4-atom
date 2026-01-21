@@ -37,7 +37,7 @@ impl<T: Atom> AsyncReadFrom for Option<T> {
             Err(err) => return Err(err),
         };
 
-        if buf.has_remaining() {
+        if (cfg!(feature = "strict") || cfg!(test)) && buf.has_remaining() {
             return Err(Error::UnderDecode(T::KIND));
         }
 
