@@ -139,7 +139,7 @@ fn vp9() {
                                         horizresolution: 72.into(),
                                         vertresolution: 72.into(),
                                         frame_count: 1,
-                                        compressor: "\nVPC Coding".into(),
+                                        compressor: "VPC Coding".into(),
                                         depth: 24
                                     },
                                     vpcc: VpcC {

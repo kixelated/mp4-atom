@@ -83,7 +83,7 @@ fn esds() {
                                     horizresolution: 72.into(),
                                     vertresolution: 72.into(),
                                     frame_count: 1,
-                                    compressor: "\u{15}Lavc60.31.102 libx264".into(),
+                                    compressor: "Lavc60.31.102 libx264".into(),
                                     depth: 24,
                                     },
                                     avcc: Avcc {

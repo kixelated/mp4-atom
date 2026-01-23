@@ -110,7 +110,7 @@ fn uncompressed() {
                                         horizresolution: FixedPoint::new(0, 72),
                                         vertresolution: FixedPoint::new(0, 72),
                                         frame_count: 1,
-                                        compressor: "\tRaw Video".into(),
+                                        compressor: "Raw Video".into(),
                                         depth: 24
                                     },
                                     cmpd: Some(Cmpd {

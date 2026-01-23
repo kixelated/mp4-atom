@@ -195,7 +195,7 @@ mod test {
                                             horizresolution: 72.into(),
                                             vertresolution: 72.into(),
                                             frame_count: 1,
-                                            compressor: "\nAVC Coding".into(),
+                                            compressor: "AVC Coding".into(),
                                             depth: 24,
                                         },
                                         avcc: Avcc {
