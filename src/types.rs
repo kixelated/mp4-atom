@@ -274,23 +274,39 @@ impl AsRef<str> for Compressor {
 impl Encode for Compressor {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         let name = self.0.as_bytes();
-        let max = name.len().min(31);
-        (&name[..max]).encode(buf)?;
+        let len = name.len();
+        if len > 31 {
+            return Err(Error::InvalidSize);
+        }
+        (len as u8).encode(buf)?;
+        (&name[..len]).encode(buf)?;
 
-        let zero = [0u8; 32];
-        (&zero[..32 - max]).encode(buf)
+        let zero = [0u8; 31];
+        (&zero[..31 - len]).encode(buf)
     }
 }
 
 impl Decode for Compressor {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
-        let name = <[u8; 32]>::decode(buf)?;
-
-        let name = String::from_utf8_lossy(&name)
-            .trim_end_matches('\0')
-            .to_string();
-
-        Ok(Self(name))
+        let compressor_name_bytes = <[u8; 32]>::decode(buf)?;
+        match compressor_name_bytes[0] {
+            0 => Ok(Self(String::new())),
+            1..=31 => {
+                let start_bytes = 1;
+                let end_bytes = start_bytes + compressor_name_bytes[0] as usize;
+                let name = String::from_utf8_lossy(&compressor_name_bytes[start_bytes..end_bytes])
+                    .trim_end_matches('\0')
+                    .to_string();
+                Ok(Self(name))
+            }
+            _ => {
+                // try reading as a string
+                let name = String::from_utf8_lossy(&compressor_name_bytes)
+                    .trim_end_matches('\0')
+                    .to_string();
+                Ok(Self(name))
+            }
+        }
     }
 }
 
@@ -332,5 +348,72 @@ impl Decode for Zeroed {
 impl From<usize> for Zeroed {
     fn from(size: usize) -> Self {
         Self { size }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Compressor, Decode as _, Encode as _};
+
+    #[test]
+    fn check_compressor_encode_minimal() {
+        let compressor = Compressor::from("A");
+        let mut buf = Vec::new();
+        compressor.encode(&mut buf).unwrap();
+        assert_eq!(buf.len(), 32);
+        assert_eq!(
+            buf,
+            vec![
+                0x01, b'A', 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+            ]
+        );
+        let decode = Compressor::decode(&mut buf.as_ref()).unwrap();
+        assert_eq!(decode, compressor);
+    }
+
+    #[test]
+    fn check_compressor_encode_empty() {
+        let compressor = Compressor::from("");
+        let mut buf = Vec::new();
+        compressor.encode(&mut buf).unwrap();
+        assert_eq!(buf.len(), 32);
+        assert_eq!(
+            buf,
+            vec![
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+            ]
+        );
+        let decode = Compressor::decode(&mut buf.as_ref()).unwrap();
+        assert_eq!(decode, compressor);
+    }
+
+    #[test]
+    fn check_compressor_encode_maximal() {
+        let compressor = Compressor::from("ABCDEFGHIJKLMNOPQRSTUVWXYZabcde");
+        let mut buf = Vec::new();
+        compressor.encode(&mut buf).unwrap();
+        assert_eq!(buf.len(), 32);
+        assert_eq!(
+            buf,
+            vec![
+                0x1F, b'A', b'B', b'C', b'D', b'E', b'F', b'G', b'H', b'I', b'J', b'K', b'L', b'M',
+                b'N', b'O', b'P', b'Q', b'R', b'S', b'T', b'U', b'V', b'W', b'X', b'Y', b'Z', b'a',
+                b'b', b'c', b'd', b'e'
+            ]
+        );
+        let decode = Compressor::decode(&mut buf.as_ref()).unwrap();
+        assert_eq!(decode, compressor);
+    }
+
+    #[test]
+    fn check_compressor_encode_too_long() {
+        let compressor = Compressor::from("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef");
+        let mut buf = Vec::new();
+        let result = compressor.encode(&mut buf);
+        assert!(result.is_err());
     }
 }
