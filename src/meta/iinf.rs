@@ -24,6 +24,7 @@ pub struct ItemInfoEntry {
     pub item_name: String,
     pub content_type: Option<String>,
     pub content_encoding: Option<String>,
+    pub item_uri_type: Option<String>,
     pub item_not_in_presentation: bool,
 }
 
@@ -73,6 +74,11 @@ impl AtomExt for ItemInfoEntry {
                     .unwrap_or("".to_string())
                     .as_str()
                     .encode(buf)?;
+            } else if self.item_type == Some(FourCC::new(b"uri ")) {
+                let item_uri_type = self.item_uri_type.as_ref().ok_or(Error::MissingContent(
+                    "item_uri_type required with 'uri ' item_type",
+                ))?;
+                item_uri_type.as_str().encode(buf)?;
             }
         }
         Ok(ItemInfoEntryExt {
@@ -88,6 +94,7 @@ impl AtomExt for ItemInfoEntry {
         let item_name;
         let mut content_type = None;
         let mut content_encoding = None;
+        let mut item_uri_type = None;
         if (ext.version == ItemInfoEntryVersion::V0) || (ext.version == ItemInfoEntryVersion::V1) {
             item_id = u16::decode(buf)? as u32;
             item_protection_index = u16::decode(buf)?;
@@ -109,6 +116,8 @@ impl AtomExt for ItemInfoEntry {
             if item_type == Some(FourCC::new(b"mime")) {
                 content_type = Some(String::decode(buf)?);
                 content_encoding = Some(String::decode(buf)?);
+            } else if item_type == Some(FourCC::new(b"uri ")) {
+                item_uri_type = Some(String::decode(buf)?);
             }
         }
         Ok(ItemInfoEntry {
@@ -118,6 +127,7 @@ impl AtomExt for ItemInfoEntry {
             item_name,
             content_type,
             content_encoding,
+            item_uri_type,
             item_not_in_presentation: ext.item_not_in_presentation,
         })
     }
@@ -161,5 +171,126 @@ impl AtomExt for Iinf {
         }
 
         Ok(IinfExt { version })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ENCODED_IINF_LIBAVIF_MIME: &[u8] = &[
+        0, 0, 0, 65, 105, 105, 110, 102, 0, 0, 0, 0, 0, 1, 0, 0, 0, 51, 105, 110, 102, 101, 2, 0,
+        0, 0, 0, 1, 0, 0, 109, 105, 109, 101, 73, 116, 101, 109, 0, 99, 111, 110, 116, 101, 110,
+        116, 45, 116, 121, 112, 101, 0, 117, 110, 107, 110, 111, 119, 110, 47, 109, 105, 109, 101,
+        0,
+    ];
+
+    #[test]
+    fn test_iinf_libavif_decode_mime() {
+        let buf: &mut std::io::Cursor<&&[u8]> =
+            &mut std::io::Cursor::new(&ENCODED_IINF_LIBAVIF_MIME);
+
+        let iinf: Iinf = Iinf {
+            item_infos: vec![ItemInfoEntry {
+                item_id: 1,
+                item_protection_index: 0,
+                item_type: Some(FourCC::new(b"mime")),
+                item_name: "Item".to_string(),
+                content_type: Some("content-type".to_string()),
+                content_encoding: Some("unknown/mime".to_string()),
+                item_uri_type: None,
+                item_not_in_presentation: false,
+            }],
+        };
+        let decoded = Iinf::decode(buf).unwrap();
+        assert_eq!(decoded, iinf);
+    }
+
+    #[test]
+    fn test_iinf_avif_encode_mime() {
+        let iinf: Iinf = Iinf {
+            item_infos: vec![ItemInfoEntry {
+                item_id: 1,
+                item_protection_index: 0,
+                item_type: Some(FourCC::new(b"mime")),
+                item_name: "Item".to_string(),
+                content_type: Some("content-type".to_string()),
+                content_encoding: Some("unknown/mime".to_string()),
+                item_uri_type: None,
+                item_not_in_presentation: false,
+            }],
+        };
+        let mut buf = Vec::new();
+        iinf.encode(&mut buf).unwrap();
+
+        assert_eq!(buf.as_slice(), ENCODED_IINF_LIBAVIF_MIME);
+    }
+
+    const ENCODED_IINF_LIBAVIF_URI: &[u8] = &[
+        0, 0, 0, 50, 105, 105, 110, 102, 0, 0, 0, 0, 0, 1, 0, 0, 0, 36, 105, 110, 102, 101, 2, 0,
+        0, 0, 0, 1, 0, 0, 117, 114, 105, 32, 73, 116, 101, 109, 0, 117, 114, 105, 58, 47, 47, 116,
+        101, 115, 116, 0,
+    ];
+
+    #[test]
+    fn test_iinf_libavif_decode_uri() {
+        let buf: &mut std::io::Cursor<&&[u8]> =
+            &mut std::io::Cursor::new(&ENCODED_IINF_LIBAVIF_URI);
+
+        let iinf: Iinf = Iinf {
+            item_infos: vec![ItemInfoEntry {
+                item_id: 1,
+                item_protection_index: 0,
+                item_type: Some(FourCC::new(b"uri ")),
+                item_name: "Item".to_string(),
+                content_type: None,
+                content_encoding: None,
+                item_uri_type: Some("uri://test".to_string()),
+                item_not_in_presentation: false,
+            }],
+        };
+        let decoded = Iinf::decode(buf).unwrap();
+        assert_eq!(decoded, iinf);
+    }
+
+    #[test]
+    fn test_iinf_avif_encode_uri() {
+        let iinf: Iinf = Iinf {
+            item_infos: vec![ItemInfoEntry {
+                item_id: 1,
+                item_protection_index: 0,
+                item_type: Some(FourCC::new(b"uri ")),
+                item_name: "Item".to_string(),
+                content_type: None,
+                content_encoding: None,
+                item_uri_type: Some("uri://test".to_string()),
+                item_not_in_presentation: false,
+            }],
+        };
+        let mut buf = Vec::new();
+        iinf.encode(&mut buf).unwrap();
+
+        assert_eq!(buf.as_slice(), ENCODED_IINF_LIBAVIF_URI);
+    }
+
+    #[test]
+    fn test_iinf_avif_encode_uri_invalid() {
+        let iinf: Iinf = Iinf {
+            item_infos: vec![ItemInfoEntry {
+                item_id: 1,
+                item_protection_index: 0,
+                item_type: Some(FourCC::new(b"uri ")),
+                item_name: "Item".to_string(),
+                content_type: None,
+                content_encoding: None,
+                item_uri_type: None, // encode will return an error because this is empty
+                item_not_in_presentation: false,
+            }],
+        };
+        let mut buf = Vec::new();
+        assert!(matches!(
+            iinf.encode(&mut buf),
+            Err(Error::MissingContent(_))
+        ));
     }
 }
