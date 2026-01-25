@@ -44,8 +44,6 @@ fn uncompressed() {
                 },
                 next_track_id: 2
             },
-            meta: None,
-            mvex: None,
             trak: [Trak {
                 tkhd: Tkhd {
                     creation_time: 3827291266,
@@ -239,7 +237,8 @@ fn uncompressed() {
                     .into(),],
                 }),
                 ..Default::default()
-            })
+            },),
+            ..Default::default()
         }
     );
 

@@ -41,7 +41,6 @@ fn flac() {
                 },
                 next_track_id: 2
             },
-            meta: None,
             mvex: Some(Mvex {
                 mehd: None,
                 trex: vec![Trex {
@@ -157,7 +156,7 @@ fn flac() {
                 senc: None,
                 udta: None
             }],
-            udta: None
+            ..Default::default()
         }
     );
 

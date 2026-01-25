@@ -45,7 +45,6 @@ fn av1() {
                 },
                 next_track_id: 2
             },
-            meta: None,
             mvex: Some(Mvex {
                 mehd: None,
                 trex: vec![Trex {
@@ -189,7 +188,8 @@ fn av1() {
                     .into(),],
                 }),
                 ..Default::default()
-            })
+            }),
+            ..Default::default()
         }
     );
 
