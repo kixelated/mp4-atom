@@ -63,6 +63,7 @@ fn heif() {
                             item_name: "".into(),
                             content_type: None,
                             content_encoding: None,
+                            item_uri_type: None,
                             item_not_in_presentation: false,
                         },
                         ItemInfoEntry {
@@ -72,6 +73,7 @@ fn heif() {
                             item_name: "".into(),
                             content_type: None,
                             content_encoding: None,
+                            item_uri_type: None,
                             item_not_in_presentation: false,
                         },
                     ]
@@ -331,6 +333,7 @@ fn avif() {
                         item_name: "Color".into(),
                         content_type: None,
                         content_encoding: None,
+                        item_uri_type: None,
                         item_not_in_presentation: false
                     }]
                 }
