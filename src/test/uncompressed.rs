@@ -171,7 +171,8 @@ fn uncompressed() {
                                         avg_bitrate: 48
                                     }),
                                     ccst: None,
-                                    pasp: None
+                                    pasp: None,
+                                    taic: None,
                                 })],
                             },
                             stts: Stts {

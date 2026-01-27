@@ -1,6 +1,6 @@
 use crate::*;
 
-use super::{Btrt, Pasp, Visual};
+use super::{Btrt, Pasp, Taic, Visual};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -11,6 +11,7 @@ pub struct Uncv {
     pub btrt: Option<Btrt>,
     pub ccst: Option<Ccst>,
     pub pasp: Option<Pasp>,
+    pub taic: Option<Taic>,
 }
 
 impl Atom for Uncv {
@@ -24,6 +25,7 @@ impl Atom for Uncv {
         let mut uncc = None;
         let mut btrt = None;
         let mut pasp = None;
+        let mut taic = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Cmpd(atom) => cmpd = atom.into(),
@@ -31,6 +33,7 @@ impl Atom for Uncv {
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Ccst(atom) => ccst = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
+                Any::Taic(atom) => taic = atom.into(),
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
@@ -42,6 +45,7 @@ impl Atom for Uncv {
             btrt,
             ccst,
             pasp,
+            taic,
         })
     }
 
@@ -52,6 +56,7 @@ impl Atom for Uncv {
         self.btrt.encode(buf)?;
         self.ccst.encode(buf)?;
         self.pasp.encode(buf)?;
+        self.taic.encode(buf)?;
 
         Ok(())
     }
