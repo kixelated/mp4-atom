@@ -143,9 +143,7 @@ fn av1() {
                                         max_bitrate: 914496,
                                         avg_bitrate: 914496
                                     }),
-                                    colr: None,
-                                    pasp: None,
-                                    taic: None,
+                                    ..Default::default()
                                 }
                                 .into()],
                             },
