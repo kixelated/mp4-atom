@@ -5,5 +5,6 @@ mod flac;
 mod h264;
 mod hevc;
 mod image;
+mod libavif_anim;
 mod uncompressed;
 mod vp9;

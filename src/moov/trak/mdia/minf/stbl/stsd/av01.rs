@@ -1,5 +1,5 @@
 use crate::coding::{Decode, Encode};
-use crate::{Any, Atom, Buf, BufMut, DecodeMaybe, Error, FourCC, Result};
+use crate::{Any, Atom, Buf, BufMut, Ccst, DecodeMaybe, Error, FourCC, Result};
 
 use super::{Btrt, Colr, Pasp, Taic, Visual};
 
@@ -9,6 +9,7 @@ pub struct Av01 {
     pub visual: Visual,
     pub av1c: Av1c,
     pub btrt: Option<Btrt>,
+    pub ccst: Option<Ccst>,
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
@@ -22,6 +23,7 @@ impl Atom for Av01 {
 
         let mut av1c = None;
         let mut btrt = None;
+        let mut ccst = None;
         let mut colr = None;
         let mut pasp = None;
         let mut taic = None;
@@ -29,6 +31,7 @@ impl Atom for Av01 {
             match atom {
                 Any::Av1c(atom) => av1c = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
+                Any::Ccst(atom) => ccst = atom.into(),
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
@@ -40,6 +43,7 @@ impl Atom for Av01 {
             visual,
             av1c: av1c.ok_or(Error::MissingBox(Av1c::KIND))?,
             btrt,
+            ccst,
             colr,
             pasp,
             taic,
@@ -50,6 +54,7 @@ impl Atom for Av01 {
         self.visual.encode(buf)?;
         self.av1c.encode(buf)?;
         self.btrt.encode(buf)?;
+        self.ccst.encode(buf)?;
         self.colr.encode(buf)?;
         self.pasp.encode(buf)?;
         self.taic.encode(buf)?;
