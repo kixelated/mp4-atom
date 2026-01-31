@@ -1,8 +1,10 @@
+mod ainf;
 mod mvex;
 mod mvhd;
 mod trak;
 mod udta;
 
+pub use ainf::*;
 pub use mvex::*;
 pub use mvhd::*;
 pub use trak::*;
@@ -18,6 +20,7 @@ pub struct Moov {
     pub mvex: Option<Mvex>,
     pub trak: Vec<Trak>,
     pub udta: Option<Udta>,
+    pub ainf: Option<Ainf>,
 }
 
 impl Atom for Moov {
@@ -25,7 +28,7 @@ impl Atom for Moov {
 
     nested! {
         required: [ Mvhd ],
-        optional: [ Meta, Mvex, Udta ],
+        optional: [ Ainf, Meta, Mvex, Udta ],
         multiple: [ Trak ],
     }
 }
@@ -231,7 +234,7 @@ mod test {
                     senc: None,
                     udta: None
                 }],
-                udta: None,
+                ..Default::default()
             }
         )
     }

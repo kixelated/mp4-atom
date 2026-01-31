@@ -40,7 +40,6 @@ fn hevc() {
                 },
                 next_track_id: 2
             },
-            meta: None,
             mvex: Some(Mvex {
                 mehd: None,
                 trex: vec![Trex {
@@ -406,7 +405,8 @@ fn hevc() {
                     .into(),],
                 }),
                 ..Default::default()
-            })
+            }),
+            ..Default::default()
         }
     );
 

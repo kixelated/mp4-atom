@@ -179,7 +179,7 @@ fn vp9() {
                 senc: None,
                 udta: None,
             }],
-            udta: None
+            ..Default::default()
         }
     );
 

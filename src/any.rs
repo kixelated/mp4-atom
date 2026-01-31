@@ -260,6 +260,7 @@ any! {
             Year,
     Moov,
         Mvhd,
+        Ainf,
         Udta,
             Cprt,
             Kind,

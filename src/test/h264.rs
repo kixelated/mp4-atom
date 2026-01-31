@@ -40,7 +40,6 @@ fn avcc_ext() {
             },
             next_track_id: 2,
         },
-        meta: None,
         mvex: Some(Mvex {
             mehd: None,
             trex: vec![
@@ -288,6 +287,7 @@ fn avcc_ext() {
             },
         ],
         udta: Some(Udta::default()),
+        ..Default::default()
     };
 
     assert_eq!(moov, expected, "different decoded result");
