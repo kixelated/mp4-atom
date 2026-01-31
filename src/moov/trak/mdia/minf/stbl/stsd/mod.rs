@@ -1,4 +1,5 @@
 mod ac3;
+mod amr;
 mod audio;
 mod av01;
 mod btrt;
@@ -24,6 +25,7 @@ mod vp9;
 mod wvtt;
 
 pub use ac3::*;
+pub use amr::*;
 pub use audio::*;
 pub use av01::*;
 pub use btrt::*;
@@ -119,6 +121,9 @@ pub enum Codec {
     // WebVTT, ISO/IEC 14496-30
     Wvtt(Wvtt),
 
+    // 3GPP Narrowband audio (3GPP TS 26.244 or ETSI TS 126 244)
+    Samr(Samr),
+
     // Unknown
     Unknown(FourCC),
 }
@@ -151,6 +156,7 @@ impl Decode for Codec {
             Any::Fl64(atom) => atom.into(),
             Any::S16l(atom) => atom.into(),
             Any::Wvtt(atom) => atom.into(),
+            Any::Samr(atom) => atom.into(),
             unknown => {
                 crate::decode_unknown(&unknown, Stsd::KIND)?;
                 Self::Unknown(unknown.kind())
@@ -187,6 +193,7 @@ impl Encode for Codec {
             Self::Fl64(atom) => atom.encode(buf),
             Self::S16l(atom) => atom.encode(buf),
             Self::Wvtt(atom) => atom.encode(buf),
+            Self::Samr(atom) => atom.encode(buf),
         }
     }
 }
