@@ -1,4 +1,5 @@
 mod ac3;
+mod amr;
 mod audio;
 mod av01;
 mod btrt;
@@ -22,6 +23,7 @@ mod visual;
 mod vp9;
 
 pub use ac3::*;
+pub use amr::*;
 pub use audio::*;
 pub use av01::*;
 pub use btrt::*;
@@ -112,6 +114,8 @@ pub enum Codec {
     Fl64(Fl64),
     S16l(S16l),
 
+    Samr(Samr),
+
     // Unknown
     Unknown(FourCC),
 }
@@ -143,6 +147,7 @@ impl Decode for Codec {
             Any::Fl32(atom) => atom.into(),
             Any::Fl64(atom) => atom.into(),
             Any::S16l(atom) => atom.into(),
+            Any::Samr(atom) => atom.into(),
             unknown => {
                 crate::decode_unknown(&unknown, Stsd::KIND)?;
                 Self::Unknown(unknown.kind())
@@ -178,6 +183,7 @@ impl Encode for Codec {
             Self::Fl32(atom) => atom.encode(buf),
             Self::Fl64(atom) => atom.encode(buf),
             Self::S16l(atom) => atom.encode(buf),
+            Self::Samr(atom) => atom.encode(buf),
         }
     }
 }

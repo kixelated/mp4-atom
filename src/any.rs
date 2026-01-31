@@ -303,6 +303,8 @@ any! {
                             Sowt, Twos, Lpcm, Ipcm, Fpcm, In24, In32, Fl32, Fl64, S16l,
                                 PcmC,
                                 Chnl,
+                            Samr,
+                                Damr,
                         Stts,
                         Stsc,
                         Stsz,
