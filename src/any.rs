@@ -257,6 +257,7 @@ any! {
             Desc,
             Tool, // "©too"
             Name,
+            Rtng,
             Year,
     Moov,
         Mvhd,

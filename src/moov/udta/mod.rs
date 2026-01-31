@@ -1,9 +1,11 @@
 mod cprt;
 mod kind;
+mod rtng;
 mod skip;
 
 pub use cprt::*;
 pub use kind::*;
+pub use rtng::*;
 pub use skip::*;
 
 use crate::*;
@@ -14,6 +16,7 @@ pub struct Udta {
     pub cprt: Option<Cprt>,
     pub kind: Option<Kind>,
     pub meta: Option<Meta>,
+    pub rtng: Option<Rtng>,
 }
 
 impl Atom for Udta {
@@ -21,7 +24,7 @@ impl Atom for Udta {
 
     nested! {
         required: [ ],
-        optional: [ Cprt, Meta, Kind],
+        optional: [ Cprt, Meta, Kind, Rtng ],
         multiple: [ ],
     }
 }
@@ -36,6 +39,7 @@ mod tests {
             cprt: None,
             meta: None,
             kind: None,
+            rtng: None,
         };
 
         let mut buf = Vec::new();
@@ -63,6 +67,12 @@ mod tests {
             kind: Some(Kind {
                 scheme_uri: "http://www.w3.org/TR/html5/".into(),
                 value: "".into(),
+            }),
+            rtng: Some(Rtng {
+                entity: b"BBFC".into(),
+                criteria: b"PG13".into(),
+                language: "eng".into(),
+                rating_info: "test info".into(),
             }),
         };
 
@@ -96,8 +106,7 @@ mod tests {
             udta,
             Udta {
                 cprt: Some(Cprt { language: "und".into(), notice: "ENST IsoMedia Conformance Files - ENST (c) 2006 - Rights released for ISO Conformance use".into() }),
-                meta: None,
-                kind: None,
+                ..Default::default()
             }
         );
 
@@ -124,12 +133,11 @@ mod tests {
         assert_eq!(
             udta,
             Udta {
-                cprt: None,
-                meta: None,
                 kind: Some(Kind {
                     scheme_uri: "urn:mpeg:dash:role:2011".into(),
                     value: "main".into()
-                })
+                }),
+                ..Default::default()
             }
         );
 
