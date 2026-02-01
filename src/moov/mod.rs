@@ -158,7 +158,6 @@ mod test {
                             }]
                         })
                     }),
-                    meta: None,
                     mdia: Mdia {
                         mdhd: Mdhd {
                             creation_time: 3773812694,
@@ -228,8 +227,7 @@ mod test {
                             ..Default::default()
                         }
                     },
-                    senc: None,
-                    udta: None
+                    ..Default::default()
                 }],
                 udta: None,
             }

@@ -99,8 +99,6 @@ fn vp9() {
                     width: 320.into(),
                     height: 240.into()
                 },
-                edts: None,
-                meta: None,
                 mdia: Mdia {
                     mdhd: Mdhd {
                         creation_time: 3576083626,
@@ -176,8 +174,7 @@ fn vp9() {
                         ..Default::default()
                     }
                 },
-                senc: None,
-                udta: None,
+                ..Default::default()
             }],
             udta: None
         }
