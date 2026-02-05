@@ -281,7 +281,7 @@ any! {
                                 Fiel,
                             Hev1, Hvc1,
                                 Hvcc,
-                            Mp4a,
+                            Mp4a, Mp4v,
                                 Esds,
                             Tx3g,
                                 Ftab,
