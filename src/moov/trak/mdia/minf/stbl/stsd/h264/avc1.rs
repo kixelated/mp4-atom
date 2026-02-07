@@ -1,8 +1,10 @@
 use crate::*;
 
+const AVC1_CODE: u32 = u32::from_be_bytes([b'a', b'v', b'c', b'1']);
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Avc1 {
+pub struct AvcSampleEntry<const KIND_CODE: u32> {
     pub visual: Visual,
     pub avcc: Avcc,
     pub btrt: Option<Btrt>,
@@ -12,8 +14,10 @@ pub struct Avc1 {
     pub fiel: Option<Fiel>,
 }
 
-impl Atom for Avc1 {
-    const KIND: FourCC = FourCC::new(b"avc1");
+pub type Avc1 = AvcSampleEntry<{ AVC1_CODE }>;
+
+impl<const KIND_CODE: u32> Atom for AvcSampleEntry<KIND_CODE> {
+    const KIND: FourCC = FourCC::from_u32(KIND_CODE);
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         let visual = Visual::decode(buf)?;
@@ -36,7 +40,7 @@ impl Atom for Avc1 {
             }
         }
 
-        Ok(Avc1 {
+        Ok(Self {
             visual,
             avcc: avcc.ok_or(Error::MissingBox(Avcc::KIND))?,
             btrt,
