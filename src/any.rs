@@ -306,6 +306,7 @@ any! {
                         Stts,
                         Stsc,
                         Stsz,
+                        Stz2,
                         Stss,
                         Stco,
                         Co64,
