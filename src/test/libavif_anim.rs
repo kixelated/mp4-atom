@@ -185,7 +185,6 @@ fn av1_anim() {
                         }]
                     })
                 }),
-                meta: None,
                 mdia: Mdia {
                     mdhd: Mdhd {
                         creation_time: 3852424385,
@@ -278,11 +277,11 @@ fn av1_anim() {
                             ..Default::default()
                         },
                         ..Default::default()
-                    }
+                    },
                 },
                 ..Default::default()
             }],
-            udta: None,
+            ..Default::default()
         }
     );
 }
