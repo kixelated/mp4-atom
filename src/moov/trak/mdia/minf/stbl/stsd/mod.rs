@@ -15,11 +15,13 @@ mod mp4a;
 mod opus;
 mod pasp;
 mod pcm;
+mod plaintext;
 mod taic;
 mod tx3g;
 mod uncv;
 mod visual;
 mod vp9;
+mod wvtt;
 
 pub use ac3::*;
 pub use audio::*;
@@ -38,11 +40,13 @@ pub use mp4a::*;
 pub use opus::*;
 pub use pasp::*;
 pub use pcm::*;
+pub use plaintext::*;
 pub use taic::*;
 pub use tx3g::*;
 pub use uncv::*;
 pub use visual::*;
 pub use vp9::*;
+pub use wvtt::*;
 
 use crate::*;
 use derive_more::From;
@@ -112,6 +116,9 @@ pub enum Codec {
     Fl64(Fl64),
     S16l(S16l),
 
+    // WebVTT, ISO/IEC 14496-30
+    Wvtt(Wvtt),
+
     // Unknown
     Unknown(FourCC),
 }
@@ -143,6 +150,7 @@ impl Decode for Codec {
             Any::Fl32(atom) => atom.into(),
             Any::Fl64(atom) => atom.into(),
             Any::S16l(atom) => atom.into(),
+            Any::Wvtt(atom) => atom.into(),
             unknown => {
                 crate::decode_unknown(&unknown, Stsd::KIND)?;
                 Self::Unknown(unknown.kind())
@@ -178,6 +186,7 @@ impl Encode for Codec {
             Self::Fl32(atom) => atom.encode(buf),
             Self::Fl64(atom) => atom.encode(buf),
             Self::S16l(atom) => atom.encode(buf),
+            Self::Wvtt(atom) => atom.encode(buf),
         }
     }
 }
