@@ -68,8 +68,6 @@ fn uncompressed() {
                     width: 2.into(),
                     height: 1.into(),
                 },
-                edts: None,
-                meta: None,
                 mdia: Mdia {
                     mdhd: Mdhd {
                         creation_time: 3827291266,
@@ -214,8 +212,7 @@ fn uncompressed() {
                         ..Default::default()
                     }
                 },
-                senc: None,
-                udta: None,
+                ..Default::default()
             }]
             .into(),
             udta: Some(Udta {

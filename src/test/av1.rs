@@ -79,8 +79,6 @@ fn av1() {
                     width: 1920.into(),
                     height: 1080.into()
                 },
-                edts: None,
-                meta: None,
                 mdia: Mdia {
                     mdhd: Mdhd {
                         creation_time: 0,
@@ -163,8 +161,7 @@ fn av1() {
                         ..Default::default()
                     }
                 },
-                senc: None,
-                udta: None,
+                ..Default::default()
             }],
             udta: Some(Udta {
                 meta: Some(Meta {

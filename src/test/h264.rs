@@ -84,8 +84,6 @@ fn avcc_ext() {
                     width: 1280.into(),
                     height: 720.into(),
                 },
-                edts: None,
-                meta: None,
                 mdia: Mdia {
                     mdhd: Mdhd {
                         creation_time: 0,
@@ -180,8 +178,7 @@ fn avcc_ext() {
                         ..Default::default()
                     },
                 },
-                senc: None,
-                udta: None,
+                ..Default::default()
             },
             Trak {
                 tkhd: Tkhd {
@@ -207,8 +204,6 @@ fn avcc_ext() {
                     width: 0.into(),
                     height: 0.into(),
                 },
-                edts: None,
-                meta: None,
                 mdia: Mdia {
                     mdhd: Mdhd {
                         creation_time: 0,
@@ -282,8 +277,7 @@ fn avcc_ext() {
                         ..Default::default()
                     },
                 },
-                senc: None,
-                udta: None,
+                ..Default::default()
             },
         ],
         udta: Some(Udta::default()),

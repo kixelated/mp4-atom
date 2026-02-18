@@ -75,8 +75,6 @@ fn flac() {
                     width: 0.into(),
                     height: 0.into(),
                 },
-                edts: None,
-                meta: None,
                 mdia: Mdia {
                     mdhd: Mdhd {
                         creation_time: 3840517353,
@@ -153,8 +151,7 @@ fn flac() {
                         ..Default::default()
                     }
                 },
-                senc: None,
-                udta: None
+                ..Default::default()
             }],
             ..Default::default()
         }
