@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0](https://github.com/kixelated/mp4-atom/compare/v0.10.1...v0.11.0) - 2026-02-19
+
+### Other
+
+- implement 3GPP narrowband codec sample entry (samr) ([#135](https://github.com/kixelated/mp4-atom/pull/135))
+- fix up tests after recent commits ([#140](https://github.com/kixelated/mp4-atom/pull/140))
+- implement track reference (tref) box ([#139](https://github.com/kixelated/mp4-atom/pull/139))
+- implement Web Video Text Tracks (WebVTT) sample entry format ([#131](https://github.com/kixelated/mp4-atom/pull/131))
+- implement rtng box ([#136](https://github.com/kixelated/mp4-atom/pull/136))
+- implement ainf box. ([#122](https://github.com/kixelated/mp4-atom/pull/122))
+- add ccst support for AV1 ([#133](https://github.com/kixelated/mp4-atom/pull/133))
+- Add option for having taic box ([#132](https://github.com/kixelated/mp4-atom/pull/132))
+- implement hint media header (hmhd) box ([#115](https://github.com/kixelated/mp4-atom/pull/115))
+- Add support for "uri " infe boxes inside iinf ([#123](https://github.com/kixelated/mp4-atom/pull/123))
+
 ## [0.10.1](https://github.com/kixelated/mp4-atom/compare/v0.10.0...v0.10.1) - 2026-01-23
 
 ### Other
