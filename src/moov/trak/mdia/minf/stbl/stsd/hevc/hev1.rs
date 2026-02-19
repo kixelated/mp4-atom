@@ -5,6 +5,7 @@ use crate::*;
 pub struct Hev1 {
     pub visual: Visual,
     pub hvcc: Hvcc,
+    pub lhvc: Option<Lhvc>,
     pub btrt: Option<Btrt>,
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
@@ -19,6 +20,7 @@ impl Atom for Hev1 {
         let visual = Visual::decode(buf)?;
 
         let mut hvcc = None;
+        let mut lhvc = None;
         let mut btrt = None;
         let mut colr = None;
         let mut pasp = None;
@@ -27,6 +29,7 @@ impl Atom for Hev1 {
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Hvcc(atom) => hvcc = atom.into(),
+                Any::Lhvc(atom) => lhvc = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
@@ -39,6 +42,7 @@ impl Atom for Hev1 {
         Ok(Hev1 {
             visual,
             hvcc: hvcc.ok_or(Error::MissingBox(Hvcc::KIND))?,
+            lhvc,
             btrt,
             colr,
             pasp,
@@ -50,6 +54,7 @@ impl Atom for Hev1 {
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
         self.hvcc.encode(buf)?;
+        self.lhvc.encode(buf)?;
         self.btrt.encode(buf)?;
         self.colr.encode(buf)?;
         self.pasp.encode(buf)?;
@@ -80,11 +85,7 @@ mod tests {
                 configuration_version: 1,
                 ..Default::default()
             },
-            btrt: None,
-            colr: None,
-            pasp: None,
-            taic: None,
-            fiel: None,
+            ..Default::default()
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();

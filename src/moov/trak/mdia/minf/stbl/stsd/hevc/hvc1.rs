@@ -6,6 +6,7 @@ pub struct Hvc1 {
     pub visual: Visual,
     pub hvcc: Hvcc,
     // TODO support SPS/PPS/VPS atoms
+    pub lhvc: Option<Lhvc>,
     pub btrt: Option<Btrt>,
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
@@ -21,6 +22,7 @@ impl Atom for Hvc1 {
         let visual = Visual::decode(buf)?;
 
         let mut hvcc = None;
+        let mut lhvc = None;
         let mut btrt = None;
         let mut colr = None;
         let mut pasp = None;
@@ -30,6 +32,7 @@ impl Atom for Hvc1 {
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Hvcc(atom) => hvcc = atom.into(),
+                Any::Lhvc(atom) => lhvc = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
@@ -43,6 +46,7 @@ impl Atom for Hvc1 {
         Ok(Self {
             visual,
             hvcc: hvcc.ok_or(Error::MissingBox(Hvcc::KIND))?,
+            lhvc,
             btrt,
             colr,
             pasp,
@@ -55,6 +59,7 @@ impl Atom for Hvc1 {
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
         self.hvcc.encode(buf)?;
+        self.lhvc.encode(buf)?;
         self.btrt.encode(buf)?;
         self.colr.encode(buf)?;
         self.pasp.encode(buf)?;
@@ -166,16 +171,12 @@ mod tests {
                         }
                     ]
                 },
-                btrt: None,
-                colr: None,
-                pasp: None,
-                taic: None,
-                fiel: None,
                 ccst: Some(Ccst {
                     all_ref_pics_intra: true,
                     intra_pred_used: false,
                     max_ref_per_pic: 0
-                })
+                }),
+                ..Default::default()
             }
         );
 

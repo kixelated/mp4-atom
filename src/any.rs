@@ -282,7 +282,7 @@ any! {
                                 Taic,
                                 Fiel,
                             Hev1, Hvc1,
-                                Hvcc,
+                                Hvcc, Lhvc,
                             Mp4a,
                                 Esds,
                             Tx3g,
