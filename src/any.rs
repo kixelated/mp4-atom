@@ -308,6 +308,8 @@ any! {
                             Wvtt,
                                 VttC,
                                 Vlab,
+                            Samr,
+                                Damr,
                         Stts,
                         Stsc,
                         Stsz,
