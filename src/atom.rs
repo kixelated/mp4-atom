@@ -63,7 +63,7 @@ impl<T: Atom> DecodeMaybe for T {
             Err(err) => return Err(err),
         };
 
-        if body.has_remaining() {
+        if (cfg!(feature = "strict") || cfg!(test)) && body.has_remaining() {
             return Err(Error::UnderDecode(T::KIND));
         }
 
@@ -95,7 +95,7 @@ impl<T: Atom> ReadFrom for Option<T> {
             Err(err) => return Err(err),
         };
 
-        if body.has_remaining() {
+        if (cfg!(feature = "strict") || cfg!(test)) && body.has_remaining() {
             return Err(Error::UnderDecode(T::KIND));
         }
 
@@ -142,7 +142,7 @@ impl<T: Atom> DecodeAtom for T {
             Err(err) => return Err(err),
         };
 
-        if body.has_remaining() {
+        if (cfg!(feature = "strict") || cfg!(test)) && body.has_remaining() {
             return Err(Error::UnderDecode(T::KIND));
         }
 

@@ -103,7 +103,7 @@ macro_rules! any {
                     },
                 };
 
-                if body.has_remaining() {
+                if (cfg!(feature = "strict") || cfg!(test)) && body.has_remaining() {
                     return Err(Error::UnderDecode(header.kind));
                 }
 
