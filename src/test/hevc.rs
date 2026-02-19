@@ -361,16 +361,15 @@ fn hevc() {
                                         max_bitrate: 25175730,
                                         avg_bitrate: 25175730
                                     }),
-                                    colr: None,
                                     pasp: Some(Pasp {
                                         h_spacing: 1,
                                         v_spacing: 1,
                                     }),
-                                    taic: None,
                                     fiel: Some(Fiel {
                                         field_count: 1,
                                         field_order: 0
                                     }),
+                                    ..Default::default()
                                 }
                                 .into()],
                             },
