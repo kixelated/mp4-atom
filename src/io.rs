@@ -4,17 +4,17 @@ use super::*;
 
 /// Read a type from a reader.
 pub trait ReadFrom: Sized {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self>;
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self>;
 }
 
 /// Read an atom from a reader provided the header.
 pub trait ReadAtom: Sized {
-    fn read_atom<R: Read>(header: &Header, r: &mut R) -> Result<Self>;
+    fn read_atom<R: Read + ?Sized>(header: &Header, r: &mut R) -> Result<Self>;
 }
 
 /// Keep discarding atoms until the desired atom is found.
 pub trait ReadUntil: Sized {
-    fn read_until<R: Read>(r: &mut R) -> Result<Self>;
+    fn read_until<R: Read + ?Sized>(r: &mut R) -> Result<Self>;
 }
 
 /// Write a type to a writer.

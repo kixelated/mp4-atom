@@ -70,13 +70,13 @@ impl DecodeMaybe for Header {
 }
 
 impl ReadFrom for Header {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         <Option<Header> as ReadFrom>::read_from(r)?.ok_or(Error::UnexpectedEof)
     }
 }
 
 impl ReadFrom for Option<Header> {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         let mut buf = [0u8; 8];
         let n = r.read(&mut buf)?;
         if n == 0 {
@@ -107,7 +107,7 @@ impl ReadFrom for Option<Header> {
 
 // Utility methods
 impl Header {
-    pub(crate) fn read_body<R: Read>(&self, r: &mut R) -> Result<Cursor<Vec<u8>>> {
+    pub(crate) fn read_body<R: Read + ?Sized>(&self, r: &mut R) -> Result<Cursor<Vec<u8>>> {
         // TODO This allocates on the heap.
         // Ideally, we should use ReadFrom instead of Decode to avoid this.
 
