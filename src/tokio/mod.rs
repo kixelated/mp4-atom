@@ -18,8 +18,10 @@ pub trait AsyncWriteTo {
 
 pub trait AsyncReadAtom: Sized {
     #[allow(async_fn_in_trait)]
-    async fn read_atom<R: tokio::io::AsyncRead + Unpin + ?Sized>(header: &Header, r: &mut R)
-        -> Result<Self>;
+    async fn read_atom<R: tokio::io::AsyncRead + Unpin + ?Sized>(
+        header: &Header,
+        r: &mut R,
+    ) -> Result<Self>;
 }
 
 pub trait AsyncReadUntil: Sized {
