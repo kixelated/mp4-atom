@@ -19,11 +19,11 @@ pub trait ReadUntil: Sized {
 
 /// Write a type to a writer.
 pub trait WriteTo {
-    fn write_to<W: Write>(&self, w: &mut W) -> Result<()>;
+    fn write_to<W: Write + ?Sized>(&self, w: &mut W) -> Result<()>;
 }
 
 impl<T: Encode> WriteTo for T {
-    fn write_to<W: Write>(&self, w: &mut W) -> Result<()> {
+    fn write_to<W: Write + ?Sized>(&self, w: &mut W) -> Result<()> {
         // TODO We should avoid allocating a buffer here.
         let mut buf = Vec::new();
         self.encode(&mut buf)?;

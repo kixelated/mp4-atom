@@ -132,7 +132,7 @@ impl Header {
     }
 
     #[cfg(feature = "tokio")]
-    pub(crate) async fn read_body_tokio<R: ::tokio::io::AsyncRead + Unpin>(
+    pub(crate) async fn read_body_tokio<R: ::tokio::io::AsyncRead + Unpin + ?Sized>(
         &self,
         r: &mut R,
     ) -> Result<Cursor<Vec<u8>>> {
