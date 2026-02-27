@@ -74,13 +74,13 @@ impl<T: Atom> DecodeMaybe for T {
 }
 
 impl<T: Atom> ReadFrom for T {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         <Option<T> as ReadFrom>::read_from(r)?.ok_or(Error::MissingBox(T::KIND))
     }
 }
 
 impl<T: Atom> ReadFrom for Option<T> {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         let header = match <Option<Header> as ReadFrom>::read_from(r)? {
             Some(header) => header,
             None => return Ok(None),
@@ -104,13 +104,13 @@ impl<T: Atom> ReadFrom for Option<T> {
 }
 
 impl<T: Atom> ReadUntil for T {
-    fn read_until<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_until<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         <Option<T> as ReadUntil>::read_until(r)?.ok_or(Error::MissingBox(T::KIND))
     }
 }
 
 impl<T: Atom> ReadUntil for Option<T> {
-    fn read_until<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_until<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         while let Some(header) = <Option<Header> as ReadFrom>::read_from(r)? {
             if header.kind == T::KIND {
                 let body = &mut header.read_body(r)?;
@@ -153,7 +153,7 @@ impl<T: Atom> DecodeAtom for T {
 }
 
 impl<T: Atom> ReadAtom for T {
-    fn read_atom<R: Read>(header: &Header, r: &mut R) -> Result<Self> {
+    fn read_atom<R: Read + ?Sized>(header: &Header, r: &mut R) -> Result<Self> {
         if header.kind != T::KIND {
             return Err(Error::UnexpectedBox(header.kind));
         }
