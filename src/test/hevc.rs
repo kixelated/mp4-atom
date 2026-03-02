@@ -374,6 +374,7 @@ fn hevc() {
                                 .into()],
                             },
                             stco: Some(Stco { entries: vec![] }),
+                            stsz: Some(Stsz::default()),
                             ..Default::default()
                         },
                         ..Default::default()
