@@ -64,6 +64,8 @@ fn av1() {
                     layer: 0,
                     alternate_group: 0,
                     enabled: true,
+                    in_movie: true,
+                    in_preview: false,
                     volume: 0.into(),
                     matrix: Matrix {
                         a: 65536,
