@@ -4,7 +4,7 @@ ext! {
     name: Url,
     versions: [0],
     flags: {
-        self_contained = 1,
+        self_contained = 0,
     }
 }
 
@@ -34,7 +34,7 @@ impl AtomExt for Url {
         }
 
         Ok(UrlExt {
-            // TODO what does this do?
+            // ISOBMFF §8.7.2: flag bit 0 = media data is in the same file
             self_contained: true,
             ..Default::default()
         })
