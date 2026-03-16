@@ -53,6 +53,8 @@ fn uncompressed() {
                     layer: 0,
                     alternate_group: 0,
                     enabled: true,
+                    in_movie: true,
+                    size_is_aspect_ratio: false,
                     volume: 0.into(),
                     matrix: Matrix {
                         a: 65536,

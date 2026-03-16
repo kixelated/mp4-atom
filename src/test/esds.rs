@@ -47,6 +47,7 @@ fn esds() {
                 tkhd: Tkhd {
                     track_id: 1,
                     enabled: true,
+                    in_movie: true,
                     width: 1280.into(),
                     height: 720.into(),
                     ..Default::default()
@@ -129,6 +130,7 @@ fn esds() {
                     track_id: 2,
                     alternate_group: 1,
                     enabled: true,
+                    in_movie: true,
                     volume: 1.into(),
                     ..Default::default()
                 },
