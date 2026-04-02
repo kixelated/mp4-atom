@@ -200,7 +200,9 @@ fn av1() {
                     sample_description_index: Some(1),
                     default_sample_duration: Some(1000),
                     default_sample_size: Some(252),
-                    default_sample_flags: Some(16842752)
+                    default_sample_flags: Some(16842752),
+                    duration_is_empty: false,
+                    default_base_is_moof: true,
                 },
                 tfdt: Some(Tfdt {
                     base_media_decode_time: 0

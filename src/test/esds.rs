@@ -219,6 +219,7 @@ fn esds() {
                     default_sample_duration: 512.into(),
                     default_sample_flags: 0x1010000.into(),
                     default_sample_size: 3377.into(),
+                    default_base_is_moof: true,
                     ..Default::default()
                 },
                 tfdt: Some(Tfdt {
