@@ -9,6 +9,11 @@ pub enum Colr {
         matrix_coefficients: u16,
         full_range_flag: bool,
     },
+    Nclc {
+        colour_primaries: u16,
+        transfer_characteristics: u16,
+        matrix_coefficients: u16,
+    },
     Ricc {
         profile: Vec<u8>,
     },
@@ -37,28 +42,46 @@ impl Atom for Colr {
     const KIND: FourCC = FourCC::new(b"colr");
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        const NCLX: FourCC = FourCC::new(b"nclx");
+        const NCLC: FourCC = FourCC::new(b"nclc");
+        const PROF: FourCC = FourCC::new(b"prof");
+        const RICC: FourCC = FourCC::new(b"rICC");
+
         let colour_type = FourCC::decode(buf)?;
-        if colour_type == FourCC::new(b"nclx") {
-            let colour_primaries = u16::decode(buf)?;
-            let transfer_characteristics = u16::decode(buf)?;
-            let matrix_coefficients = u16::decode(buf)?;
-            let full_range_flag = u8::decode(buf)? == 0x80;
-            Ok(Colr::Nclx {
-                colour_primaries,
-                transfer_characteristics,
-                matrix_coefficients,
-                full_range_flag,
-            })
-        } else if colour_type == FourCC::new(b"prof") {
-            let profile_len = buf.remaining();
-            let profile = buf.slice(profile_len).to_vec();
-            Ok(Colr::Prof { profile })
-        } else if colour_type == FourCC::new(b"rICC") {
-            let profile_len = buf.remaining();
-            let profile = buf.slice(profile_len).to_vec();
-            Ok(Colr::Ricc { profile })
-        } else {
-            Err(Error::UnexpectedBox(colour_type))
+        match colour_type {
+            NCLX => {
+                let colour_primaries = u16::decode(buf)?;
+                let transfer_characteristics = u16::decode(buf)?;
+                let matrix_coefficients = u16::decode(buf)?;
+                let full_range_flag = u8::decode(buf)? == 0x80;
+                Ok(Colr::Nclx {
+                    colour_primaries,
+                    transfer_characteristics,
+                    matrix_coefficients,
+                    full_range_flag,
+                })
+            }
+            NCLC => {
+                let colour_primaries = u16::decode(buf)?;
+                let transfer_characteristics = u16::decode(buf)?;
+                let matrix_coefficients = u16::decode(buf)?;
+                Ok(Colr::Nclc {
+                    colour_primaries,
+                    transfer_characteristics,
+                    matrix_coefficients,
+                })
+            }
+            PROF => {
+                let profile_len = buf.remaining();
+                let profile = buf.slice(profile_len).to_vec();
+                Ok(Colr::Prof { profile })
+            }
+            RICC => {
+                let profile_len = buf.remaining();
+                let profile = buf.slice(profile_len).to_vec();
+                Ok(Colr::Ricc { profile })
+            }
+            _ => Err(Error::UnexpectedBox(colour_type)),
         }
     }
 
@@ -79,6 +102,16 @@ impl Atom for Colr {
                 } else {
                     0x00u8.encode(buf)?;
                 }
+            }
+            Colr::Nclc {
+                colour_primaries,
+                transfer_characteristics,
+                matrix_coefficients,
+            } => {
+                b"nclc".encode(buf)?;
+                colour_primaries.encode(buf)?;
+                transfer_characteristics.encode(buf)?;
+                matrix_coefficients.encode(buf)?;
             }
             Colr::Ricc { profile } => {
                 b"rICC".encode(buf)?;
