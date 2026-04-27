@@ -2,6 +2,7 @@ use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
 pub enum Colr {
     Nclx {
         colour_primaries: u16,
@@ -241,6 +242,46 @@ mod tests {
             transfer_characteristics: 13,
             matrix_coefficients: 6,
             full_range_flag: true,
+        };
+
+        let mut buf = Vec::new();
+        colr.encode(&mut buf).unwrap();
+
+        assert_eq!(buf.as_slice(), ENCODED);
+    }
+
+    #[test]
+    fn test_nclc_decode() {
+        const ENCODED: &[u8] = &[
+            0x00, 0x00, 0x00, 0x12, 0x63, 0x6f, 0x6c, 0x72, 0x6e, 0x63, 0x6c, 0x63, 0x00, 0x01,
+            0x00, 0x0d, 0x00, 0x06,
+        ];
+
+        let buf = &mut std::io::Cursor::new(&ENCODED);
+
+        let colr = Colr::decode(buf).expect("failed to decode colr");
+
+        assert_eq!(
+            colr,
+            Colr::Nclc {
+                colour_primaries: 1,
+                transfer_characteristics: 13,
+                matrix_coefficients: 6,
+            }
+        );
+    }
+
+    #[test]
+    fn test_nclc_encode() {
+        const ENCODED: &[u8] = &[
+            0x00, 0x00, 0x00, 0x12, 0x63, 0x6f, 0x6c, 0x72, 0x6e, 0x63, 0x6c, 0x63, 0x00, 0x01,
+            0x00, 0x0d, 0x00, 0x06,
+        ];
+
+        let colr = Colr::Nclc {
+            colour_primaries: 1,
+            transfer_characteristics: 13,
+            matrix_coefficients: 6,
         };
 
         let mut buf = Vec::new();
