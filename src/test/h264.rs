@@ -396,6 +396,8 @@ fn avc_encrypted_segment() {
                     default_sample_duration: None,
                     default_sample_size: None,
                     default_sample_flags: None,
+                    duration_is_empty: false,
+                    default_base_is_moof: true,
                 },
                 tfdt: Some(Tfdt {
                     base_media_decode_time: 342202323002237

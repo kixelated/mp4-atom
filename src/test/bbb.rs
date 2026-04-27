@@ -226,6 +226,7 @@ fn bbb() {
                     default_sample_duration: 1000.into(),
                     default_sample_flags: 0x1010000.into(),
                     default_sample_size: 215.into(),
+                    default_base_is_moof: true,
                     ..Default::default()
                 },
                 tfdt: Some(Tfdt {
@@ -287,6 +288,7 @@ fn bbb() {
                     default_sample_duration: 1024.into(),
                     default_sample_flags: 0x2000000.into(),
                     default_sample_size: 9.into(),
+                    default_base_is_moof: true,
                     ..Default::default()
                 },
                 tfdt: Some(Tfdt {

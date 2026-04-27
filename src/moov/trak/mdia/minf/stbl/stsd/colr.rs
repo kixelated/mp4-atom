@@ -75,11 +75,13 @@ impl Atom for Colr {
             PROF => {
                 let profile_len = buf.remaining();
                 let profile = buf.slice(profile_len).to_vec();
+                buf.advance(profile_len);
                 Ok(Colr::Prof { profile })
             }
             RICC => {
                 let profile_len = buf.remaining();
                 let profile = buf.slice(profile_len).to_vec();
+                buf.advance(profile_len);
                 Ok(Colr::Ricc { profile })
             }
             _ => Err(Error::UnexpectedBox(colour_type)),
@@ -163,6 +165,69 @@ mod tests {
                 full_range_flag: false
             }
         );
+    }
+
+    #[test]
+    fn test_prof_decode_roundtrip() {
+        // 19-byte colr: size=0x13, kind=colr, colour_type=prof, 7 bytes profile.
+        // Pre-fix this failed with UnderDecode("colr") because the prof branch
+        // borrowed the profile via buf.slice without advancing the cursor.
+        const ENCODED: &[u8] = &[
+            0x00, 0x00, 0x00, 0x13, b'c', b'o', b'l', b'r', b'p', b'r', b'o', b'f', 0x01, 0x02,
+            0x03, 0x04, 0x05, 0x06, 0x07,
+        ];
+        let buf = &mut std::io::Cursor::new(&ENCODED);
+        let colr = Colr::decode(buf).expect("failed to decode prof colr");
+        assert_eq!(
+            colr,
+            Colr::Prof {
+                profile: vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07],
+            }
+        );
+
+        let mut out = Vec::new();
+        colr.encode(&mut out).expect("encode prof colr");
+        assert_eq!(out.as_slice(), ENCODED);
+    }
+
+    #[test]
+    fn test_prof_does_not_leave_remaining_bytes_for_parent() {
+        // Pin the strict-end-check contract: after decoding a prof colr, the
+        // parent's remaining-bytes check must see an empty buffer. Pre-fix
+        // this saw `profile_len` bytes still pending and returned
+        // UnderDecode("colr") to the parent.
+        const ENCODED: &[u8] = &[
+            0x00, 0x00, 0x00, 0x10, b'c', b'o', b'l', b'r', b'p', b'r', b'o', b'f', 0xDE, 0xAD,
+            0xBE, 0xEF,
+        ];
+        let buf = &mut std::io::Cursor::new(&ENCODED);
+        let _ = Colr::decode(buf).expect("prof colr must decode without leaving trailing bytes");
+        assert_eq!(
+            <std::io::Cursor<&&[u8]> as crate::Buf>::remaining(buf),
+            0,
+            "parent end-check must see an empty body buffer"
+        );
+    }
+
+    #[test]
+    fn test_ricc_decode_roundtrip() {
+        // Same shape with rICC colour_type instead of prof.
+        const ENCODED: &[u8] = &[
+            0x00, 0x00, 0x00, 0x13, b'c', b'o', b'l', b'r', b'r', b'I', b'C', b'C', 0xAA, 0xBB,
+            0xCC, 0xDD, 0xEE, 0xFF, 0x00,
+        ];
+        let buf = &mut std::io::Cursor::new(&ENCODED);
+        let colr = Colr::decode(buf).expect("failed to decode rICC colr");
+        assert_eq!(
+            colr,
+            Colr::Ricc {
+                profile: vec![0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00],
+            }
+        );
+
+        let mut out = Vec::new();
+        colr.encode(&mut out).expect("encode rICC colr");
+        assert_eq!(out.as_slice(), ENCODED);
     }
 
     #[test]

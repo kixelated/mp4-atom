@@ -23,6 +23,8 @@ pub struct Tfhd {
     pub default_sample_duration: Option<u32>,
     pub default_sample_size: Option<u32>,
     pub default_sample_flags: Option<u32>,
+    pub duration_is_empty: bool,
+    pub default_base_is_moof: bool,
 }
 
 impl AtomExt for Tfhd {
@@ -65,6 +67,8 @@ impl AtomExt for Tfhd {
             default_sample_duration,
             default_sample_size,
             default_sample_flags,
+            duration_is_empty: ext.duration_is_empty,
+            default_base_is_moof: ext.default_base_is_moof,
         })
     }
 
@@ -75,6 +79,8 @@ impl AtomExt for Tfhd {
             default_sample_duration: self.default_sample_duration.is_some(),
             default_sample_size: self.default_sample_size.is_some(),
             default_sample_flags: self.default_sample_flags.is_some(),
+            duration_is_empty: self.duration_is_empty,
+            default_base_is_moof: self.default_base_is_moof,
             ..Default::default()
         };
 
@@ -102,6 +108,8 @@ mod tests {
             default_sample_duration: None,
             default_sample_size: None,
             default_sample_flags: None,
+            duration_is_empty: false,
+            default_base_is_moof: false,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -120,6 +128,41 @@ mod tests {
             default_sample_duration: Some(512),
             default_sample_size: None,
             default_sample_flags: Some(0x1010000),
+            duration_is_empty: false,
+            default_base_is_moof: false,
+        };
+        let mut buf = Vec::new();
+        expected.encode(&mut buf).unwrap();
+
+        let mut buf = buf.as_ref();
+        let decoded = Tfhd::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn test_tfhd_duration_is_empty() {
+        let expected = Tfhd {
+            track_id: 1,
+            duration_is_empty: true,
+            ..Default::default()
+        };
+        let mut buf = Vec::new();
+        expected.encode(&mut buf).unwrap();
+
+        let mut buf = buf.as_ref();
+        let decoded = Tfhd::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn test_tfhd_default_base_is_moof() {
+        let expected = Tfhd {
+            track_id: 1,
+            default_base_is_moof: true,
+            default_sample_duration: Some(512),
+            default_sample_size: Some(0),
+            default_sample_flags: Some(0x1010000),
+            ..Default::default()
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
