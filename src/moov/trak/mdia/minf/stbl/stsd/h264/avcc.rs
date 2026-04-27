@@ -94,7 +94,7 @@ impl Atom for Avcc {
             let bit_depth_chroma_minus8 = u8::decode(buf)? & 0x7;
             let num_of_sequence_parameter_set_exts = u8::decode(buf)? as usize;
             let mut sequence_parameter_sets_ext =
-                Vec::with_capacity(num_of_sequence_parameter_set_exts);
+                Vec::with_capacity(num_of_sequence_parameter_set_exts.min(4096));
 
             for _ in 0..num_of_sequence_parameter_set_exts {
                 let size = u16::decode(buf)? as usize;
