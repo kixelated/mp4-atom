@@ -150,8 +150,8 @@ pub struct Dfla {
     pub blocks: Vec<FlacMetadataBlock>,
 }
 
+/// Parse a FLAC `StreamInfo` metadata block. See RFC 9639 Section 8.2.
 fn parse_stream_info(arr: &[u8]) -> Result<FlacMetadataBlock> {
-    // See RFC 9639 Section 8.2
     let buf = &mut std::io::Cursor::new(arr);
     let minimum_block_size = u16::decode(buf)?;
     let maximum_block_size = u16::decode(buf)?;
@@ -176,9 +176,10 @@ fn parse_stream_info(arr: &[u8]) -> Result<FlacMetadataBlock> {
     })
 }
 
+/// Parse a FLAC `VorbisComment` metadata block. See RFC 9639 Section 8.6
+/// (D.2.5 has an example). Vorbis comments in FLAC use little-endian
+/// integers for Vorbis compatibility.
 fn parse_vorbis_comment(arr: &[u8]) -> Result<FlacMetadataBlock> {
-    // See RFC 9639 Section 8.6, and D.2.5 for an example
-    // Vorbis comments in FLAC use little endian, for Vorbis compatibility
     let buf = &mut std::io::Cursor::new(arr);
     let vendor_string_length = u32::from_le_bytes(<[u8; 4]>::decode(buf)?) as usize;
     let vendor_string_bytes: Vec<u8> = Vec::decode_exact(buf, vendor_string_length)?;
