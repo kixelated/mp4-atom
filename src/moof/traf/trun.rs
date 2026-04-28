@@ -96,15 +96,24 @@ impl AtomExt for Trun {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<TrunExt> {
+        let any_flags = self.entries.iter().any(|s| s.flags.is_some());
+        let first_only_flags = any_flags
+            && self.entries.first().is_some_and(|s| s.flags.is_some())
+            && self.entries.iter().skip(1).all(|s| s.flags.is_none());
+
+        // Use per-sample flags when any entry has flags and it's not the first-only pattern.
+        // None entries are backfilled with 0 to avoid silently dropping flags.
+        let sample_flags = any_flags && !first_only_flags;
+
         let ext = TrunExt {
             version: TrunVersion::V1,
             data_offset: self.data_offset.is_some(),
-            first_sample_flags: false,
+            first_sample_flags: first_only_flags,
 
             // TODO error if these are not all the same
             sample_duration: self.entries.iter().all(|s| s.duration.is_some()),
             sample_size: self.entries.iter().all(|s| s.size.is_some()),
-            sample_flags: self.entries.iter().all(|s| s.flags.is_some()),
+            sample_flags,
             sample_cts: self.entries.iter().all(|s| s.cts.is_some()),
         };
 
@@ -112,16 +121,138 @@ impl AtomExt for Trun {
 
         self.data_offset.encode(buf)?;
         if ext.first_sample_flags {
-            0u32.encode(buf)?; // TODO first sample flags
+            self.entries[0].flags.unwrap().encode(buf)?;
         }
 
         for entry in &self.entries {
             ext.sample_duration.then_some(entry.duration).encode(buf)?;
             ext.sample_size.then_some(entry.size).encode(buf)?;
-            ext.sample_flags.then_some(entry.flags).encode(buf)?;
+            if ext.sample_flags {
+                Some(Some(entry.flags.unwrap_or(0))).encode(buf)?;
+            }
             ext.sample_cts.then_some(entry.cts).encode(buf)?;
         }
 
         Ok(ext)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    /// Verify that first_sample_flags survives encode→decode roundtrip.
+    ///
+    /// ffmpeg commonly writes trun boxes where only the first entry has flags
+    /// (via first_sample_flags) and the rest inherit default_sample_flags from
+    /// tfhd. After decode, entry[0].flags = Some(keyframe), entries[1..N].flags = None.
+    /// The encoder must preserve this by emitting first_sample_flags.
+    #[test]
+    fn first_sample_flags_roundtrip() {
+        let trun = Trun {
+            data_offset: Some(100),
+            entries: vec![
+                TrunEntry {
+                    duration: Some(512),
+                    size: Some(1000),
+                    flags: Some(0x02000000), // keyframe (sample_depends_on=2)
+                    cts: None,
+                },
+                TrunEntry {
+                    duration: Some(512),
+                    size: Some(200),
+                    flags: None, // inherits default_sample_flags from tfhd
+                    cts: None,
+                },
+                TrunEntry {
+                    duration: Some(512),
+                    size: Some(200),
+                    flags: None,
+                    cts: None,
+                },
+            ],
+        };
+
+        let mut buf = Vec::new();
+        trun.encode(&mut buf).expect("encode");
+
+        let decoded = Trun::decode(&mut &buf[..]).expect("decode");
+
+        // entry[0] must have the keyframe flags from first_sample_flags
+        assert_eq!(decoded.entries[0].flags, Some(0x02000000));
+        // entries[1..N] must have None (they use default_sample_flags from tfhd)
+        assert_eq!(decoded.entries[1].flags, None);
+        assert_eq!(decoded.entries[2].flags, None);
+        assert_eq!(decoded.data_offset, Some(100));
+        assert_eq!(decoded.entries.len(), 3);
+    }
+
+    /// When multiple entries have explicit flags (not just the first),
+    /// the encoder must use per-sample flags, not first_sample_flags.
+    #[test]
+    fn mixed_flags_uses_per_sample() {
+        let trun = Trun {
+            data_offset: Some(100),
+            entries: vec![
+                TrunEntry {
+                    duration: Some(512),
+                    size: Some(1000),
+                    flags: Some(0x02000000), // keyframe
+                    cts: None,
+                },
+                TrunEntry {
+                    duration: Some(512),
+                    size: Some(200),
+                    flags: Some(0x01010000), // non-keyframe (explicit)
+                    cts: None,
+                },
+                TrunEntry {
+                    duration: Some(512),
+                    size: Some(200),
+                    flags: None, // no flags
+                    cts: None,
+                },
+            ],
+        };
+
+        let mut buf = Vec::new();
+        trun.encode(&mut buf).expect("encode");
+
+        let decoded = Trun::decode(&mut &buf[..]).expect("decode");
+
+        // Mixed Some/None: encoder backfills None with 0 and emits per-sample flags.
+        assert_eq!(decoded.entries[0].flags, Some(0x02000000));
+        assert_eq!(decoded.entries[1].flags, Some(0x01010000));
+        assert_eq!(decoded.entries[2].flags, Some(0)); // was None, backfilled to 0
+    }
+
+    /// When all entries have explicit flags, per-sample flags are used.
+    #[test]
+    fn all_flags_roundtrip() {
+        let trun = Trun {
+            data_offset: Some(100),
+            entries: vec![
+                TrunEntry {
+                    duration: Some(512),
+                    size: Some(1000),
+                    flags: Some(0x02000000),
+                    cts: None,
+                },
+                TrunEntry {
+                    duration: Some(512),
+                    size: Some(200),
+                    flags: Some(0x01010000),
+                    cts: None,
+                },
+            ],
+        };
+
+        let mut buf = Vec::new();
+        trun.encode(&mut buf).expect("encode");
+
+        let decoded = Trun::decode(&mut &buf[..]).expect("decode");
+
+        assert_eq!(decoded.entries[0].flags, Some(0x02000000));
+        assert_eq!(decoded.entries[1].flags, Some(0x01010000));
     }
 }
