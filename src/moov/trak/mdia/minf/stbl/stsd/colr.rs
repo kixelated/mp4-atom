@@ -201,9 +201,9 @@ mod tests {
             0xBE, 0xEF,
         ];
         let buf = &mut std::io::Cursor::new(&ENCODED);
-        let _ = Colr::decode(buf).expect("prof colr must decode without leaving trailing bytes");
+        Colr::decode(buf).expect("prof colr must decode without leaving trailing bytes");
         assert_eq!(
-            <std::io::Cursor<&&[u8]> as crate::Buf>::remaining(buf),
+            Buf::remaining(buf),
             0,
             "parent end-check must see an empty body buffer"
         );
