@@ -174,7 +174,7 @@ nested! {
 
 macro_rules! nested {
     (required: [$($required:ident),*$(,)?], optional: [$($optional:ident),*$(,)?], multiple: [$($multiple:ident),*$(,)?],) => {
-        paste::paste! {
+        pastey::paste! {
             fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
                 $( let mut [<$required:lower>] = None;)*
                 $( let mut [<$optional:lower>] = None;)*
