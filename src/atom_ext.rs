@@ -89,7 +89,7 @@ struct TfdtExt {
 
 macro_rules! ext {
     (name: $name:ident, versions: [$($version:expr),*], flags: { $($flag:ident = $bit:expr,)* }) => {
-        paste::paste! {
+        pastey::paste! {
             #[derive(Debug, Clone, Copy, PartialEq, Eq)]
             pub(crate) enum [<$name Version>] {
                 $(
