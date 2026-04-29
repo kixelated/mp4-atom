@@ -12,7 +12,7 @@ keywords = ["mp4", "isobmff", "mp4box", "audio", "video"]
 categories = ["multimedia::encoding"]
 
 [dependencies]
-pastey = "0.1"
+pastey = "0.2"
 thiserror = "1"
 num = "0.4"
 tracing = "0.1"
