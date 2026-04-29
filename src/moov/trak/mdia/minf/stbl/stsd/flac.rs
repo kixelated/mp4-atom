@@ -150,8 +150,8 @@ pub struct Dfla {
     pub blocks: Vec<FlacMetadataBlock>,
 }
 
+/// Parse a FLAC `StreamInfo` metadata block. See RFC 9639 Section 8.2.
 fn parse_stream_info(arr: &[u8]) -> Result<FlacMetadataBlock> {
-    // See RFC 9639 Section 8.2
     let buf = &mut std::io::Cursor::new(arr);
     let minimum_block_size = u16::decode(buf)?;
     let maximum_block_size = u16::decode(buf)?;
@@ -176,9 +176,10 @@ fn parse_stream_info(arr: &[u8]) -> Result<FlacMetadataBlock> {
     })
 }
 
+/// Parse a FLAC `VorbisComment` metadata block. See RFC 9639 Section 8.6
+/// (D.2.5 has an example). Vorbis comments in FLAC use little-endian
+/// integers for Vorbis compatibility.
 fn parse_vorbis_comment(arr: &[u8]) -> Result<FlacMetadataBlock> {
-    // See RFC 9639 Section 8.6, and D.2.5 for an example
-    // Vorbis comments in FLAC use little endian, for Vorbis compatibility
     let buf = &mut std::io::Cursor::new(arr);
     let vendor_string_length = u32::from_le_bytes(<[u8; 4]>::decode(buf)?) as usize;
     let vendor_string_bytes: Vec<u8> = Vec::decode_exact(buf, vendor_string_length)?;
@@ -186,7 +187,12 @@ fn parse_vorbis_comment(arr: &[u8]) -> Result<FlacMetadataBlock> {
         .trim_end_matches('\0')
         .to_string();
     let number_of_fields = u32::from_le_bytes(<[u8; 4]>::decode(buf)?) as usize;
-    let mut comments = Vec::with_capacity(number_of_fields);
+    // Each field is at least 4 bytes (the field_length u32); reject counts
+    // that cannot possibly fit in the remaining buffer before allocating.
+    if number_of_fields > buf.remaining() / 4 {
+        return Err(Error::OutOfBounds);
+    }
+    let mut comments = Vec::with_capacity(number_of_fields.min(4096));
     for _ in 0..number_of_fields {
         let field_length = u32::from_le_bytes(<[u8; 4]>::decode(buf)?) as usize;
         let field_bytes: Vec<u8> = Vec::decode_exact(buf, field_length)?;
@@ -349,6 +355,24 @@ mod tests {
                 ]
             }
         );
+    }
+
+    // Regression for issue #154: a u32::MAX number_of_fields must
+    // fail cleanly without attempting a ~103 GiB upfront allocation.
+    const ENCODED_DFLA_VORBIS_HUGE_COUNT: &[u8] = &[
+        // VorbisComment block: is_last=1, block_type=4, length=8
+        0x84, 0x00, 0x00, 0x08, // vendor_string_length = 0 (LE)
+        0x00, 0x00, 0x00, 0x00, // number_of_fields = u32::MAX (LE)
+        0xFF, 0xFF, 0xFF, 0xFF,
+    ];
+
+    #[test]
+    fn test_dfla_vorbis_huge_count() {
+        let buf = &mut std::io::Cursor::new(ENCODED_DFLA_VORBIS_HUGE_COUNT);
+        assert!(matches!(
+            Dfla::decode_body_ext(buf, ()),
+            Err(Error::OutOfBounds)
+        ));
     }
 
     #[test]
