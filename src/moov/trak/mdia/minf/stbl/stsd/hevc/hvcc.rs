@@ -72,7 +72,14 @@ impl Atom for Hvcc {
         for _ in 0..num_of_arrays {
             let params = u8::decode(buf)?;
             let num_nalus = u16::decode(buf)?;
-            let mut nalus = Vec::with_capacity(num_nalus as usize);
+            // Each NALU has at least a u16 length prefix (2 bytes); reject
+            // counts that cannot possibly fit in the remaining buffer before
+            // allocating. Real HEVC arrays hold a handful of VPS/SPS/PPS/SEI
+            // entries, so cap the upfront reservation at 64.
+            if num_nalus as usize > buf.remaining() / 2 {
+                return Err(Error::OutOfBounds);
+            }
+            let mut nalus = Vec::with_capacity((num_nalus as usize).min(64));
 
             for _ in 0..num_nalus {
                 let size = u16::decode(buf)? as usize;
@@ -418,6 +425,36 @@ mod tests {
         };
         let decoded = Hvcc::decode(buf).unwrap();
         assert_eq!(decoded, hvcc);
+    }
+
+    // Regression for issue #156: a u16::MAX num_nalus must fail cleanly
+    // without attempting a ~1.5 MiB upfront allocation for empty input.
+    const ENCODED_HVCC_HUGE_NALU_COUNT: &[u8] = &[
+        0x00, 0x00, 0x00, 0x22, // size = 34
+        0x68, 0x76, 0x63, 0x43, // "hvcC"
+        // 22-byte configuration record up through length_size_minus_one:
+        0x01, // configuration_version
+        0x00, // profile_space|tier|profile_idc
+        0x00, 0x00, 0x00, 0x00, // general_profile_compatibility_flags
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // general_constraint_indicator_flags
+        0x00, // general_level_idc
+        0x00, 0x00, // min_spatial_segmentation_idc
+        0x00, // parallelism_type
+        0x00, // chroma_format_idc
+        0x00, // bit_depth_luma_minus8
+        0x00, // bit_depth_chroma_minus8
+        0x00, 0x00, // avg_frame_rate
+        0x00, // constant_frame_rate|num_temporal_layers|nested|length_size
+        0x01, // num_of_arrays = 1
+        0x00, // first array params byte
+        0xFF, 0xFF, // num_nalus = u16::MAX
+    ];
+
+    #[test]
+    fn test_hvcc_huge_nalu_count() {
+        let buf: &mut std::io::Cursor<&&[u8]> =
+            &mut std::io::Cursor::new(&ENCODED_HVCC_HUGE_NALU_COUNT);
+        assert!(matches!(Hvcc::decode(buf), Err(Error::OverDecode(_))));
     }
 
     #[test]
