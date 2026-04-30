@@ -1,5 +1,7 @@
 use crate::*;
 
+/// HEVCConfigurationBox / `HEVCDecoderConfigurationRecord`,
+/// ISO/IEC 14496-15:2022 Sect 8.3.3.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hvcc {
@@ -24,6 +26,9 @@ pub struct Hvcc {
 }
 
 impl Hvcc {
+    /// Returns an `Hvcc` with `configuration_version` set to 1 and all
+    /// other fields zeroed, matching `HEVCDecoderConfigurationRecord`'s
+    /// only currently-defined version.
     pub fn new() -> Self {
         Self {
             configuration_version: 1,
@@ -32,6 +37,8 @@ impl Hvcc {
     }
 }
 
+/// One entry of `HEVCDecoderConfigurationRecord.arrays`: a group of NAL
+/// units of a single `nal_unit_type` (typically VPS, SPS, PPS, or SEI).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HvcCArray {

@@ -1,5 +1,7 @@
 use crate::*;
 
+/// Auxiliary information type and parameter shared by `saiz` and `saio`,
+/// ISO/IEC 14496-12:2022 Sect 8.7.8 / 8.7.9.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AuxInfo {
