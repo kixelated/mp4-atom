@@ -74,7 +74,7 @@ impl AtomExt for Iloc {
                 0 => 0u64,
                 4 => u32::decode(buf)? as u64,
                 8 => u64::decode(buf)?,
-                _ => panic!("iloc base_offset_size must be in [0,4,8]"),
+                _ => return Err(Error::Reserved),
             };
             let extent_count = u16::decode(buf)?;
             let mut extents = vec![];
@@ -85,7 +85,7 @@ impl AtomExt for Iloc {
                             0 => 0,
                             4 => u32::decode(buf)? as u64,
                             8 => u64::decode(buf)?,
-                            _ => panic!("iloc index_size must be in [0,4,8]"),
+                            _ => return Err(Error::Reserved),
                         }
                     } else {
                         0
@@ -94,13 +94,13 @@ impl AtomExt for Iloc {
                     0 => 0u64,
                     4 => u32::decode(buf)? as u64,
                     8 => u64::decode(buf)?,
-                    _ => panic!("iloc offset_size must be in [0,4,8]"),
+                    _ => return Err(Error::Reserved),
                 };
                 let extent_length = match length_size {
                     0 => 0u64,
                     4 => u32::decode(buf)? as u64,
                     8 => u64::decode(buf)?,
-                    _ => panic!("iloc length_size must be in [0,4,8]"),
+                    _ => return Err(Error::Reserved),
                 };
                 extents.push(ItemLocationExtent {
                     item_reference_index,
@@ -217,6 +217,86 @@ mod tests {
         };
         let decoded = Iloc::decode(buf).unwrap();
         assert_eq!(decoded, iloc);
+    }
+
+    // Regression for issue #158: out-of-range *_size nibbles (anything
+    // outside {0, 4, 8} per ISO/IEC 14496-12 §8.11.3.3) must return
+    // Err, not panic.
+
+    #[test]
+    fn test_iloc_reserved_base_offset_size() {
+        // version=0, flags=0, sizes0=0x00 (offset_size=0, length_size=0),
+        // sizes1=0xF0 (base_offset_size=15), item_count=1,
+        // item_id=0, data_reference_index=0, then base_offset_size match.
+        let body: &[u8] = &[0x00, 0xF0, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00];
+        let ext = IlocExt {
+            version: IlocVersion::V0,
+        };
+        assert!(matches!(
+            Iloc::decode_body_ext(&mut std::io::Cursor::new(body), ext),
+            Err(Error::Reserved)
+        ));
+    }
+
+    #[test]
+    fn test_iloc_reserved_index_size() {
+        // V1: sizes1 low nibble is index_size. base_offset_size=0,
+        // index_size=15. Reach the index_size match by giving an extent.
+        let body: &[u8] = &[
+            0x00, 0x0F, // sizes0=0, sizes1=0x0F
+            0x00, 0x01, // item_count=1
+            0x00, 0x00, // item_id
+            0x00, 0x00, // construction_method
+            0x00, 0x00, // data_reference_index
+            // base_offset_size=0 -> no base_offset
+            0x00, 0x01, // extent_count=1
+        ];
+        let ext = IlocExt {
+            version: IlocVersion::V1,
+        };
+        assert!(matches!(
+            Iloc::decode_body_ext(&mut std::io::Cursor::new(body), ext),
+            Err(Error::Reserved)
+        ));
+    }
+
+    #[test]
+    fn test_iloc_reserved_offset_size() {
+        // V0: sizes0 high nibble is offset_size=0xF.
+        let body: &[u8] = &[
+            0xF0, 0x00, // sizes0=0xF0 (offset_size=15), sizes1=0
+            0x00, 0x01, // item_count=1
+            0x00, 0x00, // item_id
+            0x00, 0x00, // data_reference_index
+            0x00, 0x01, // extent_count=1
+        ];
+        let ext = IlocExt {
+            version: IlocVersion::V0,
+        };
+        assert!(matches!(
+            Iloc::decode_body_ext(&mut std::io::Cursor::new(body), ext),
+            Err(Error::Reserved)
+        ));
+    }
+
+    #[test]
+    fn test_iloc_reserved_length_size() {
+        // V0: sizes0 low nibble is length_size=0xF, offset_size=0
+        // so the offset_size arm passes through 0 and reaches length_size.
+        let body: &[u8] = &[
+            0x0F, 0x00, // sizes0=0x0F (length_size=15), sizes1=0
+            0x00, 0x01, // item_count=1
+            0x00, 0x00, // item_id
+            0x00, 0x00, // data_reference_index
+            0x00, 0x01, // extent_count=1
+        ];
+        let ext = IlocExt {
+            version: IlocVersion::V0,
+        };
+        assert!(matches!(
+            Iloc::decode_body_ext(&mut std::io::Cursor::new(body), ext),
+            Err(Error::Reserved)
+        ));
     }
 
     #[test]
