@@ -358,13 +358,13 @@ any! {
 }
 
 impl ReadFrom for Any {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         <Option<Any> as ReadFrom>::read_from(r)?.ok_or(Error::UnexpectedEof)
     }
 }
 
 impl ReadFrom for Option<Any> {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         let header = match <Option<Header> as ReadFrom>::read_from(r)? {
             Some(header) => header,
             None => return Ok(None),
@@ -376,7 +376,7 @@ impl ReadFrom for Option<Any> {
 }
 
 impl ReadAtom for Any {
-    fn read_atom<R: Read>(header: &Header, r: &mut R) -> Result<Self> {
+    fn read_atom<R: Read + ?Sized>(header: &Header, r: &mut R) -> Result<Self> {
         let body = &mut header.read_body(r)?;
         Any::decode_atom(header, body)
     }
