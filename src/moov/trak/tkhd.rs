@@ -20,6 +20,8 @@ pub struct Tkhd {
     pub layer: u16,
     pub alternate_group: u16,
     pub enabled: bool,
+    pub in_movie: bool,
+    pub in_preview: bool,
 
     pub volume: FixedPoint<u8>,
     pub matrix: Matrix,
@@ -73,6 +75,8 @@ impl AtomExt for Tkhd {
             width,
             height,
             enabled: ext.track_enabled,
+            in_movie: ext.track_in_movie,
+            in_preview: ext.track_in_preview,
         })
     }
 
@@ -96,7 +100,8 @@ impl AtomExt for Tkhd {
         Ok(TkhdExt {
             version: TkhdVersion::V1,
             track_enabled: self.enabled,
-            ..Default::default()
+            track_in_movie: self.in_movie,
+            track_in_preview: self.in_preview,
         })
     }
 }
@@ -190,6 +195,8 @@ mod tests {
             width: 512.into(),
             height: 288.into(),
             enabled: true,
+            in_movie: true,
+            in_preview: false,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -213,6 +220,8 @@ mod tests {
             width: 512.into(),
             height: 288.into(),
             enabled: true,
+            in_movie: true,
+            in_preview: false,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();

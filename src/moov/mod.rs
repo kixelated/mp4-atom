@@ -148,6 +148,8 @@ mod test {
                         modification_time: 3773812694,
                         track_id: 1,
                         enabled: true,
+                        in_movie: true,
+                        in_preview: true,
                         width: 1920.into(),
                         height: 1080.into(),
                         ..Default::default()

@@ -47,6 +47,8 @@ fn bbb() {
                 tkhd: Tkhd {
                     track_id: 1,
                     enabled: true,
+                    in_movie: true,
+                    in_preview: false,
                     width: 1280.into(),
                     height: 720.into(),
                     ..Default::default()
@@ -129,6 +131,8 @@ fn bbb() {
                     track_id: 2,
                     alternate_group: 1,
                     enabled: true,
+                    in_movie: true,
+                    in_preview: false,
                     volume: 1.into(),
                     ..Default::default()
                 },

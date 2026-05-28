@@ -60,6 +60,8 @@ fn flac() {
                     layer: 0,
                     alternate_group: 0,
                     enabled: true,
+                    in_movie: true,
+                    in_preview: true,
                     volume: 1.into(),
                     matrix: Matrix {
                         a: 65536,
