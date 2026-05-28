@@ -56,7 +56,7 @@ impl AtomExt for ItemInfoEntry {
                 .as_str()
                 .encode(buf)?;
             if version == ItemInfoEntryVersion::V1 {
-                unimplemented!("infe extensions are not yet supported");
+                return Err(Error::Unsupported("infe version 1 extensions"));
             }
         } else {
             if version == ItemInfoEntryVersion::V2 {
@@ -102,7 +102,7 @@ impl AtomExt for ItemInfoEntry {
             content_type = Some(String::decode(buf)?);
             content_encoding = Some(String::decode(buf)?);
             if ext.version == ItemInfoEntryVersion::V1 {
-                unimplemented!("infe extensions are not yet supported");
+                return Err(Error::Unsupported("infe version 1 extensions"));
             }
         } else {
             if ext.version == ItemInfoEntryVersion::V2 {
@@ -291,6 +291,36 @@ mod tests {
         assert!(matches!(
             iinf.encode(&mut buf),
             Err(Error::MissingContent(_))
+        ));
+    }
+
+    #[test]
+    fn test_iinf_decode_unsupported_infe_v1_returns_error() {
+        let body: &[u8] = &[
+            // iinf version/flags and one entry
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // infe atom header
+            0x00, 0x00, 0x00, 0x13, b'i', b'n', b'f', b'e', // infe version 1, no flags
+            0x01, 0x00, 0x00, 0x00,
+            // item_id, item_protection_index, item_name, content_type,
+            // content_encoding
+            0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ];
+        let result = Iinf::decode_body(&mut std::io::Cursor::new(body));
+
+        assert!(matches!(
+            result,
+            Err(Error::Unsupported("infe version 1 extensions"))
+        ));
+
+        let fuzz_body: &[u8] = &[
+            0x00, 0x00, 0x00, 0x00, 0x5b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x41, 0x80,
+            0x01, 0x00, 0x00, 0x04, 0x00, b'p', b'y', b't', b'f',
+        ];
+        let fuzz_result = Iinf::decode_body(&mut std::io::Cursor::new(fuzz_body));
+
+        assert!(matches!(
+            fuzz_result,
+            Err(Error::Unsupported("infe version 1 extensions"))
         ));
     }
 }
