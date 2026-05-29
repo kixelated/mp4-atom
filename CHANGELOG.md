@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1](https://github.com/kixelated/mp4-atom/compare/v0.11.0...v0.11.1) - 2026-05-29
+
+### Other
+
+- return error for unsupported infe v1 ([#165](https://github.com/kixelated/mp4-atom/pull/165))
+
 ## [0.11.0](https://github.com/kixelated/mp4-atom/compare/v0.10.1...v0.11.0) - 2026-05-18
 
 ### Added
