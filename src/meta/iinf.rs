@@ -15,16 +15,32 @@ ext! {
     flags: {item_not_in_presentation = 0,}
 }
 
+/// Describes one item stored in an `iinf` item information box.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ItemInfoEntry {
+    /// Item identifier used by other item metadata boxes.
     pub item_id: u32,
+
+    /// Index into the item protection box, or zero when unprotected.
     pub item_protection_index: u16,
+
+    /// Version 2 and 3 item type, such as `mime` or `uri `.
     pub item_type: Option<FourCC>,
+
+    /// Human-readable item name.
     pub item_name: String,
+
+    /// MIME content type for `mime` item entries.
     pub content_type: Option<String>,
+
+    /// MIME content encoding for `mime` item entries.
     pub content_encoding: Option<String>,
+
+    /// URI payload for `uri ` item entries.
     pub item_uri_type: Option<String>,
+
+    /// Whether the item is excluded from presentation.
     pub item_not_in_presentation: bool,
 }
 
@@ -33,6 +49,7 @@ impl AtomExt for ItemInfoEntry {
 
     type Ext = ItemInfoEntryExt;
 
+    /// Encodes the item info entry body and version/flags extension.
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<Self::Ext> {
         // TODO: maybe work harder at versioning
         let version: ItemInfoEntryVersion = if self.item_id > u16::MAX as u32 {
@@ -56,7 +73,7 @@ impl AtomExt for ItemInfoEntry {
                 .as_str()
                 .encode(buf)?;
             if version == ItemInfoEntryVersion::V1 {
-                unimplemented!("infe extensions are not yet supported");
+                return Err(Error::Unsupported("infe version 1 extensions"));
             }
         } else {
             if version == ItemInfoEntryVersion::V2 {
@@ -87,6 +104,7 @@ impl AtomExt for ItemInfoEntry {
         })
     }
 
+    /// Decodes the item info entry body for the parsed version/flags extension.
     fn decode_body_ext<B: Buf>(buf: &mut B, ext: Self::Ext) -> Result<Self> {
         let item_id: u32;
         let item_protection_index;
@@ -102,7 +120,7 @@ impl AtomExt for ItemInfoEntry {
             content_type = Some(String::decode(buf)?);
             content_encoding = Some(String::decode(buf)?);
             if ext.version == ItemInfoEntryVersion::V1 {
-                unimplemented!("infe extensions are not yet supported");
+                return Err(Error::Unsupported("infe version 1 extensions"));
             }
         } else {
             if ext.version == ItemInfoEntryVersion::V2 {
@@ -133,9 +151,11 @@ impl AtomExt for ItemInfoEntry {
     }
 }
 
+/// Item information box containing every item entry.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iinf {
+    /// Item info entries in file order.
     pub item_infos: Vec<ItemInfoEntry>,
 }
 
@@ -144,6 +164,7 @@ impl AtomExt for Iinf {
 
     const KIND_EXT: FourCC = FourCC::new(b"iinf");
 
+    /// Decodes an item information box for the parsed version/flags extension.
     fn decode_body_ext<B: Buf>(buf: &mut B, ext: IinfExt) -> Result<Self> {
         let mut item_infos = vec![];
         let entry_count = if ext.version == IinfVersion::V0 {
@@ -157,6 +178,7 @@ impl AtomExt for Iinf {
         Ok(Iinf { item_infos })
     }
 
+    /// Encodes an item information box and chooses the smallest entry-count version.
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<IinfExt> {
         let version;
         if self.item_infos.len() > u16::MAX as usize {
@@ -185,6 +207,7 @@ mod tests {
         0,
     ];
 
+    /// Decodes a libavif-style `mime` item info box.
     #[test]
     fn test_iinf_libavif_decode_mime() {
         let buf: &mut std::io::Cursor<&&[u8]> =
@@ -206,6 +229,7 @@ mod tests {
         assert_eq!(decoded, iinf);
     }
 
+    /// Encodes a libavif-style `mime` item info box.
     #[test]
     fn test_iinf_avif_encode_mime() {
         let iinf: Iinf = Iinf {
@@ -232,6 +256,7 @@ mod tests {
         101, 115, 116, 0,
     ];
 
+    /// Decodes a libavif-style `uri ` item info box.
     #[test]
     fn test_iinf_libavif_decode_uri() {
         let buf: &mut std::io::Cursor<&&[u8]> =
@@ -253,6 +278,7 @@ mod tests {
         assert_eq!(decoded, iinf);
     }
 
+    /// Encodes a libavif-style `uri ` item info box.
     #[test]
     fn test_iinf_avif_encode_uri() {
         let iinf: Iinf = Iinf {
@@ -273,6 +299,7 @@ mod tests {
         assert_eq!(buf.as_slice(), ENCODED_IINF_LIBAVIF_URI);
     }
 
+    /// Rejects a `uri ` item info box when the URI payload is missing.
     #[test]
     fn test_iinf_avif_encode_uri_invalid() {
         let iinf: Iinf = Iinf {
@@ -291,6 +318,37 @@ mod tests {
         assert!(matches!(
             iinf.encode(&mut buf),
             Err(Error::MissingContent(_))
+        ));
+    }
+
+    /// Version 1 `infe` entries are reported as unsupported, not panicked.
+    #[test]
+    fn test_iinf_decode_unsupported_infe_v1_returns_error() {
+        let body: &[u8] = &[
+            // iinf version/flags and one entry
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // infe atom header
+            0x00, 0x00, 0x00, 0x13, b'i', b'n', b'f', b'e', // infe version 1, no flags
+            0x01, 0x00, 0x00, 0x00,
+            // item_id, item_protection_index, item_name, content_type,
+            // content_encoding
+            0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ];
+        let result = Iinf::decode_body(&mut std::io::Cursor::new(body));
+
+        assert!(matches!(
+            result,
+            Err(Error::Unsupported("infe version 1 extensions"))
+        ));
+
+        let fuzz_body: &[u8] = &[
+            0x00, 0x00, 0x00, 0x00, 0x5b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x41, 0x80,
+            0x01, 0x00, 0x00, 0x04, 0x00, b'p', b'y', b't', b'f',
+        ];
+        let fuzz_result = Iinf::decode_body(&mut std::io::Cursor::new(fuzz_body));
+
+        assert!(matches!(
+            fuzz_result,
+            Err(Error::Unsupported("infe version 1 extensions"))
         ));
     }
 }
