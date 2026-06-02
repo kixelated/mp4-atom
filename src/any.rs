@@ -273,7 +273,7 @@ any! {
                 Minf,
                     Stbl,
                         Stsd,
-                            Avc1,
+                            Avc1, Avc3,
                                 Avcc,
                                 Btrt,
                                 Ccst,
