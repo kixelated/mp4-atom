@@ -7,6 +7,7 @@ ext! {
         track_enabled = 0,
         track_in_movie = 1,
         track_in_preview = 2,
+        track_size_is_aspect_ratio = 3,
     }
 }
 
@@ -20,6 +21,10 @@ pub struct Tkhd {
     pub layer: u16,
     pub alternate_group: u16,
     pub enabled: bool,
+    pub in_movie: bool,
+    /// When set, `width`/`height` express the track's suggested aspect ratio
+    /// rather than pixel dimensions (ISO/IEC 14496-12:2022 §8.3.2.3).
+    pub size_is_aspect_ratio: bool,
 
     pub volume: FixedPoint<u8>,
     pub matrix: Matrix,
@@ -73,6 +78,10 @@ impl AtomExt for Tkhd {
             width,
             height,
             enabled: ext.track_enabled,
+            in_movie: ext.track_in_movie,
+            size_is_aspect_ratio: ext.track_size_is_aspect_ratio,
+            // track_in_preview has no assigned meaning and is ignored on read
+            // per ISO/IEC 14496-12:2022 §8.3.2.3.
         })
     }
 
@@ -96,7 +105,11 @@ impl AtomExt for Tkhd {
         Ok(TkhdExt {
             version: TkhdVersion::V1,
             track_enabled: self.enabled,
-            ..Default::default()
+            track_in_movie: self.in_movie,
+            // track_in_preview has no assigned meaning; per ISO/IEC
+            // 14496-12:2022 §8.3.2.3 writers should mirror track_in_movie.
+            track_in_preview: self.in_movie,
+            track_size_is_aspect_ratio: self.size_is_aspect_ratio,
         })
     }
 }
@@ -190,6 +203,8 @@ mod tests {
             width: 512.into(),
             height: 288.into(),
             enabled: true,
+            in_movie: true,
+            size_is_aspect_ratio: false,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -213,6 +228,8 @@ mod tests {
             width: 512.into(),
             height: 288.into(),
             enabled: true,
+            in_movie: true,
+            size_is_aspect_ratio: false,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
