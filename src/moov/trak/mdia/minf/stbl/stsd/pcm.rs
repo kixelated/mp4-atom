@@ -43,26 +43,49 @@ impl AtomExt for PcmC {
     }
 }
 
+/// The resolved sample format of a PCM sample entry.
+///
+/// See [`Pcm::format`] for how it is derived.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct PcmFormat {
+    /// Whether the samples are stored big-endian.
+    pub big_endian: bool,
+    /// The size of each sample in bits.
+    pub sample_size: u16,
+    /// Whether the samples are floating point (otherwise integer).
+    pub float: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pcm {
     pub fourcc: FourCC,
     pub audio: Audio,
-    pub pcmc: PcmC,
+    pub pcmc: Option<PcmC>,
     pub chnl: Option<Chnl>,
     pub btrt: Option<Btrt>,
 }
 
 impl Pcm {
     fn encode_fields<B: BufMut>(
+        fourcc: FourCC,
         audio: &Audio,
-        pcmc: &PcmC,
+        pcmc: Option<&PcmC>,
         chnl: Option<&Chnl>,
         btrt: Option<&Btrt>,
         buf: &mut B,
     ) -> Result<()> {
+        // An ipcm/fpcm entry without its mandatory pcmC box is invalid (ISO/IEC 23003-5).
+        if pcmc.is_none() && matches!(fourcc, Ipcm::KIND | Fpcm::KIND) {
+            return Err(Error::MissingBox(PcmC::KIND));
+        }
+
         audio.encode(buf)?;
-        pcmc.encode(buf)?;
+
+        if let Some(pcmc) = pcmc {
+            pcmc.encode(buf)?;
+        }
 
         if let Some(chnl) = chnl {
             chnl.encode(buf)?;
@@ -114,10 +137,16 @@ impl Pcm {
             buf.advance(size);
         }
 
+        // ISO/IEC 23003-5 mandates the pcmC box for ipcm/fpcm. The QuickTime
+        // (QTFF-2001) fourccs and s16l imply their format and don't carry one.
+        if pcmc.is_none() && matches!(fourcc, Ipcm::KIND | Fpcm::KIND) {
+            return Err(Error::MissingBox(PcmC::KIND));
+        }
+
         Ok(Self {
             fourcc,
             audio,
-            pcmc: pcmc.ok_or(Error::MissingBox(PcmC::KIND))?,
+            pcmc,
             chnl,
             btrt,
         })
@@ -125,12 +154,64 @@ impl Pcm {
 
     pub fn encode_with_fourcc<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         Self::encode_fields(
+            self.fourcc,
             &self.audio,
-            &self.pcmc,
+            self.pcmc.as_ref(),
             self.chnl.as_ref(),
             self.btrt.as_ref(),
             buf,
         )
+    }
+
+    /// Returns the resolved sample format of this entry.
+    ///
+    /// The `pcmC` box wins when present. Otherwise the format implied by the
+    /// fourcc is used:
+    /// - `twos`: big-endian integer, `sample_size` bits (8 or 16 per QTFF-2001)
+    /// - `sowt`: little-endian integer, `sample_size` bits (8 or 16 per QTFF-2001)
+    /// - `in24` / `in32`: big-endian integer, 24 / 32 bits
+    /// - `fl32` / `fl64`: big-endian float, 32 / 64 bits
+    /// - `s16l`: little-endian integer, 16 bits
+    /// - `lpcm`: QTFF format flags are only defined for version 2 sound sample
+    ///   descriptions, which are not decoded here; defaults to big-endian
+    ///   integer, `sample_size` bits
+    ///
+    /// Returns `None` for an unknown fourcc, or for an `ipcm`/`fpcm` entry
+    /// missing its mandatory `pcmC` box (which
+    /// [`decode_with_fourcc`](Self::decode_with_fourcc) never produces).
+    pub fn format(&self) -> Option<PcmFormat> {
+        Self::resolve_format(self.fourcc, &self.audio, self.pcmc.as_ref())
+    }
+
+    fn resolve_format(fourcc: FourCC, audio: &Audio, pcmc: Option<&PcmC>) -> Option<PcmFormat> {
+        // fl32/fl64 samples are float, as are fpcm samples (ISO/IEC 23003-5).
+        let float = matches!(fourcc, Fl32::KIND | Fl64::KIND | Fpcm::KIND);
+
+        if let Some(pcmc) = pcmc {
+            return Some(PcmFormat {
+                big_endian: pcmc.big_endian,
+                sample_size: pcmc.sample_size as u16,
+                float,
+            });
+        }
+
+        let (big_endian, sample_size) = match fourcc {
+            Twos::KIND | Lpcm::KIND => (true, audio.sample_size),
+            Sowt::KIND => (false, audio.sample_size),
+            In24::KIND => (true, 24),
+            In32::KIND => (true, 32),
+            Fl32::KIND => (true, 32),
+            Fl64::KIND => (true, 64),
+            S16l::KIND => (false, 16),
+            // ipcm/fpcm require a pcmC box and unknown fourccs don't imply a format.
+            _ => return None,
+        };
+
+        Some(PcmFormat {
+            big_endian,
+            sample_size,
+            float,
+        })
     }
 }
 
@@ -140,9 +221,18 @@ macro_rules! define_pcm_sample_entry {
         #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name {
             pub audio: Audio,
-            pub pcmc: PcmC,
+            pub pcmc: Option<PcmC>,
             pub chnl: Option<Chnl>,
             pub btrt: Option<Btrt>,
+        }
+
+        impl $name {
+            /// Returns the resolved sample format of this entry.
+            ///
+            /// See [`Pcm::format`] for the resolution rules.
+            pub fn format(&self) -> Option<PcmFormat> {
+                Pcm::resolve_format(Self::KIND, &self.audio, self.pcmc.as_ref())
+            }
         }
 
         impl Atom for $name {
@@ -160,8 +250,9 @@ macro_rules! define_pcm_sample_entry {
 
             fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
                 Pcm::encode_fields(
+                    Self::KIND,
                     &self.audio,
-                    &self.pcmc,
+                    self.pcmc.as_ref(),
                     self.chnl.as_ref(),
                     self.btrt.as_ref(),
                     buf,
@@ -224,7 +315,7 @@ mod tests {
                 sample_size: 16,
                 sample_rate: 48000.into(),
             },
-            pcmc,
+            pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: None,
         };
@@ -260,7 +351,7 @@ mod tests {
                 sample_size: 16,
                 sample_rate: 48000.into(),
             },
-            pcmc,
+            pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: None,
         };
@@ -297,7 +388,7 @@ mod tests {
                 sample_size: 16,
                 sample_rate: 48000.into(),
             },
-            pcmc,
+            pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: Some(Btrt {
                 buffer_size_db: 6,
@@ -338,7 +429,7 @@ mod tests {
                 sample_size: 16,
                 sample_rate: 48000.into(),
             },
-            pcmc,
+            pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: None,
         };
@@ -378,7 +469,7 @@ mod tests {
                 sample_size: 16,
                 sample_rate: 48000.into(),
             },
-            pcmc,
+            pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: None,
         };
@@ -414,7 +505,7 @@ mod tests {
                 sample_size: 24,
                 sample_rate: 48000.into(),
             },
-            pcmc,
+            pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: None,
         };
@@ -444,10 +535,10 @@ mod tests {
                 sample_size: 24,
                 sample_rate: FixedPoint::new(48000, 0),
             },
-            pcmc: PcmC {
+            pcmc: Some(PcmC {
                 big_endian: true,
                 sample_size: 24,
-            },
+            }),
             chnl: Some(Chnl {
                 channel_structure: Some(ChannelStructure::DefinedLayout {
                     layout: 2,
@@ -479,5 +570,94 @@ mod tests {
         let mut buf = Vec::new();
         ipcm.encode(&mut buf).unwrap();
         assert_eq!(buf.as_slice(), ENCODED_IPCM);
+    }
+
+    // A bare QuickTime sample entry without any child boxes, as written by
+    // e.g. Sony XAVC cameras; the format is implied by the fourcc.
+    const ENCODED_BARE_TWOS: &[u8] = &[
+        0x00, 0x00, 0x00, 0x24, // size = 36
+        0x74, 0x77, 0x6f, 0x73, // "twos"
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved
+        0x00, 0x01, // data_reference_index = 1
+        0x00, 0x00, // version = 0
+        0x00, 0x00, // revision = 0
+        0x00, 0x00, 0x00, 0x00, // vendor = 0
+        0x00, 0x02, // channelcount = 2
+        0x00, 0x10, // samplesize = 16
+        0x00, 0x00, // compression_id = 0
+        0x00, 0x00, // packet_size = 0
+        0xbb, 0x80, 0x00, 0x00, // samplerate = 48000 << 16
+    ];
+
+    #[test]
+    fn test_bare_twos_decode() {
+        let buf = &mut std::io::Cursor::new(ENCODED_BARE_TWOS);
+        let twos = Twos::decode(buf).expect("failed to decode twos");
+        assert_eq!(
+            twos,
+            Twos {
+                audio: Audio {
+                    data_reference_index: 1,
+                    channel_count: 2,
+                    sample_size: 16,
+                    sample_rate: FixedPoint::new(48000, 0),
+                },
+                pcmc: None,
+                chnl: None,
+                btrt: None,
+            }
+        );
+        assert_eq!(
+            twos.format(),
+            Some(PcmFormat {
+                big_endian: true,
+                sample_size: 16,
+                float: false,
+            })
+        );
+    }
+
+    #[test]
+    fn test_bare_twos_roundtrip() {
+        let buf = &mut std::io::Cursor::new(ENCODED_BARE_TWOS);
+        let twos = Twos::decode(buf).expect("failed to decode twos");
+
+        let mut encoded = Vec::new();
+        twos.encode(&mut encoded).unwrap();
+        assert_eq!(encoded.as_slice(), ENCODED_BARE_TWOS);
+    }
+
+    #[test]
+    fn test_ipcm_missing_pcmc_decode() {
+        // The same bare entry, but ipcm requires a pcmC box (ISO/IEC 23003-5).
+        let mut encoded = ENCODED_BARE_TWOS.to_vec();
+        encoded[4..8].copy_from_slice(b"ipcm");
+
+        let buf = &mut std::io::Cursor::new(&encoded);
+        assert!(matches!(
+            Ipcm::decode(buf),
+            Err(Error::MissingBox(PcmC::KIND))
+        ));
+    }
+
+    #[test]
+    fn test_ipcm_missing_pcmc_encode() {
+        let ipcm = Ipcm {
+            audio: Audio {
+                data_reference_index: 1,
+                channel_count: 2,
+                sample_size: 16,
+                sample_rate: 48000.into(),
+            },
+            pcmc: None,
+            chnl: None,
+            btrt: None,
+        };
+
+        let mut buf = Vec::new();
+        assert!(matches!(
+            ipcm.encode(&mut buf),
+            Err(Error::MissingBox(PcmC::KIND))
+        ));
     }
 }
