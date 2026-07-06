@@ -30,7 +30,7 @@ impl AtomExt for VpcC {
         let level = u8::decode(buf)?;
         let (bit_depth, chroma_subsampling, video_full_range_flag) = {
             let b = u8::decode(buf)?;
-            (b >> 4, (b >> 1) & 0x01, b & 0x01 == 1)
+            (b >> 4, (b >> 1) & 0x07, b & 0x01 == 1)
         };
         let color_primaries = u8::decode(buf)?;
         let transfer_characteristics = u8::decode(buf)?;
@@ -91,5 +91,29 @@ mod tests {
         let mut buf = buf.as_ref();
         let decoded = VpcC::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn test_vpcc_chroma_subsampling() {
+        // chroma_subsampling is a 3-bit field: 0/1 = 4:2:0, 2 = 4:2:2, 3 = 4:4:4
+        for chroma_subsampling in [2, 3] {
+            let expected = VpcC {
+                profile: 1,
+                level: 0x1F,
+                bit_depth: 8,
+                chroma_subsampling,
+                video_full_range_flag: false,
+                color_primaries: 1,
+                transfer_characteristics: 1,
+                matrix_coefficients: 1,
+                codec_initialization_data: vec![],
+            };
+            let mut buf = Vec::new();
+            expected.encode(&mut buf).unwrap();
+
+            let mut buf = buf.as_ref();
+            let decoded = VpcC::decode(&mut buf).unwrap();
+            assert_eq!(decoded, expected);
+        }
     }
 }
