@@ -77,7 +77,7 @@ impl Pcm {
         buf: &mut B,
     ) -> Result<()> {
         // An ipcm/fpcm entry without its mandatory pcmC box is invalid (ISO/IEC 23003-5).
-        if pcmc.is_none() && matches!(fourcc, Ipcm::KIND | Fpcm::KIND) {
+        if pcmc.is_none() && Self::requires_pcmc(fourcc) {
             return Err(Error::MissingBox(PcmC::KIND));
         }
 
@@ -137,9 +137,8 @@ impl Pcm {
             buf.advance(size);
         }
 
-        // ISO/IEC 23003-5 mandates the pcmC box for ipcm/fpcm. The QuickTime
-        // (QTFF-2001) fourccs and s16l imply their format and don't carry one.
-        if pcmc.is_none() && matches!(fourcc, Ipcm::KIND | Fpcm::KIND) {
+        // ISO/IEC 23003-5 mandates the pcmC box for ipcm/fpcm.
+        if pcmc.is_none() && Self::requires_pcmc(fourcc) {
             return Err(Error::MissingBox(PcmC::KIND));
         }
 
@@ -183,6 +182,14 @@ impl Pcm {
         Self::resolve_format(self.fourcc, &self.audio, self.pcmc.as_ref())
     }
 
+    /// Whether a PCM sample entry with this fourcc must carry a `pcmC` box.
+    ///
+    /// ISO/IEC 23003-5 mandates it for `ipcm`/`fpcm`. The QuickTime (QTFF-2001)
+    /// fourccs and `s16l` imply their format and don't carry one.
+    fn requires_pcmc(fourcc: FourCC) -> bool {
+        matches!(fourcc, Ipcm::KIND | Fpcm::KIND)
+    }
+
     fn resolve_format(fourcc: FourCC, audio: &Audio, pcmc: Option<&PcmC>) -> Option<PcmFormat> {
         // fl32/fl64 samples are float, as are fpcm samples (ISO/IEC 23003-5).
         let float = matches!(fourcc, Fl32::KIND | Fl64::KIND | Fpcm::KIND);
@@ -195,6 +202,12 @@ impl Pcm {
             });
         }
 
+        // ipcm/fpcm carry their format in the pcmC box, so with none present
+        // there's nothing to fall back to.
+        if Self::requires_pcmc(fourcc) {
+            return None;
+        }
+
         let (big_endian, sample_size) = match fourcc {
             Twos::KIND | Lpcm::KIND => (true, audio.sample_size),
             Sowt::KIND => (false, audio.sample_size),
@@ -203,7 +216,7 @@ impl Pcm {
             Fl32::KIND => (true, 32),
             Fl64::KIND => (true, 64),
             S16l::KIND => (false, 16),
-            // ipcm/fpcm require a pcmC box and unknown fourccs don't imply a format.
+            // Unknown fourccs don't imply a format.
             _ => return None,
         };
 
