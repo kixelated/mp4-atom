@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1](https://github.com/kixelated/mp4-atom/compare/v0.12.0...v0.12.1) - 2026-07-07
+
+### Other
+
+- only require pcmC for ipcm/fpcm sample entries ([#167](https://github.com/kixelated/mp4-atom/pull/167))
+- decode chroma_subsampling as 3 bits, not 1 ([#168](https://github.com/kixelated/mp4-atom/pull/168))
+
 ## [0.12.0](https://github.com/kixelated/mp4-atom/compare/v0.11.0...v0.12.0) - 2026-06-07
 
 ### Other
