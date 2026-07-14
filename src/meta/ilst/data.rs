@@ -76,3 +76,53 @@ pub(crate) fn encode_text<B: BufMut>(
     text_bytes.encode(buf)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Long QuickTime/GPAC style: the value is wrapped in a nested `data` atom.
+    // This is the layout `encode_text` always emits.
+    const LONG_STYLE: &[u8] = &[
+        0x00, 0x00, 0x00, 0x1A, // data atom size = 26
+        b'd', b'a', b't', b'a', //
+        0x00, 0x00, 0x00, 0x01, // type indicator: UTF-8
+        0x00, 0x00, 0x00, 0x00, // country + language
+        b'(', b'c', b')', b' ', b'2', b'0', b'2', b'6', b' ', b'x',
+    ];
+
+    #[test]
+    fn test_decode_text_short_style() {
+        // FFmpeg short style: the leading `1` is the type indicator (too small
+        // to be a valid `data` atom length), so the UTF-8 value follows directly.
+        let buf = [
+            0x00, 0x00, 0x00, 0x01, // type indicator (short style): UTF-8
+            0x00, 0x00, 0x00, 0x00, // country + language
+            b'2', b'0', b'2', b'6',
+        ];
+        let decoded = decode_text(&mut &buf[..]).unwrap();
+        assert_eq!(decoded.country_indicator, 0);
+        assert_eq!(decoded.language_indicator, 0);
+        assert_eq!(decoded.text, "2026");
+    }
+
+    #[test]
+    fn test_decode_text_long_style() {
+        let decoded = decode_text(&mut &LONG_STYLE[..]).unwrap();
+        assert_eq!(decoded.country_indicator, 0);
+        assert_eq!(decoded.language_indicator, 0);
+        assert_eq!(decoded.text, "(c) 2026 x");
+    }
+
+    #[test]
+    fn test_encode_text_emits_long_style() {
+        // `encode_text` always emits the long `data`-wrapped layout, which
+        // decodes back to the same value.
+        let mut buf = Vec::new();
+        encode_text(0, 0, "(c) 2026 x", &mut buf).unwrap();
+        assert_eq!(buf, LONG_STYLE);
+
+        let decoded = decode_text(&mut buf.as_slice()).unwrap();
+        assert_eq!(decoded.text, "(c) 2026 x");
+    }
+}
