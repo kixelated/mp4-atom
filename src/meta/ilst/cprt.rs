@@ -4,7 +4,7 @@ use crate::*;
 /// `copyright` metadata key.
 ///
 /// This lives inside `moov/udta/meta/ilst` and shares its fourcc with the
-/// unrelated ISO CopyrightBox ([`Cprt`]) found directly under `udta` — the
+/// unrelated ISO CopyrightBox ([`cprt`]) found directly under `udta` — the
 /// two have completely different layouts. It is deliberately NOT part of the
 /// global [`Any`] dispatch; [`Ilst`] decodes it by header.
 #[derive(Debug, Clone, PartialEq, Eq)]
