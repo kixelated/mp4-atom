@@ -36,3 +36,51 @@ impl Atom for Copyright {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Long QuickTime/GPAC style: the value is wrapped in a nested `data` atom.
+    // This is what FFmpeg and iTunes write for the `copyright` key.
+    const ENCODED_CPRT_LONG: &[u8] = &[
+        0x00, 0x00, 0x00, 0x22, // cprt size = 34
+        b'c', b'p', b'r', b't', //
+        0x00, 0x00, 0x00, 0x1A, // data size = 26
+        b'd', b'a', b't', b'a', //
+        0x00, 0x00, 0x00, 0x01, // type indicator: UTF-8
+        0x00, 0x00, 0x00, 0x00, // country + language
+        b'(', b'c', b')', b' ', b'2', b'0', b'2', b'6', b' ', b'x',
+    ];
+
+    #[test]
+    fn test_copyright_long_style() {
+        let decoded = Copyright::decode(&mut &ENCODED_CPRT_LONG[..]).unwrap();
+        assert_eq!(decoded.country_indicator, 0);
+        assert_eq!(decoded.language_indicator, 0);
+        assert_eq!(decoded.text, "(c) 2026 x");
+
+        // The encoder always emits the long `data`-wrapped layout.
+        let mut out = Vec::new();
+        decoded.encode(&mut out).unwrap();
+        assert_eq!(out, ENCODED_CPRT_LONG);
+    }
+
+    // Short FFmpeg style: the UTF-8 value follows the item header directly (no
+    // nested `data` atom); the leading `1` is the type indicator, too small to
+    // be a valid `data` atom length.
+    #[test]
+    fn test_copyright_short_style() {
+        let buf = [
+            0x00, 0x00, 0x00, 0x14, // cprt size = 20
+            b'c', b'p', b'r', b't', //
+            0x00, 0x00, 0x00, 0x01, // type indicator (short style): UTF-8
+            0x00, 0x00, 0x00, 0x00, // country + language
+            b'2', b'0', b'2', b'6',
+        ];
+        let decoded = Copyright::decode(&mut &buf[..]).unwrap();
+        assert_eq!(decoded.country_indicator, 0);
+        assert_eq!(decoded.language_indicator, 0);
+        assert_eq!(decoded.text, "2026");
+    }
+}
