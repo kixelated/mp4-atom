@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0](https://github.com/kixelated/mp4-atom/compare/v0.12.1...v0.13.0) - 2026-07-14
+
+### Other
+
+- dispatch children against the iTunes namespace, add cprt item ([#172](https://github.com/kixelated/mp4-atom/pull/172))
+- find esds inside the QuickTime wave box ([#170](https://github.com/kixelated/mp4-atom/pull/170))
+
 ## [0.12.1](https://github.com/kixelated/mp4-atom/compare/v0.12.0...v0.12.1) - 2026-07-07
 
 ### Other
