@@ -180,7 +180,8 @@ fn av1() {
                             country_indicator: 0,
                             language_indicator: 0,
                             text: "Lavf61.7.100".into()
-                        })
+                        }),
+                        cprt: None
                     }
                     .into(),],
                 }),
