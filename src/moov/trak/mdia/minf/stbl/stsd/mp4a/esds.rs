@@ -30,8 +30,28 @@ impl AtomExt for Esds {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        Descriptor::from(self.es_desc).encode(buf)
+        Descriptor::from(self.es_desc.clone()).encode(buf)
     }
+}
+
+/// Decode a descriptor body of `size` bytes, tolerating trailing bytes the
+/// specific descriptor doesn't consume.
+///
+/// MPEG-4 (ISO/IEC 14496-1) descriptors are length-prefixed and forward-
+/// compatible: the size field is authoritative and a parser skips to the
+/// declared end, ignoring extension fields (or writer padding) it doesn't
+/// understand. Unlike [`Decode::decode_exact`] this does not `ShortRead` on the
+/// leftover — e.g. a 2-byte `SLConfigDescriptor` (`predefined` + a trailing
+/// byte) decodes instead of failing the whole `esds`. The `size` slice still
+/// bounds the read, so a descriptor can never run past its declared length.
+fn decode_descriptor_body<T: Decode, B: Buf>(buf: &mut B, size: usize) -> Result<T> {
+    if buf.remaining() < size {
+        return Err(Error::OutOfBounds);
+    }
+    let mut inner = buf.slice(size);
+    let res = T::decode(&mut inner)?;
+    buf.advance(size);
+    Ok(res)
 }
 
 macro_rules! descriptors {
@@ -59,7 +79,7 @@ macro_rules! descriptors {
 
                 match tag {
                     $(
-                        $name::TAG => Ok($name::decode_exact(buf, size as _)?.into()),
+                        $name::TAG => Ok(decode_descriptor_body::<$name, _>(buf, size as _)?.into()),
                     )*
                     _ => Ok(Descriptor::Unknown(tag, Vec::decode_exact(buf, size as _)?)),
                 }
@@ -135,7 +155,7 @@ descriptors! {
     SLConfig,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EsDescriptor {
     pub es_id: u16,
@@ -178,14 +198,14 @@ impl Encode for EsDescriptor {
         self.es_id.encode(buf)?;
         0u8.encode(buf)?;
 
-        Descriptor::from(self.dec_config).encode(buf)?;
+        Descriptor::from(self.dec_config.clone()).encode(buf)?;
         Descriptor::from(self.sl_config).encode(buf)?;
 
         Ok(())
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DecoderConfig {
     pub object_type_indication: u8,
@@ -194,7 +214,12 @@ pub struct DecoderConfig {
     pub buffer_size_db: u24,
     pub max_bitrate: u32,
     pub avg_bitrate: u32,
-    pub dec_specific: DecoderSpecific,
+    /// The `DecoderSpecificInfo` (tag 0x05). ISO/IEC 14496-1 makes this
+    /// child optional ("if available"): a stream whose config can be derived
+    /// in-band (e.g. AAC carried with ADTS headers) legitimately omits it, so a
+    /// missing tag 5 must not fail the whole `esds`. `None` means the container
+    /// carried no out-of-band config.
+    pub dec_specific: Option<DecoderSpecific>,
 }
 
 impl DecoderConfig {
@@ -228,7 +253,7 @@ impl Decode for DecoderConfig {
             buffer_size_db,
             max_bitrate,
             avg_bitrate,
-            dec_specific: dec_specific.ok_or(Error::MissingDescriptor(DecoderSpecific::TAG))?,
+            dec_specific,
         })
     }
 }
@@ -241,70 +266,107 @@ impl Encode for DecoderConfig {
         self.max_bitrate.encode(buf)?;
         self.avg_bitrate.encode(buf)?;
 
-        Descriptor::from(self.dec_specific).encode(buf)?;
+        if let Some(dec_specific) = &self.dec_specific {
+            Descriptor::from(dec_specific.clone()).encode(buf)?;
+        }
 
         Ok(())
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DecoderSpecific {
     pub profile: u8,
     pub freq_index: u8,
     pub chan_conf: u8,
+    /// The complete `DecoderSpecificInfo` payload. For AAC this is the
+    /// AudioSpecificConfig — the `profile` / `freq_index` / `chan_conf` fields
+    /// above are a parsed view of its prefix. For a non-AAC object type (e.g.
+    /// the MPEG-4 Visual VOS/VOL config carried by an `mp4v` `esds`) the fields
+    /// are not meaningful, but the bytes are preserved verbatim so the
+    /// descriptor round-trips faithfully. Empty on a hand-constructed AAC
+    /// config, in which case [`Encode`] re-derives the 2-byte AudioSpecificConfig
+    /// from the fields.
+    pub raw: Vec<u8>,
 }
 
 impl DecoderSpecific {
     pub const TAG: u8 = 0x05;
 }
 
+/// Best-effort parse of the AAC AudioSpecificConfig prefix (`audioObjectType`,
+/// `samplingFrequencyIndex`, `channelConfiguration`) from the raw payload.
+/// Returns zeros when the payload is too short to parse (e.g. a non-AAC config);
+/// the raw bytes remain the source of truth for round-tripping.
+fn parse_audio_specific_config(raw: &[u8]) -> (u8, u8, u8) {
+    if raw.len() < 2 {
+        return (0, 0, 0);
+    }
+    let byte_a = raw[0];
+    let byte_b = raw[1];
+
+    let mut profile = byte_a >> 3;
+    if profile == 31 {
+        profile = 32 + ((byte_a & 7) | (byte_b >> 5));
+    }
+
+    let freq_index = if profile > 31 {
+        (byte_b >> 1) & 0x0F
+    } else {
+        ((byte_a & 0x07) << 1) + (byte_b >> 7)
+    };
+
+    let chan_conf = if freq_index == 15 {
+        // The 24-bit explicit sample rate precedes the channel config.
+        if raw.len() >= 5 {
+            let sample_rate =
+                (u32::from(raw[2]) << 16) | (u32::from(raw[3]) << 8) | u32::from(raw[4]);
+            ((sample_rate >> 4) & 0x0F) as u8
+        } else {
+            0
+        }
+    } else if profile > 31 {
+        if raw.len() >= 3 {
+            (byte_b & 1) | (raw[2] & 0xE0)
+        } else {
+            0
+        }
+    } else {
+        (byte_b >> 3) & 0x0F
+    };
+
+    (profile, freq_index, chan_conf)
+}
+
 impl Decode for DecoderSpecific {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
-        let byte_a = u8::decode(buf)?;
-        let byte_b = u8::decode(buf)?;
-
-        let mut profile = byte_a >> 3;
-        if profile == 31 {
-            profile = 32 + ((byte_a & 7) | (byte_b >> 5));
-        }
-
-        let freq_index = if profile > 31 {
-            (byte_b >> 1) & 0x0F
-        } else {
-            ((byte_a & 0x07) << 1) + (byte_b >> 7)
-        };
-
-        let chan_conf;
-        if freq_index == 15 {
-            // Skip the 24 bit sample rate
-            // TODO this needs to be implemented in encode
-            let sample_rate = u24::decode(buf)?;
-            chan_conf = ((u32::from(sample_rate) >> 4) & 0x0F) as u8;
-        } else if profile > 31 {
-            let byte_c = u8::decode(buf)?;
-            chan_conf = (byte_b & 1) | (byte_c & 0xE0);
-        } else {
-            chan_conf = (byte_b >> 3) & 0x0F;
-        }
-
-        if buf.has_remaining() {
-            tracing::warn!("PLEASE FIX: failed to consume all bytes in DecoderSpecificDescriptor");
-            buf.advance(buf.remaining());
-        }
+        // Capture the complete payload (the descriptor body is already
+        // size-bounded by `decode_descriptor_body`) so any object type
+        // round-trips; the AAC fields are a best-effort parse of its prefix.
+        let raw = Vec::decode(buf)?;
+        let (profile, freq_index, chan_conf) = parse_audio_specific_config(&raw);
 
         Ok(DecoderSpecific {
             profile,
             freq_index,
             chan_conf,
+            raw,
         })
     }
 }
 
 impl Encode for DecoderSpecific {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        ((self.profile << 3) + (self.freq_index >> 1)).encode(buf)?;
-        ((self.freq_index << 7) + (self.chan_conf << 3)).encode(buf)?;
+        if self.raw.is_empty() {
+            // Hand-constructed AAC config with no preserved bytes: re-derive the
+            // 2-byte AudioSpecificConfig from the fields.
+            ((self.profile << 3) + (self.freq_index >> 1)).encode(buf)?;
+            ((self.freq_index << 7) + (self.chan_conf << 3)).encode(buf)?;
+        } else {
+            // Emit the preserved payload verbatim (faithful for any object type).
+            self.raw.encode(buf)?;
+        }
 
         Ok(())
     }
@@ -329,5 +391,76 @@ impl Encode for SLConfig {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         2u8.encode(buf)?; // pre-defined
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // An `esds` whose `SLConfigDescriptor` (tag 0x06) declares 2 bytes — a
+    // `predefined` value plus a trailing byte — instead of the usual 1.
+    // `SLConfig::decode` reads only `predefined`, so the strict `decode_exact`
+    // used to `ShortRead` and fail the whole `esds` with `UnderDecode(esds)`.
+    // ISO 14496-1 makes the descriptor length authoritative, so the trailing
+    // byte must be skipped. Descriptor tree: EsDescriptor(0x03) → DecoderConfig
+    // (0x04) → DecoderSpecific(0x05, AAC-LC 48 kHz) + SLConfig(0x06, 2 bytes).
+    const ESDS_2BYTE_SLCONFIG: &[u8] = &[
+        0x00, 0x00, 0x00, 0x28, b'e', b's', b'd', b's', // esds box, size 40
+        0x00, 0x00, 0x00, 0x00, // version + flags
+        0x03, 0x1a, 0x00, 0x01, 0x00, // EsDescriptor: size 26, es_id 1, flags 0
+        0x04, 0x11, 0x40, 0x15, // DecoderConfig: size 17, oti 0x40, stream/up 0x15
+        0x00, 0x00, 0x00, // buffer_size_db
+        0x00, 0x00, 0x00, 0x00, // max_bitrate
+        0x00, 0x00, 0x00, 0x00, // avg_bitrate
+        0x05, 0x02, 0x11, 0x90, // DecoderSpecific: size 2 (profile 2, freq 3, chan 2)
+        0x06, 0x02, 0x02, 0x15, // SLConfig: size 2 = predefined 0x02 + a trailing byte
+    ];
+
+    #[test]
+    fn test_esds_two_byte_slconfig() {
+        let esds =
+            Esds::decode(&mut &ESDS_2BYTE_SLCONFIG[..]).expect("2-byte SLConfig must be tolerated");
+        let dec = esds
+            .es_desc
+            .dec_config
+            .dec_specific
+            .expect("DecoderSpecificInfo present");
+        assert_eq!(dec.profile, 2, "AAC-LC");
+        assert_eq!(dec.freq_index, 3, "48 kHz");
+    }
+
+    // A `DecoderConfigDescriptor` (tag 0x04) with NO `DecoderSpecificInfo`
+    // (tag 0x05) child — valid per ISO/IEC 14496-1, where the DecSpecificInfo
+    // is optional (e.g. AAC whose config is carried in-band via ADTS headers).
+    // Before the fix the mandatory `MissingDescriptor(0x05)` rejected the whole
+    // `esds`; now the field decodes to `None`. Descriptor tree: EsDescriptor
+    // (0x03) → DecoderConfig(0x04, no tag-5 child) + SLConfig(0x06).
+    const ESDS_NO_DEC_SPECIFIC: &[u8] = &[
+        0x00, 0x00, 0x00, 0x23, b'e', b's', b'd', b's', // esds box, size 35
+        0x00, 0x00, 0x00, 0x00, // version + flags
+        0x03, 0x15, 0x00, 0x01, 0x00, // EsDescriptor: size 21, es_id 1, flags 0
+        0x04, 0x0d, 0x40, 0x15, // DecoderConfig: size 13, oti 0x40 (AAC), stream/up 0x15
+        0x00, 0x00, 0x00, // buffer_size_db
+        0x00, 0x00, 0x00, 0x00, // max_bitrate
+        0x00, 0x00, 0x00, 0x00, // avg_bitrate
+        0x06, 0x01, 0x02, // SLConfig: size 1, predefined 0x02
+    ];
+
+    #[test]
+    fn test_esds_missing_dec_specific() {
+        let esds = Esds::decode(&mut &ESDS_NO_DEC_SPECIFIC[..])
+            .expect("a DecoderConfig without a DecoderSpecificInfo must be tolerated");
+        assert_eq!(esds.es_desc.dec_config.object_type_indication, 0x40);
+        assert!(
+            esds.es_desc.dec_config.dec_specific.is_none(),
+            "no tag-5 child decodes to None, not an error"
+        );
+
+        // And it round-trips: a `None` dec_specific emits no tag-5 descriptor.
+        let mut buf = Vec::new();
+        esds.encode(&mut buf).unwrap();
+        let again = Esds::decode(&mut buf.as_slice()).unwrap();
+        assert_eq!(again, esds);
     }
 }
