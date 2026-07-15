@@ -65,15 +65,20 @@ pub struct Pcm {
     pub pcmc: Option<PcmC>,
     pub chnl: Option<Chnl>,
     pub btrt: Option<Btrt>,
+    /// QuickTime version-2 sound sample description fields, when the entry was
+    /// written as a v2 `AudioSampleEntry` (the `lpcm` case — see [`SoundV2`]).
+    pub sound_v2: Option<SoundV2>,
 }
 
 impl Pcm {
+    #[allow(clippy::too_many_arguments)]
     fn encode_fields<B: BufMut>(
         fourcc: FourCC,
         audio: &Audio,
         pcmc: Option<&PcmC>,
         chnl: Option<&Chnl>,
         btrt: Option<&Btrt>,
+        sound_v2: Option<&SoundV2>,
         buf: &mut B,
     ) -> Result<()> {
         // An ipcm/fpcm entry without its mandatory pcmC box is invalid (ISO/IEC 23003-5).
@@ -81,7 +86,7 @@ impl Pcm {
             return Err(Error::MissingBox(PcmC::KIND));
         }
 
-        audio.encode(buf)?;
+        audio.encode_with_v2(sound_v2, buf)?;
 
         if let Some(pcmc) = pcmc {
             pcmc.encode(buf)?;
@@ -99,7 +104,7 @@ impl Pcm {
     }
 
     pub fn decode_with_fourcc<B: Buf>(fourcc: FourCC, buf: &mut B) -> Result<Self> {
-        let audio = Audio::decode(buf)?;
+        let (audio, sound_v2) = Audio::decode_with_v2(buf)?;
 
         let mut chnl = None;
         let mut pcmc = None;
@@ -148,6 +153,7 @@ impl Pcm {
             pcmc,
             chnl,
             btrt,
+            sound_v2,
         })
     }
 
@@ -158,6 +164,7 @@ impl Pcm {
             self.pcmc.as_ref(),
             self.chnl.as_ref(),
             self.btrt.as_ref(),
+            self.sound_v2.as_ref(),
             buf,
         )
     }
@@ -171,15 +178,22 @@ impl Pcm {
     /// - `in24` / `in32`: big-endian integer, 24 / 32 bits
     /// - `fl32` / `fl64`: big-endian float, 32 / 64 bits
     /// - `s16l`: little-endian integer, 16 bits
-    /// - `lpcm`: QTFF format flags are only defined for version 2 sound sample
-    ///   descriptions, which are not decoded here; defaults to big-endian
-    ///   integer, `sample_size` bits
+    /// - `lpcm`: resolved from the version-2 sound sample description when
+    ///   present — [`SoundV2::format_flags`] (bit 0 = float, bit 1 = big-endian)
+    ///   and [`SoundV2::bits_per_channel`]. A version-0/1 `lpcm` (no `SoundV2`)
+    ///   has no format flags to consult, so it falls back to big-endian integer,
+    ///   `sample_size` bits.
     ///
     /// Returns `None` for an unknown fourcc, or for an `ipcm`/`fpcm` entry
     /// missing its mandatory `pcmC` box (which
     /// [`decode_with_fourcc`](Self::decode_with_fourcc) never produces).
     pub fn format(&self) -> Option<PcmFormat> {
-        Self::resolve_format(self.fourcc, &self.audio, self.pcmc.as_ref())
+        Self::resolve_format(
+            self.fourcc,
+            &self.audio,
+            self.pcmc.as_ref(),
+            self.sound_v2.as_ref(),
+        )
     }
 
     /// Whether a PCM sample entry with this fourcc must carry a `pcmC` box.
@@ -190,9 +204,28 @@ impl Pcm {
         matches!(fourcc, Ipcm::KIND | Fpcm::KIND)
     }
 
-    fn resolve_format(fourcc: FourCC, audio: &Audio, pcmc: Option<&PcmC>) -> Option<PcmFormat> {
+    fn resolve_format(
+        fourcc: FourCC,
+        audio: &Audio,
+        pcmc: Option<&PcmC>,
+        sound_v2: Option<&SoundV2>,
+    ) -> Option<PcmFormat> {
         // fl32/fl64 samples are float, as are fpcm samples (ISO/IEC 23003-5).
         let float = matches!(fourcc, Fl32::KIND | Fl64::KIND | Fpcm::KIND);
+
+        // A version-2 `lpcm` entry names its real storage format in the
+        // CoreAudio `formatSpecificFlags` (QTFF): bit 0 = float, bit 1 =
+        // big-endian. This is the only faithful source for `lpcm` — the
+        // fourcc-implied default below is a guess.
+        if fourcc == Lpcm::KIND {
+            if let Some(v2) = sound_v2 {
+                return Some(PcmFormat {
+                    big_endian: v2.format_flags & 0x2 != 0,
+                    sample_size: v2.bits_per_channel as u16,
+                    float: v2.format_flags & 0x1 != 0,
+                });
+            }
+        }
 
         if let Some(pcmc) = pcmc {
             return Some(PcmFormat {
@@ -244,7 +277,9 @@ macro_rules! define_pcm_sample_entry {
             ///
             /// See [`Pcm::format`] for the resolution rules.
             pub fn format(&self) -> Option<PcmFormat> {
-                Pcm::resolve_format(Self::KIND, &self.audio, self.pcmc.as_ref())
+                // These fourccs are only ever written as version-0 sample
+                // entries, so there is no `SoundV2` to consult (see `Lpcm`).
+                Pcm::resolve_format(Self::KIND, &self.audio, self.pcmc.as_ref(), None)
             }
         }
 
@@ -268,6 +303,7 @@ macro_rules! define_pcm_sample_entry {
                     self.pcmc.as_ref(),
                     self.chnl.as_ref(),
                     self.btrt.as_ref(),
+                    None,
                     buf,
                 )
             }
@@ -277,7 +313,6 @@ macro_rules! define_pcm_sample_entry {
 
 define_pcm_sample_entry!(Sowt, b"sowt");
 define_pcm_sample_entry!(Twos, b"twos");
-define_pcm_sample_entry!(Lpcm, b"lpcm");
 define_pcm_sample_entry!(Ipcm, b"ipcm");
 define_pcm_sample_entry!(Fpcm, b"fpcm");
 define_pcm_sample_entry!(In24, b"in24");
@@ -285,6 +320,62 @@ define_pcm_sample_entry!(In32, b"in32");
 define_pcm_sample_entry!(Fl32, b"fl32");
 define_pcm_sample_entry!(Fl64, b"fl64");
 define_pcm_sample_entry!(S16l, b"s16l");
+
+/// QuickTime Linear PCM (`lpcm`). QTFF defines this fourcc ONLY inside a
+/// **version-2** sound sample description, so — unlike the other QTFF PCM
+/// entries — it carries the real rate / channel count / storage format in its
+/// [`SoundV2`] extension (`sound_v2`) rather than in the legacy base fields
+/// (which the spec fixes to placeholders). A rare version-0/1 `lpcm` leaves
+/// `sound_v2` `None`, and [`Self::format`] falls back to the fourcc guess.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Lpcm {
+    pub audio: Audio,
+    pub pcmc: Option<PcmC>,
+    pub chnl: Option<Chnl>,
+    pub btrt: Option<Btrt>,
+    pub sound_v2: Option<SoundV2>,
+}
+
+impl Lpcm {
+    /// The resolved sample format — from the version-2 `formatSpecificFlags`
+    /// when present (see [`Pcm::format`]).
+    pub fn format(&self) -> Option<PcmFormat> {
+        Pcm::resolve_format(
+            Self::KIND,
+            &self.audio,
+            self.pcmc.as_ref(),
+            self.sound_v2.as_ref(),
+        )
+    }
+}
+
+impl Atom for Lpcm {
+    const KIND: FourCC = FourCC::new(b"lpcm");
+
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        let entry = Pcm::decode_with_fourcc(Self::KIND, buf)?;
+        Ok(Self {
+            audio: entry.audio,
+            pcmc: entry.pcmc,
+            chnl: entry.chnl,
+            btrt: entry.btrt,
+            sound_v2: entry.sound_v2,
+        })
+    }
+
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        Pcm::encode_fields(
+            Self::KIND,
+            &self.audio,
+            self.pcmc.as_ref(),
+            self.chnl.as_ref(),
+            self.btrt.as_ref(),
+            self.sound_v2.as_ref(),
+            buf,
+        )
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -331,6 +422,7 @@ mod tests {
             pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: None,
+            sound_v2: None,
         };
 
         let mut buf = Vec::new();
@@ -367,6 +459,7 @@ mod tests {
             pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: None,
+            sound_v2: None,
         };
 
         let mut buf = Vec::new();
@@ -408,6 +501,7 @@ mod tests {
                 max_bitrate: 2_304_096,
                 avg_bitrate: 2_304_000,
             }),
+            sound_v2: None,
         };
 
         let mut buf = Vec::new();
@@ -445,6 +539,7 @@ mod tests {
             pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: None,
+            sound_v2: None,
         };
 
         let mut buf = Vec::new();
@@ -485,6 +580,7 @@ mod tests {
             pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: None,
+            sound_v2: None,
         };
 
         let mut buf = Vec::new();
@@ -521,6 +617,7 @@ mod tests {
             pcmc: Some(pcmc),
             chnl: Some(chnl),
             btrt: None,
+            sound_v2: None,
         };
 
         let mut buf = Vec::new();
@@ -528,6 +625,50 @@ mod tests {
 
         let decoded = Lpcm::decode(&mut &buf[..]).unwrap();
         assert_eq!(pcm, decoded);
+    }
+
+    #[test]
+    fn test_lpcm_v2_sound_description() {
+        // A version-2 `lpcm` entry: the real 48000 Hz / 2ch / 24-bit signed
+        // little-endian format lives in the `SoundV2` extension; the base fields
+        // are the QTFF placeholders. formatSpecificFlags 0x4 = signed integer,
+        // little-endian (bit 1 clear), not float (bit 0 clear) → S24LE.
+        let lpcm = Lpcm {
+            audio: Audio {
+                data_reference_index: 1,
+                channel_count: 2,
+                sample_size: 16,
+                sample_rate: FixedPoint::new(1, 0),
+            },
+            pcmc: None,
+            chnl: None,
+            btrt: None,
+            sound_v2: Some(SoundV2 {
+                sample_rate: 48000,
+                channel_count: 2,
+                bits_per_channel: 24,
+                format_flags: 0x4,
+            }),
+        };
+
+        // Round-trips through the version-2 encoding.
+        let mut buf = Vec::new();
+        lpcm.encode(&mut buf).unwrap();
+        let decoded = Lpcm::decode(&mut &buf[..]).unwrap();
+        assert_eq!(decoded, lpcm);
+
+        // The storage format is resolved from the v2 flags, not the fourcc guess.
+        assert_eq!(
+            decoded.format(),
+            Some(PcmFormat {
+                big_endian: false,
+                sample_size: 24,
+                float: false,
+            })
+        );
+        let v2 = decoded.sound_v2.expect("v2 sound description present");
+        assert_eq!(v2.sample_rate, 48000);
+        assert_eq!(v2.channel_count, 2);
     }
 
     const ENCODED_IPCM: &[u8] = &[

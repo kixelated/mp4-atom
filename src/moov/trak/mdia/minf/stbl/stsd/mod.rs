@@ -13,6 +13,7 @@ mod ftab;
 mod h264;
 mod hevc;
 mod mp4a;
+mod mp4v;
 mod opus;
 mod pasp;
 mod pcm;
@@ -39,6 +40,7 @@ pub use ftab::*;
 pub use h264::*;
 pub use hevc::*;
 pub use mp4a::*;
+pub use mp4v::*;
 pub use opus::*;
 pub use pasp::*;
 pub use pcm::*;
@@ -84,6 +86,9 @@ pub enum Codec {
 
     // AAC
     Mp4a(Mp4a),
+
+    // MPEG-4 Part 2 Visual
+    Mp4v(Mp4v),
 
     // Text
     Tx3g(Tx3g),
@@ -138,6 +143,7 @@ impl Decode for Codec {
             Any::Vp08(atom) => atom.into(),
             Any::Vp09(atom) => atom.into(),
             Any::Mp4a(atom) => atom.into(),
+            Any::Mp4v(atom) => atom.into(),
             Any::Tx3g(atom) => atom.into(),
             Any::Av01(atom) => atom.into(),
             Any::Opus(atom) => atom.into(),
@@ -175,6 +181,7 @@ impl Encode for Codec {
             Self::Vp08(atom) => atom.encode(buf),
             Self::Vp09(atom) => atom.encode(buf),
             Self::Mp4a(atom) => atom.encode(buf),
+            Self::Mp4v(atom) => atom.encode(buf),
             Self::Tx3g(atom) => atom.encode(buf),
             Self::Av01(atom) => atom.encode(buf),
             Self::Opus(atom) => atom.encode(buf),
