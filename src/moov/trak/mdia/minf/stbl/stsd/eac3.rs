@@ -164,6 +164,7 @@ mod tests {
             Eac3 {
                 audio: Audio {
                     data_reference_index: 1,
+                    version: AudioVersion::V0,
                     channel_count: 2,
                     sample_size: 16,
                     sample_rate: 44100.into()
@@ -190,6 +191,7 @@ mod tests {
         let eac3 = Eac3 {
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 16,
                 sample_rate: 44100.into(),
@@ -221,6 +223,7 @@ mod tests {
         let eac3 = Eac3 {
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 6,
                 sample_size: 16,
                 sample_rate: 48000.into(),
@@ -258,6 +261,7 @@ mod tests {
         let eac3 = Eac3 {
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 8,
                 sample_size: 16,
                 sample_rate: 48000.into(),
@@ -326,6 +330,7 @@ mod tests {
             Eac3 {
                 audio: Audio {
                     data_reference_index: 1,
+                    version: AudioVersion::V0,
                     channel_count: 2,
                     sample_size: 16,
                     sample_rate: 44100.into()
