@@ -116,8 +116,7 @@ impl AtomExt for Subs {
                 };
                 let priority = u8::decode(buf)?;
                 let discardable = u8::decode(buf)? == 1;
-                let codec_specific_parameters = buf.slice(4).to_vec();
-                buf.advance(4);
+                let codec_specific_parameters = <[u8; 4]>::decode(buf)?.to_vec();
                 subsamples.push(SubsSubsample {
                     size,
                     priority,
@@ -205,6 +204,30 @@ mod tests {
                 }],
             }
         )
+    }
+
+    #[test]
+    fn subs_truncated_codec_parameters_return_error() {
+        let body: &[u8] = &[
+            0x00, 0x00, 0x00, 0x01, // entry_count
+            0x00, 0x00, 0x00, 0x01, // sample_delta
+            0x00, 0x01, // subsample_count
+            0x00, 0x01, // subsample_size
+            0x00, // priority
+            0x00, // discardable
+            0x00, 0x00, 0x00, // truncated codec_specific_parameters
+        ];
+
+        assert!(matches!(
+            Subs::decode_body_ext(
+                &mut Cursor::new(body),
+                SubsExt {
+                    version: SubsVersion::V0,
+                    flags: [0; 3],
+                },
+            ),
+            Err(Error::OutOfBounds)
+        ));
     }
 
     // This example was taken from:
