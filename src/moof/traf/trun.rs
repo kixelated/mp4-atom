@@ -25,15 +25,19 @@ pub struct Trun {
 /// `None` fields mean the value was not present in the per-sample trun data.
 /// After decode, callers should resolve `None` against tfhd defaults
 /// (`default_sample_duration`, `default_sample_size`, `default_sample_flags`)
-/// before using the values. The encoder backfills unresolved `None` with `0`
-/// as a last resort to avoid silently dropping fields that other entries set.
+/// before using the values. Except for the first-sample-flags layout, the
+/// encoder rejects fields that are present for only some entries because a
+/// trun box cannot represent them without changing their meaning.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TrunEntry {
     pub duration: Option<u32>,
     pub size: Option<u32>,
     pub flags: Option<u32>,
-    pub cts: Option<i32>,
+    /// Composition time offset. Version 0 stores an unsigned `u32`, while
+    /// version 1 stores a signed `i32`, so an `i64` is needed to represent
+    /// every value from either version.
+    pub cts: Option<i64>,
 }
 
 impl AtomExt for Trun {
@@ -47,6 +51,18 @@ impl AtomExt for Trun {
             true => i32::decode(buf)?.into(),
             false => None,
         };
+
+        if ext.first_sample_flags && ext.sample_flags {
+            return Err(Error::Unsupported(
+                "trun first_sample_flags and sample_flags cannot both be set",
+            ));
+        }
+
+        if ext.first_sample_flags && sample_count == 0 {
+            return Err(Error::Unsupported(
+                "trun first_sample_flags requires at least one sample",
+            ));
+        }
 
         let mut first_sample_flags = match ext.first_sample_flags {
             true => u32::decode(buf)?.into(),
@@ -84,7 +100,10 @@ impl AtomExt for Trun {
                 },
             };
             let cts = match ext.sample_cts {
-                true => i32::decode(buf)?.into(),
+                true => Some(match ext.version {
+                    TrunVersion::V0 => i64::from(u32::decode(buf)?),
+                    TrunVersion::V1 => i64::from(i32::decode(buf)?),
+                }),
                 false => None,
             };
 
@@ -103,28 +122,92 @@ impl AtomExt for Trun {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<TrunExt> {
-        let any_flags = self.entries.iter().any(|s| s.flags.is_some());
-        let first_only_flags = any_flags
-            && self.entries.first().is_some_and(|s| s.flags.is_some())
+        fn field_is_uniform<T>(
+            entries: &[TrunEntry],
+            get: impl Fn(&TrunEntry) -> Option<T>,
+        ) -> bool {
+            let Some(first) = entries.first() else {
+                return true;
+            };
+            let present = get(first).is_some();
+            entries
+                .iter()
+                .skip(1)
+                .all(|entry| get(entry).is_some() == present)
+        }
+
+        if !field_is_uniform(&self.entries, |entry| entry.duration) {
+            return Err(Error::Unsupported("mixed trun sample_duration presence"));
+        }
+        if !field_is_uniform(&self.entries, |entry| entry.size) {
+            return Err(Error::Unsupported("mixed trun sample_size presence"));
+        }
+        if !field_is_uniform(&self.entries, |entry| entry.cts) {
+            return Err(Error::Unsupported("mixed trun sample_cts presence"));
+        }
+
+        let all_flags =
+            !self.entries.is_empty() && self.entries.iter().all(|entry| entry.flags.is_some());
+        let first_only_flags = self
+            .entries
+            .first()
+            .is_some_and(|entry| entry.flags.is_some())
             && self.entries.iter().skip(1).all(|s| s.flags.is_none());
 
-        // Use per-sample flags when any entry has flags and it's not the first-only pattern.
-        // None entries are backfilled with 0 to avoid silently dropping flags.
-        let sample_flags = any_flags && !first_only_flags;
+        if self.entries.iter().any(|entry| entry.flags.is_some()) && !all_flags && !first_only_flags
+        {
+            return Err(Error::Unsupported("mixed trun sample_flags presence"));
+        }
+
+        let sample_cts = self
+            .entries
+            .first()
+            .is_some_and(|entry| entry.cts.is_some());
+        let has_negative_cts = self
+            .entries
+            .iter()
+            .filter_map(|entry| entry.cts)
+            .any(|cts| cts < 0);
+        let has_large_cts = self
+            .entries
+            .iter()
+            .filter_map(|entry| entry.cts)
+            .any(|cts| cts > i64::from(i32::MAX));
+
+        if self
+            .entries
+            .iter()
+            .filter_map(|entry| entry.cts)
+            .any(|cts| cts < i64::from(i32::MIN) || cts > i64::from(u32::MAX))
+        {
+            return Err(Error::Unsupported("trun sample_cts is out of range"));
+        }
+        if has_negative_cts && has_large_cts {
+            return Err(Error::Unsupported(
+                "trun sample_cts values require incompatible versions",
+            ));
+        }
+
+        let version = if has_large_cts {
+            TrunVersion::V0
+        } else {
+            TrunVersion::V1
+        };
 
         let ext = TrunExt {
-            version: TrunVersion::V1,
+            version,
             data_offset: self.data_offset.is_some(),
             first_sample_flags: first_only_flags,
-
-            // Use the field if any entry has it set. None entries are backfilled
-            // with 0 during encoding to avoid silently dropping fields on
-            // decode→encode roundtrips (entries that inherited defaults from tfhd
-            // have None after decode).
-            sample_duration: self.entries.iter().any(|s| s.duration.is_some()),
-            sample_size: self.entries.iter().any(|s| s.size.is_some()),
-            sample_flags,
-            sample_cts: self.entries.iter().any(|s| s.cts.is_some()),
+            sample_duration: self
+                .entries
+                .first()
+                .is_some_and(|entry| entry.duration.is_some()),
+            sample_size: self
+                .entries
+                .first()
+                .is_some_and(|entry| entry.size.is_some()),
+            sample_flags: all_flags && !first_only_flags,
+            sample_cts,
         };
 
         (self.entries.len() as u32).encode(buf)?;
@@ -136,16 +219,19 @@ impl AtomExt for Trun {
 
         for entry in &self.entries {
             if ext.sample_duration {
-                Some(Some(entry.duration.unwrap_or(0))).encode(buf)?;
+                entry.duration.unwrap().encode(buf)?;
             }
             if ext.sample_size {
-                Some(Some(entry.size.unwrap_or(0))).encode(buf)?;
+                entry.size.unwrap().encode(buf)?;
             }
             if ext.sample_flags {
-                Some(Some(entry.flags.unwrap_or(0))).encode(buf)?;
+                entry.flags.unwrap().encode(buf)?;
             }
             if ext.sample_cts {
-                Some(Some(entry.cts.unwrap_or(0))).encode(buf)?;
+                match ext.version {
+                    TrunVersion::V0 => (entry.cts.unwrap() as u32).encode(buf)?,
+                    TrunVersion::V1 => (entry.cts.unwrap() as i32).encode(buf)?,
+                }
             }
         }
 
@@ -203,10 +289,10 @@ mod test {
         assert_eq!(decoded.entries.len(), 3);
     }
 
-    /// When multiple entries have explicit flags (not just the first),
-    /// the encoder must use per-sample flags, not first_sample_flags.
+    /// A mixed per-sample layout cannot be encoded without changing `None`
+    /// (inherit the tfhd default) into an explicit value.
     #[test]
-    fn mixed_flags_uses_per_sample() {
+    fn mixed_flags_are_rejected() {
         let trun = Trun {
             data_offset: Some(100),
             entries: vec![
@@ -232,14 +318,10 @@ mod test {
         };
 
         let mut buf = Vec::new();
-        trun.encode(&mut buf).expect("encode");
-
-        let decoded = Trun::decode(&mut &buf[..]).expect("decode");
-
-        // Mixed Some/None: encoder backfills None with 0 and emits per-sample flags.
-        assert_eq!(decoded.entries[0].flags, Some(0x02000000));
-        assert_eq!(decoded.entries[1].flags, Some(0x01010000));
-        assert_eq!(decoded.entries[2].flags, Some(0)); // was None, backfilled to 0
+        assert!(matches!(
+            trun.encode(&mut buf),
+            Err(Error::Unsupported("mixed trun sample_flags presence"))
+        ));
     }
 
     /// When all entries have explicit flags, per-sample flags are used.
@@ -272,10 +354,9 @@ mod test {
         assert_eq!(decoded.entries[1].flags, Some(0x01010000));
     }
 
-    /// Entries with None duration (inherited from tfhd default_sample_duration)
-    /// must not cause the duration field to be dropped entirely on re-encode.
+    /// A partially present duration field cannot be represented by trun flags.
     #[test]
-    fn duration_backfill_roundtrip() {
+    fn mixed_duration_is_rejected() {
         let trun = Trun {
             data_offset: Some(100),
             entries: vec![
@@ -295,19 +376,15 @@ mod test {
         };
 
         let mut buf = Vec::new();
-        trun.encode(&mut buf).expect("encode");
-
-        let decoded = Trun::decode(&mut &buf[..]).expect("decode");
-
-        assert_eq!(decoded.entries[0].duration, Some(512));
-        // None backfilled to 0 during encode
-        assert_eq!(decoded.entries[1].duration, Some(0));
+        assert!(matches!(
+            trun.encode(&mut buf),
+            Err(Error::Unsupported("mixed trun sample_duration presence"))
+        ));
     }
 
-    /// Entries with None size (inherited from tfhd default_sample_size)
-    /// must not cause the size field to be dropped entirely on re-encode.
+    /// A partially present size field cannot be represented by trun flags.
     #[test]
-    fn size_backfill_roundtrip() {
+    fn mixed_size_is_rejected() {
         let trun = Trun {
             data_offset: Some(100),
             entries: vec![
@@ -327,13 +404,110 @@ mod test {
         };
 
         let mut buf = Vec::new();
-        trun.encode(&mut buf).expect("encode");
+        assert!(matches!(
+            trun.encode(&mut buf),
+            Err(Error::Unsupported("mixed trun sample_size presence"))
+        ));
+    }
 
-        let decoded = Trun::decode(&mut &buf[..]).expect("decode");
+    #[test]
+    fn mixed_cts_is_rejected() {
+        let trun = Trun {
+            data_offset: None,
+            entries: vec![
+                TrunEntry {
+                    cts: Some(0),
+                    ..Default::default()
+                },
+                TrunEntry::default(),
+            ],
+        };
 
-        assert_eq!(decoded.entries[0].size, Some(1000));
-        // None backfilled to 0 during encode
-        assert_eq!(decoded.entries[1].size, Some(0));
+        let mut encoded = Vec::new();
+        assert!(matches!(
+            trun.encode(&mut encoded),
+            Err(Error::Unsupported("mixed trun sample_cts presence"))
+        ));
+    }
+
+    #[test]
+    fn version_zero_cts_is_unsigned() {
+        let encoded = [
+            0, 0, 0, 20, b't', b'r', b'u', b'n', // size and kind
+            0, 0, 8, 0, // version 0, sample_cts flag
+            0, 0, 0, 1, // sample_count
+            0x80, 0, 0, 0, // unsigned composition offset
+        ];
+
+        let trun = Trun::decode(&mut &encoded[..]).expect("decode");
+        assert_eq!(trun.entries[0].cts, Some(0x8000_0000));
+
+        let mut reencoded = Vec::new();
+        trun.encode(&mut reencoded).expect("re-encode");
+        assert_eq!(reencoded[8], 0, "large unsigned offsets require version 0");
+        assert_eq!(
+            Trun::decode(&mut &reencoded[..]).expect("decode re-encoded"),
+            trun
+        );
+    }
+
+    #[test]
+    fn version_one_cts_is_signed() {
+        let trun = Trun {
+            data_offset: None,
+            entries: vec![TrunEntry {
+                cts: Some(-1),
+                ..Default::default()
+            }],
+        };
+
+        let mut encoded = Vec::new();
+        trun.encode(&mut encoded).expect("encode");
+        assert_eq!(encoded[8], 1, "negative offsets require version 1");
+        assert_eq!(Trun::decode(&mut &encoded[..]).expect("decode"), trun);
+    }
+
+    #[test]
+    fn incompatible_cts_versions_are_rejected() {
+        let trun = Trun {
+            data_offset: None,
+            entries: vec![
+                TrunEntry {
+                    cts: Some(-1),
+                    ..Default::default()
+                },
+                TrunEntry {
+                    cts: Some(i64::from(i32::MAX) + 1),
+                    ..Default::default()
+                },
+            ],
+        };
+
+        let mut encoded = Vec::new();
+        assert!(matches!(
+            trun.encode(&mut encoded),
+            Err(Error::Unsupported(
+                "trun sample_cts values require incompatible versions"
+            ))
+        ));
+    }
+
+    #[test]
+    fn first_and_per_sample_flags_are_rejected() {
+        let encoded = [
+            0, 0, 0, 24, b't', b'r', b'u', b'n', // size and kind
+            0, 0, 4, 4, // version 0, both flag fields
+            0, 0, 0, 1, // sample_count
+            0, 0, 0, 1, // first_sample_flags
+            0, 0, 0, 2, // sample_flags for sample 0
+        ];
+
+        assert!(matches!(
+            Trun::decode(&mut &encoded[..]),
+            Err(Error::Unsupported(
+                "trun first_sample_flags and sample_flags cannot both be set"
+            ))
+        ));
     }
 
     /// When all entries have None for a field, the flag is not set and
