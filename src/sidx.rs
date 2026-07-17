@@ -101,6 +101,13 @@ impl AtomExt for Sidx {
             .map_err(|_| Error::TooLarge(Self::KIND))?;
         reference_count.encode(buf)?;
         for reference in &self.references {
+            if reference.reference_size > 0x7FFF_FFFF
+                || reference.sap_type > 0b111
+                || reference.sap_delta_time > 0x0FFF_FFFF
+            {
+                return Err(Error::TooLarge(Self::KIND));
+            }
+
             let reference_type_and_size: u32 = match reference.reference_type {
                 true => 0x8000_0000 | reference.reference_size,
                 false => reference.reference_size,
@@ -109,14 +116,9 @@ impl AtomExt for Sidx {
             reference.subsegment_duration.encode(buf)?;
             let sap_flag_and_type_and_delta_time = match reference.starts_with_sap {
                 true => {
-                    0x8000_0000
-                        | ((reference.sap_type as u32 & 0b111) << 28)
-                        | (reference.sap_delta_time & 0x0FFF_FFFF)
+                    0x8000_0000 | ((reference.sap_type as u32) << 28) | reference.sap_delta_time
                 }
-                false => {
-                    ((reference.sap_type as u32 & 0b111) << 28)
-                        | (reference.sap_delta_time & 0x0FFF_FFFF)
-                }
+                false => ((reference.sap_type as u32) << 28) | reference.sap_delta_time,
             };
             sap_flag_and_type_and_delta_time.encode(buf)?;
         }
@@ -201,5 +203,43 @@ mod tests {
         sidx.encode(&mut buf).unwrap();
 
         assert_eq!(buf.as_slice(), ENCODED_SIDX);
+    }
+
+    #[test]
+    fn test_sidx_encode_rejects_oversized_reference_fields() {
+        fn assert_too_large(reference: SegmentReference) {
+            let sidx = Sidx {
+                references: vec![reference],
+                ..Default::default()
+            };
+            let mut buf = Vec::new();
+
+            assert!(matches!(
+                sidx.encode(&mut buf),
+                Err(Error::TooLarge(kind)) if kind == Sidx::KIND
+            ));
+        }
+
+        let reference = SegmentReference {
+            reference_type: false,
+            reference_size: 0,
+            subsegment_duration: 0,
+            starts_with_sap: false,
+            sap_type: 0,
+            sap_delta_time: 0,
+        };
+
+        assert_too_large(SegmentReference {
+            reference_size: 0x8000_0000,
+            ..reference.clone()
+        });
+        assert_too_large(SegmentReference {
+            sap_type: 0b1000,
+            ..reference.clone()
+        });
+        assert_too_large(SegmentReference {
+            sap_delta_time: 0x1000_0000,
+            ..reference
+        });
     }
 }
