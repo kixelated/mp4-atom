@@ -250,9 +250,11 @@ fn avcc_ext() {
                                                     profile: 2,
                                                     freq_index: 3,
                                                     chan_conf: 2,
+                                                    ..Default::default()
                                                 },
                                             },
                                             sl_config: esds::SLConfig::default(),
+                                            ..Default::default()
                                         },
                                     },
                                     btrt: Some(Btrt {

@@ -176,10 +176,12 @@ fn bbb() {
                                                     profile: 2,
                                                     freq_index: 4,
                                                     chan_conf: 2,
+                                                    ..Default::default()
                                                 },
                                                 ..Default::default()
                                             },
                                             sl_config: esds::SLConfig{},
+                                            ..Default::default()
                                         },
                                     },
                                     btrt: Some(Btrt { buffer_size_db: 0, max_bitrate: 125587, avg_bitrate: 125587 }),
