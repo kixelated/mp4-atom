@@ -99,9 +99,10 @@ fn hevc() {
                         }),
                         dinf: Dinf {
                             dref: Dref {
-                                urls: vec![Url {
+                                entries: vec![Url {
                                     location: "".to_string()
-                                }]
+                                }
+                                .into()]
                             }
                         },
                         stbl: Stbl {

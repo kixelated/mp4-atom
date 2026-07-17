@@ -185,7 +185,7 @@ mod test {
                             }),
                             dinf: Dinf {
                                 dref: Dref {
-                                    urls: vec![Url::default()]
+                                    entries: vec![Url::default().into()]
                                 }
                             },
                             stbl: Stbl {
