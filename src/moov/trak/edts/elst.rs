@@ -70,27 +70,28 @@ impl AtomExt for Elst {
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<ElstExt> {
         // On the wire media_time is signed: None is the -1 empty edit, and a real
         // media time must fit the signed 64-bit field.
-        let media_times = self
-            .entries
-            .iter()
-            .map(|e| match e.media_time {
-                None => Ok(-1i64),
+        fn wire_media_time(media_time: Option<u64>) -> Result<i64> {
+            match media_time {
+                None => Ok(-1),
                 Some(t) => i64::try_from(t)
                     .map_err(|_| Error::Unsupported("elst media_time exceeds i64::MAX")),
-            })
-            .collect::<Result<Vec<_>>>()?;
+            }
+        }
 
         // Prefer version 0 (32-bit) when every value fits: it matches what muxers
         // typically emit (so a V0 source round-trips byte-for-byte) and keeps the box
-        // compact. Fall back to version 1 (64-bit) when a value is too large.
-        let use_v0 =
-            self.entries.iter().zip(&media_times).all(|(e, &mt)| {
-                u32::try_from(e.segment_duration).is_ok() && i32::try_from(mt).is_ok()
-            });
+        // compact. segment_duration is unsigned int(32) but media_time is signed
+        // int(32), so their ceilings differ. Out-of-range media_time is validated (and
+        // -1 / None handled) below in the encode pass.
+        let use_v0 = !self.entries.iter().any(|e| {
+            e.segment_duration > u32::MAX as u64
+                || e.media_time.is_some_and(|t| t > i32::MAX as u64)
+        });
 
         (self.entries.len() as u32).encode(buf)?;
 
-        for (entry, &media_time) in self.entries.iter().zip(&media_times) {
+        for entry in &self.entries {
+            let media_time = wire_media_time(entry.media_time)?;
             if use_v0 {
                 (entry.segment_duration as u32).encode(buf)?;
                 (media_time as i32).encode(buf)?;
@@ -146,6 +147,26 @@ mod tests {
 
         let mut buf = buf.as_ref();
         let decoded = Elst::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
+    }
+
+    // media_time is a *signed* int(32) in version 0, so a value above i32::MAX (but
+    // within u32) must fall back to version 1. Encoding it as a 32-bit int would
+    // overflow into a negative media_time.
+    #[test]
+    fn test_elst_media_time_above_i32_forces_v1() {
+        let expected = Elst {
+            entries: vec![ElstEntry {
+                segment_duration: 0,
+                media_time: Some(i32::MAX as u64 + 1),
+                media_rate: 1.into(),
+            }],
+        };
+        let mut buf = Vec::new();
+        expected.encode(&mut buf).unwrap();
+        assert_eq!(buf[8], 1, "media_time above i32::MAX must use version 1");
+
+        let decoded = Elst::decode(&mut buf.as_ref()).unwrap();
         assert_eq!(decoded, expected);
     }
 
