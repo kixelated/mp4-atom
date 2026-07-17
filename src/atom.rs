@@ -44,16 +44,21 @@ impl<T: Atom> Decode for T {
 
 impl<T: Atom> DecodeMaybe for T {
     fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>> {
-        let header = match Header::decode_maybe(buf)? {
+        // Decode the header from a view so an incomplete atom leaves the
+        // caller's buffer untouched.
+        let remaining = buf.remaining();
+        let mut peek = buf.slice(remaining);
+        let header = match Header::decode_maybe(&mut peek)? {
             Some(header) => header,
             None => return Ok(None),
         };
 
-        let size = header.size.unwrap_or(buf.remaining());
-        if size > buf.remaining() {
+        let size = header.size.unwrap_or(peek.remaining());
+        if size > peek.remaining() {
             return Ok(None);
         }
 
+        buf.advance(remaining - peek.remaining());
         let body = &mut buf.slice(size);
 
         let atom = match Self::decode_body(body) {

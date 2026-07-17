@@ -38,6 +38,21 @@ mod test {
     use super::*;
 
     #[test]
+    fn rejects_truncated_child_body() {
+        let mut encoded = Vec::new();
+        Moov::default().encode(&mut encoded).unwrap();
+
+        encoded.extend_from_slice(b"\0\0\0\x20trak");
+        let size = u32::try_from(encoded.len()).unwrap();
+        encoded[..4].copy_from_slice(&size.to_be_bytes());
+
+        assert!(matches!(
+            Moov::decode(&mut encoded.as_slice()),
+            Err(Error::UnderDecode(kind)) if kind == Moov::KIND
+        ));
+    }
+
+    #[test]
     fn test_meta() {
         const ENCODED: &[u8] = &[
             0x00, 0x00, 0x03, 0x3A, 0x6D, 0x6F, 0x6F, 0x76, 0x00, 0x00, 0x00, 0x6C, 0x6D, 0x76,
