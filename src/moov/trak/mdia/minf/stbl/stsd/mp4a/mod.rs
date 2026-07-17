@@ -110,10 +110,12 @@ mod tests {
                         dec_specific: esds::DecoderSpecific {
                             profile: 2,
                             freq_index: 4,
+                            sample_rate: None,
                             chan_conf: 2,
                         },
                     },
                     sl_config: esds::SLConfig::default(),
+                    ..Default::default()
                 },
             },
             btrt: Some(Btrt {
@@ -164,10 +166,12 @@ mod tests {
                     dec_specific: esds::DecoderSpecific {
                         profile: 2,
                         freq_index: 4,
+                        sample_rate: None,
                         chan_conf: 2,
                     },
                 },
                 sl_config: esds::SLConfig::default(),
+                ..Default::default()
             },
         };
 
@@ -229,10 +233,12 @@ mod tests {
                         dec_specific: esds::DecoderSpecific {
                             profile: 2,
                             freq_index: 4,
+                            sample_rate: None,
                             chan_conf: 2,
                         },
                     },
                     sl_config: esds::SLConfig::default(),
+                    ..Default::default()
                 },
             },
             btrt: None,
