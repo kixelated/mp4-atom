@@ -93,9 +93,10 @@ fn uncompressed() {
                         }),
                         dinf: Dinf {
                             dref: Dref {
-                                urls: vec![Url {
+                                entries: vec![Url {
                                     location: "".into()
-                                }],
+                                }
+                                .into()],
                             }
                         },
                         stbl: Stbl {

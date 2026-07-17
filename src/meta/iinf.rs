@@ -348,7 +348,7 @@ mod tests {
 
         assert!(matches!(
             fuzz_result,
-            Err(Error::Unsupported("infe version 1 extensions"))
+            Err(Error::UnexpectedBox(kind)) if kind == FourCC::new(b"\0\0A\x80")
         ));
     }
 }

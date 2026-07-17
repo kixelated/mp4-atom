@@ -109,7 +109,7 @@ fn avcc_ext() {
                         }),
                         dinf: Dinf {
                             dref: Dref {
-                                urls: vec![Url::default()],
+                                entries: vec![Url::default().into()],
                             },
                         },
                         stbl: Stbl {
@@ -224,7 +224,7 @@ fn avcc_ext() {
                         smhd: Some(Smhd::default()),
                         dinf: Dinf {
                             dref: Dref {
-                                urls: vec![Url::default()],
+                                entries: vec![Url::default().into()],
                             },
                         },
                         stbl: Stbl {

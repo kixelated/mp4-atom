@@ -49,6 +49,10 @@ impl<T: Atom> DecodeMaybe for T {
             None => return Ok(None),
         };
 
+        if header.kind != T::KIND {
+            return Err(Error::UnexpectedBox(header.kind));
+        }
+
         let size = header.size.unwrap_or(buf.remaining());
         if size > buf.remaining() {
             return Ok(None);
@@ -85,6 +89,10 @@ impl<T: Atom> ReadFrom for Option<T> {
             Some(header) => header,
             None => return Ok(None),
         };
+
+        if header.kind != T::KIND {
+            return Err(Error::UnexpectedBox(header.kind));
+        }
 
         let body = &mut header.read_body(r)?;
 
@@ -222,3 +230,24 @@ macro_rules! nested {
 }
 
 pub(crate) use nested;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    const FTYP_BODY_TAGGED_AS_MOOV: &[u8] = b"\0\0\0\x14mooviso6\0\0\x02\0mp41";
+
+    #[test]
+    fn typed_decode_rejects_unexpected_box() {
+        let err = Ftyp::decode(&mut Cursor::new(FTYP_BODY_TAGGED_AS_MOOV)).unwrap_err();
+        assert!(matches!(err, Error::UnexpectedBox(kind) if kind == Moov::KIND));
+    }
+
+    #[test]
+    fn typed_read_from_rejects_unexpected_box() {
+        let err =
+            <Ftyp as ReadFrom>::read_from(&mut Cursor::new(FTYP_BODY_TAGGED_AS_MOOV)).unwrap_err();
+        assert!(matches!(err, Error::UnexpectedBox(kind) if kind == Moov::KIND));
+    }
+}
