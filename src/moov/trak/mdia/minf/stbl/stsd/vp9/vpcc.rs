@@ -52,6 +52,10 @@ impl AtomExt for VpcC {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<VpccExt> {
+        if self.chroma_subsampling > 0x07 {
+            return Err(Error::InvalidSize);
+        }
+
         self.profile.encode(buf)?;
         self.level.encode(buf)?;
         ((self.bit_depth << 4)
@@ -95,8 +99,7 @@ mod tests {
 
     #[test]
     fn test_vpcc_chroma_subsampling() {
-        // chroma_subsampling is a 3-bit field: 0/1 = 4:2:0, 2 = 4:2:2, 3 = 4:4:4
-        for chroma_subsampling in [2, 3] {
+        for chroma_subsampling in 0..=7 {
             let expected = VpcC {
                 profile: 1,
                 level: 0x1F,
@@ -115,5 +118,18 @@ mod tests {
             let decoded = VpcC::decode(&mut buf).unwrap();
             assert_eq!(decoded, expected);
         }
+    }
+
+    #[test]
+    fn test_vpcc_rejects_chroma_subsampling_that_exceeds_field() {
+        let vpcc = VpcC {
+            chroma_subsampling: 8,
+            ..Default::default()
+        };
+
+        assert!(matches!(
+            vpcc.encode(&mut Vec::new()),
+            Err(Error::InvalidSize)
+        ));
     }
 }
