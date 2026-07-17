@@ -52,10 +52,14 @@ impl AtomExt for VpcC {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<VpccExt> {
+        if self.chroma_subsampling > 0x07 {
+            return Err(Error::InvalidSize);
+        }
+
         self.profile.encode(buf)?;
         self.level.encode(buf)?;
         ((self.bit_depth << 4)
-            | (self.chroma_subsampling << 1)
+            | ((self.chroma_subsampling & 0x07) << 1)
             | (self.video_full_range_flag as u8))
             .encode(buf)?;
         self.color_primaries.encode(buf)?;
@@ -115,5 +119,18 @@ mod tests {
             let decoded = VpcC::decode(&mut buf).unwrap();
             assert_eq!(decoded, expected);
         }
+    }
+
+    #[test]
+    fn test_vpcc_rejects_invalid_chroma_subsampling() {
+        let vpcc = VpcC {
+            chroma_subsampling: 8,
+            ..VpcC::default()
+        };
+
+        assert!(matches!(
+            vpcc.encode(&mut Vec::new()),
+            Err(Error::InvalidSize)
+        ));
     }
 }
