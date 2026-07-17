@@ -157,7 +157,7 @@ mod test {
                         elst: Some(Elst {
                             entries: vec![ElstEntry {
                                 media_time: Some(6000),
-                                media_rate: 1,
+                                media_rate: 1.into(),
                                 ..Default::default()
                             }]
                         })

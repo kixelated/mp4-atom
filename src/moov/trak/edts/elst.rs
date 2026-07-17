@@ -22,12 +22,10 @@ pub struct ElstEntry {
     /// an initial presentation offset -- and `Some(t)` is a real, non-negative
     /// media time. `t` must fit in an `i64` (the on-wire field is signed) to encode.
     pub media_time: Option<u64>,
-    // media_rate is a signed 16.16 fixed-point playback rate split into its integer
-    // and fractional halves (both int(16) per §8.6.6). It is always present -- there
-    // is no "absent" sentinel; media_rate == 0 is a meaningful value (a dwell, i.e. a
-    // frozen frame) rather than absence -- so it is not optional.
-    pub media_rate: i16,
-    pub media_rate_fraction: i16,
+    // Signed 16.16 fixed-point playback rate (int(16).int(16) per §8.6.6). Always
+    // present -- there is no "absent" sentinel; media_rate == 0 is a meaningful value
+    // (a dwell, i.e. a frozen frame) rather than absence -- so it is not optional.
+    pub media_rate: FixedPoint<i16>,
 }
 
 impl AtomExt for Elst {
@@ -62,8 +60,7 @@ impl AtomExt for Elst {
             entries.push(ElstEntry {
                 segment_duration,
                 media_time,
-                media_rate: i16::decode(buf)?,
-                media_rate_fraction: i16::decode(buf)?,
+                media_rate: FixedPoint::decode(buf)?,
             });
         }
 
@@ -102,7 +99,6 @@ impl AtomExt for Elst {
                 media_time.encode(buf)?;
             }
             entry.media_rate.encode(buf)?;
-            entry.media_rate_fraction.encode(buf)?;
         }
 
         Ok(if use_v0 {
@@ -123,8 +119,7 @@ mod tests {
             entries: vec![ElstEntry {
                 segment_duration: 634634,
                 media_time: Some(0),
-                media_rate: 1,
-                media_rate_fraction: 0,
+                media_rate: 1.into(),
             }],
         };
         let mut buf = Vec::new();
@@ -142,8 +137,7 @@ mod tests {
             entries: vec![ElstEntry {
                 segment_duration: 5_000_000_000,
                 media_time: Some(5_000_000_000),
-                media_rate: 1,
-                media_rate_fraction: 0,
+                media_rate: 1.into(),
             }],
         };
         let mut buf = Vec::new();
@@ -166,14 +160,12 @@ mod tests {
                 ElstEntry {
                     segment_duration: 23,
                     media_time: None,
-                    media_rate: 1,
-                    media_rate_fraction: 0,
+                    media_rate: 1.into(),
                 },
                 ElstEntry {
                     segment_duration: 0,
                     media_time: Some(0),
-                    media_rate: 1,
-                    media_rate_fraction: 0,
+                    media_rate: 1.into(),
                 },
             ],
         };
@@ -229,8 +221,7 @@ mod tests {
             entries: vec![ElstEntry {
                 segment_duration: 0,
                 media_time: Some(u64::MAX),
-                media_rate: 1,
-                media_rate_fraction: 0,
+                media_rate: 1.into(),
             }],
         };
         let mut buf = Vec::new();
