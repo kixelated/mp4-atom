@@ -105,10 +105,13 @@ impl Atom for Cmpd {
         for component in &self.components {
             component.component_type.encode(buf)?;
             if component.component_type >= 0x8000 {
-                let component_type_uri = component
-                    .component_type_uri
-                    .as_ref()
-                    .expect("Expected valid URI when component_type is >= 0x8000");
+                let component_type_uri =
+                    component
+                        .component_type_uri
+                        .as_ref()
+                        .ok_or(Error::MissingContent(
+                            "component_type_uri required when component_type >= 0x8000",
+                        ))?;
                 component_type_uri.as_str().encode(buf)?;
             }
         }

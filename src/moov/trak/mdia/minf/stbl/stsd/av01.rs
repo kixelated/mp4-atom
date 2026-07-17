@@ -140,8 +140,18 @@ impl Atom for Av1c {
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         0b1000_0001_u8.encode(buf)?;
+
+        // seq_profile is 3 bits and seq_level_idx_0 is 5 bits; out-of-range
+        // values would otherwise silently corrupt neighbouring fields.
+        if self.seq_profile > 0b111 || self.seq_level_idx_0 > 0b1_1111 {
+            return Err(Error::OutOfRange);
+        }
         ((self.seq_profile << 5) | self.seq_level_idx_0).encode(buf)?;
 
+        // chroma_sample_position occupies only the low 2 bits.
+        if self.chroma_sample_position > 0b11 {
+            return Err(Error::OutOfRange);
+        }
         (((self.seq_tier_0 as u8) << 7)
             | ((self.high_bitdepth as u8) << 6)
             | ((self.twelve_bit as u8) << 5)
@@ -152,7 +162,15 @@ impl Atom for Av1c {
             .encode(buf)?;
 
         if let Some(initial_presentation_delay) = self.initial_presentation_delay {
-            ((initial_presentation_delay - 1) | 0b0001_0000).encode(buf)?;
+            // The stored value is the real delay (1..=16); on the wire it is
+            // `delay - 1` in the low 4 bits, with bit 4 marking presence.
+            let minus_one = initial_presentation_delay
+                .checked_sub(1)
+                .ok_or(Error::OutOfRange)?;
+            if minus_one > 0b1111 {
+                return Err(Error::OutOfRange);
+            }
+            (minus_one | 0b0001_0000).encode(buf)?;
         } else {
             0b0000_0000_u8.encode(buf)?;
         }

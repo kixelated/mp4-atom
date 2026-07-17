@@ -86,7 +86,7 @@ fn encode_variable_unsigned_int<B: BufMut>(
         0 => (value as u8).encode(buf),
         1 => (value as u16).encode(buf),
         2 => {
-            let v: u24 = value.try_into().expect("should have already been checked");
+            let v: u24 = value.try_into()?;
             v.encode(buf)
         }
         3 => value.encode(buf),

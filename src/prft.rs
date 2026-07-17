@@ -67,6 +67,12 @@ impl AtomExt for Prft {
     fn decode_body_ext<B: Buf>(buf: &mut B, ext: PrftExt) -> Result<Self> {
         let reference_track_id = u32::decode(buf)?;
         let ntp_timestamp = u64::decode(buf)?;
+        // The real_time flag (0x10) is only defined together with the
+        // consistent_offset flag (0x08); on its own it is nonconformant and
+        // would otherwise be misread as an unrelated ReferenceTime variant.
+        if ext.real_time && !ext.consistent_offset {
+            return Err(Error::Reserved);
+        }
         let utc_time_semantics = if ext.real_time && ext.consistent_offset {
             ReferenceTime::RealTime
         } else if ext.consistent_offset {

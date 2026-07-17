@@ -47,8 +47,23 @@ impl Atom for Mfra {
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        let start = buf.len();
         self.tfra.iter().try_for_each(|x| x.encode(buf))?;
-        self.mfro.encode(buf)
+        let tfra_bytes = buf.len() - start;
+
+        // `mfro.parent_size` must equal the total size of the enclosing `mfra`
+        // box, so recompute it rather than trusting a possibly-stale stored
+        // value (e.g. after a `tfra` was modified). Seek-from-end readers rely
+        // on this to locate the start of the `mfra`.
+        //   mfra = 8-byte header + tfra bytes + 16-byte mfro box
+        let parent_size = 8usize
+            .checked_add(tfra_bytes)
+            .and_then(|n| n.checked_add(16))
+            .ok_or(Error::TooLarge(Self::KIND))?;
+        let mfro = Mfro {
+            parent_size: u32::try_from(parent_size).map_err(|_| Error::TooLarge(Self::KIND))?,
+        };
+        mfro.encode(buf)
     }
 }
 
