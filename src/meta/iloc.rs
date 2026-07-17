@@ -120,9 +120,30 @@ impl AtomExt for Iloc {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<IlocExt> {
+        let item_count: u32 = self
+            .item_locations
+            .len()
+            .try_into()
+            .map_err(|_| Error::TooLarge(Self::KIND))?;
+
         let mut base_offset_size = 0u8;
-        // TODO: work out which version and sizes we really need for this instance.
+        let mut offset_size = 4u8;
+        let mut length_size = 4u8;
+        let mut index_size = 0u8;
+        let mut needs_version_1 = false;
+        let mut needs_version_2 = self.item_locations.len() > u16::MAX as usize;
+
         for item_location in &self.item_locations {
+            if item_location.construction_method > 0x0f {
+                return Err(Error::InvalidSize);
+            }
+            if item_location.extents.len() > u16::MAX as usize {
+                return Err(Error::TooLarge(Self::KIND));
+            }
+
+            needs_version_1 |= item_location.construction_method != 0;
+            needs_version_2 |= item_location.item_id > u16::MAX as u32;
+
             if item_location.base_offset > 0 {
                 if item_location.base_offset > u32::MAX as u64 {
                     base_offset_size = 8u8;
@@ -130,24 +151,49 @@ impl AtomExt for Iloc {
                     base_offset_size = 4u8;
                 }
             }
-        }
-        let version = IlocVersion::V0;
-        let offset_size = 4u8;
-        let length_size = 4u8;
 
-        let index_size = 0u8;
+            for extent in &item_location.extents {
+                if extent.item_reference_index > 0 {
+                    needs_version_1 = true;
+                    if extent.item_reference_index > u32::MAX as u64 {
+                        index_size = 8;
+                    } else if index_size != 8 {
+                        index_size = 4;
+                    }
+                }
+                if extent.offset > u32::MAX as u64 {
+                    offset_size = 8;
+                }
+                if extent.length > u32::MAX as u64 {
+                    length_size = 8;
+                }
+            }
+        }
+
+        let version = if needs_version_2 {
+            IlocVersion::V2
+        } else if needs_version_1 {
+            IlocVersion::V1
+        } else {
+            IlocVersion::V0
+        };
+
         let size0 = (offset_size << 4) | length_size;
         let size1 = (base_offset_size << 4) | index_size;
         size0.encode(buf)?;
         size1.encode(buf)?;
         if version == IlocVersion::V0 || version == IlocVersion::V1 {
-            (self.item_locations.len() as u16).encode(buf)?;
+            u16::try_from(item_count)
+                .map_err(|_| Error::TooLarge(Self::KIND))?
+                .encode(buf)?;
         } else {
-            (self.item_locations.len() as u32).encode(buf)?;
+            item_count.encode(buf)?;
         }
         for item_location in &self.item_locations {
             if version == IlocVersion::V0 || version == IlocVersion::V1 {
-                (item_location.item_id as u16).encode(buf)?;
+                u16::try_from(item_location.item_id)
+                    .map_err(|_| Error::TooLarge(Self::KIND))?
+                    .encode(buf)?;
             } else {
                 item_location.item_id.encode(buf)?;
             }
@@ -157,35 +203,43 @@ impl AtomExt for Iloc {
             item_location.data_reference_index.encode(buf)?;
             match base_offset_size {
                 0 => {}
-                4 => (item_location.base_offset as u32).encode(buf)?,
+                4 => u32::try_from(item_location.base_offset)
+                    .map_err(|_| Error::TooLarge(Self::KIND))?
+                    .encode(buf)?,
                 8 => item_location.base_offset.encode(buf)?,
                 _ => unreachable!("iloc base_offset_size must be in [0,4,8]"),
             }
-            (item_location.extents.len() as u16).encode(buf)?;
+            u16::try_from(item_location.extents.len())
+                .map_err(|_| Error::TooLarge(Self::KIND))?
+                .encode(buf)?;
             for extent in &item_location.extents {
                 match index_size {
                     0 => {}
-                    4 => (extent.item_reference_index as u32).encode(buf)?,
+                    4 => u32::try_from(extent.item_reference_index)
+                        .map_err(|_| Error::TooLarge(Self::KIND))?
+                        .encode(buf)?,
                     8 => extent.item_reference_index.encode(buf)?,
                     _ => unreachable!("iloc index_size must be in [0,4,8]"),
                 }
                 match offset_size {
                     0 => {}
-                    4 => (extent.offset as u32).encode(buf)?,
+                    4 => u32::try_from(extent.offset)
+                        .map_err(|_| Error::TooLarge(Self::KIND))?
+                        .encode(buf)?,
                     8 => extent.offset.encode(buf)?,
                     _ => unreachable!("iloc offset_size must be in [0,4,8]"),
                 }
                 match length_size {
                     0 => {}
-                    4 => (extent.length as u32).encode(buf)?,
+                    4 => u32::try_from(extent.length)
+                        .map_err(|_| Error::TooLarge(Self::KIND))?
+                        .encode(buf)?,
                     8 => extent.length.encode(buf)?,
                     _ => unreachable!("iloc length_size must be in [0,4,8]"),
                 }
             }
         }
-        Ok(IlocExt {
-            version: IlocVersion::V0,
-        })
+        Ok(IlocExt { version })
     }
 }
 
@@ -318,5 +372,107 @@ mod tests {
         iloc.encode(&mut buf).unwrap();
 
         assert_eq!(buf.as_slice(), ENCODED_ILOC_LIBAVIF);
+    }
+
+    #[test]
+    fn test_iloc_version_1_fields_round_trip() {
+        let iloc = Iloc {
+            item_locations: vec![ItemLocation {
+                item_id: 1,
+                construction_method: 1,
+                data_reference_index: 0,
+                base_offset: 0,
+                extents: vec![ItemLocationExtent {
+                    item_reference_index: u32::MAX as u64 + 1,
+                    offset: u32::MAX as u64 + 1,
+                    length: u32::MAX as u64 + 2,
+                }],
+            }],
+        };
+        let mut buf = Vec::new();
+        iloc.encode(&mut buf).unwrap();
+
+        assert_eq!(buf[8], 1); // version 1
+        assert_eq!(buf[12], 0x88); // 64-bit extent offset and length
+        assert_eq!(buf[13], 0x08); // no base offset, 64-bit extent index
+        assert_eq!(Iloc::decode(&mut buf.as_slice()).unwrap(), iloc);
+    }
+
+    #[test]
+    fn test_iloc_version_2_item_id_round_trip() {
+        let iloc = Iloc {
+            item_locations: vec![ItemLocation {
+                item_id: u16::MAX as u32 + 1,
+                construction_method: 0,
+                data_reference_index: 0,
+                base_offset: 0,
+                extents: vec![],
+            }],
+        };
+        let mut buf = Vec::new();
+        iloc.encode(&mut buf).unwrap();
+
+        assert_eq!(buf[8], 2);
+        assert_eq!(Iloc::decode(&mut buf.as_slice()).unwrap(), iloc);
+    }
+
+    #[test]
+    fn test_iloc_version_2_item_count_round_trip() {
+        let item_location = ItemLocation {
+            item_id: 0,
+            construction_method: 0,
+            data_reference_index: 0,
+            base_offset: 0,
+            extents: vec![],
+        };
+        let iloc = Iloc {
+            item_locations: vec![item_location; u16::MAX as usize + 1],
+        };
+        let mut buf = Vec::new();
+        iloc.encode(&mut buf).unwrap();
+
+        assert_eq!(buf[8], 2);
+        assert_eq!(Iloc::decode(&mut buf.as_slice()).unwrap(), iloc);
+    }
+
+    #[test]
+    fn test_iloc_rejects_unrepresentable_construction_method() {
+        let iloc = Iloc {
+            item_locations: vec![ItemLocation {
+                item_id: 0,
+                construction_method: 0x10,
+                data_reference_index: 0,
+                base_offset: 0,
+                extents: vec![],
+            }],
+        };
+
+        assert!(matches!(
+            iloc.encode(&mut Vec::new()),
+            Err(Error::InvalidSize)
+        ));
+    }
+
+    #[test]
+    fn test_iloc_rejects_too_many_extents() {
+        let extent = ItemLocationExtent {
+            item_reference_index: 0,
+            offset: 0,
+            length: 0,
+        };
+        let iloc = Iloc {
+            item_locations: vec![ItemLocation {
+                item_id: 0,
+                construction_method: 0,
+                data_reference_index: 0,
+                base_offset: 0,
+                extents: vec![extent; u16::MAX as usize + 1],
+            }],
+        };
+
+        assert!(matches!(
+            iloc.encode(&mut Vec::new()),
+            Err(Error::TooLarge(kind)) if kind == Iloc::KIND
+        ));
     }
 }
