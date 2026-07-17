@@ -181,7 +181,7 @@ fn av1_anim() {
                     elst: Some(Elst {
                         entries: vec![ElstEntry {
                             segment_duration: 2,
-                            media_time: 0,
+                            media_time: Some(0),
                             media_rate: 1,
                             media_rate_fraction: 0
                         }]
