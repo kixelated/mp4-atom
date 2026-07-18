@@ -80,7 +80,8 @@ impl Atom for Cmpd {
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         let component_count = u32::decode(buf)?;
-        let mut components: Vec<Component> = Vec::with_capacity(component_count as usize);
+        let mut components: Vec<Component> =
+            Vec::with_capacity((component_count as usize).min(1024));
         for _ in 0..component_count {
             let component_type = u16::decode(buf)?;
             if component_type >= 0x8000 {
@@ -169,7 +170,7 @@ impl AtomExt for UncC {
             UncCVersion::V0 => {
                 let profile = FourCC::decode(buf)?;
                 let component_count = u32::decode(buf)?;
-                let mut components = Vec::with_capacity(component_count as usize);
+                let mut components = Vec::with_capacity((component_count as usize).min(1024));
                 for _ in 0..component_count {
                     components.push(UncompressedComponent {
                         component_index: u16::decode(buf)?,
@@ -296,6 +297,17 @@ mod tests {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
 
+    // Regression for issue #180: attacker-controlled component counts must not
+    // cause a multi-gigabyte upfront allocation before decoding fails.
+    const ENCODED_CMPD_HUGE_COUNT: &[u8] = &[
+        0x00, 0x00, 0x00, 0x0c, 0x63, 0x6d, 0x70, 0x64, 0xff, 0xff, 0xff, 0xff,
+    ];
+
+    const ENCODED_UNCC_HUGE_COUNT: &[u8] = &[
+        0x00, 0x00, 0x00, 0x14, 0x75, 0x6e, 0x63, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0xff, 0xff, 0xff, 0xff,
+    ];
+
     #[test]
     fn test_cmpd_decode() {
         let buf: &mut std::io::Cursor<&&[u8]> = &mut std::io::Cursor::new(&ENCODED_CMPD);
@@ -321,6 +333,12 @@ mod tests {
                 ]
             },
         );
+    }
+
+    #[test]
+    fn test_cmpd_huge_count() {
+        let buf = &mut std::io::Cursor::new(&ENCODED_CMPD_HUGE_COUNT);
+        assert!(matches!(Cmpd::decode(buf), Err(Error::OverDecode(_))));
     }
 
     #[test]
@@ -393,6 +411,12 @@ mod tests {
                 num_tile_rows_minus_one: 0
             }
         );
+    }
+
+    #[test]
+    fn test_uncc_huge_count() {
+        let buf = &mut std::io::Cursor::new(&ENCODED_UNCC_HUGE_COUNT);
+        assert!(matches!(UncC::decode(buf), Err(Error::OverDecode(_))));
     }
 
     #[test]
