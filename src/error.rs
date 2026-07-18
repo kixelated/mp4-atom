@@ -65,6 +65,9 @@ pub enum Error {
 
     #[error("missing required content: {0}")]
     MissingContent(&'static str),
+
+    #[error("invalid parameter combination: {0}")]
+    InvalidCombination(&'static str),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
