@@ -52,6 +52,10 @@ impl AtomExt for VpcC {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<VpccExt> {
+        if self.chroma_subsampling > 3 {
+            return Err(Error::Reserved);
+        }
+
         self.profile.encode(buf)?;
         self.level.encode(buf)?;
         ((self.bit_depth << 4)
@@ -95,10 +99,9 @@ mod tests {
 
     #[test]
     fn test_vpcc_chroma_subsampling() {
-        // chroma_subsampling is a 3-bit field: 0/1 = 4:2:0, 2 = 4:2:2, 3 = 4:4:4
-        for chroma_subsampling in [2, 3] {
+        for chroma_subsampling in 0..=3 {
             let expected = VpcC {
-                profile: 1,
+                profile: if chroma_subsampling < 2 { 0 } else { 1 },
                 level: 0x1F,
                 bit_depth: 8,
                 chroma_subsampling,
@@ -114,6 +117,18 @@ mod tests {
             let mut buf = buf.as_ref();
             let decoded = VpcC::decode(&mut buf).unwrap();
             assert_eq!(decoded, expected);
+        }
+    }
+
+    #[test]
+    fn test_vpcc_rejects_reserved_chroma_subsampling() {
+        for chroma_subsampling in 4..=u8::MAX {
+            let vpcc = VpcC {
+                chroma_subsampling,
+                ..Default::default()
+            };
+
+            assert!(matches!(vpcc.encode(&mut Vec::new()), Err(Error::Reserved)));
         }
     }
 }
