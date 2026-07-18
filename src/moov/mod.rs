@@ -156,8 +156,8 @@ mod test {
                     edts: Some(Edts {
                         elst: Some(Elst {
                             entries: vec![ElstEntry {
-                                media_time: 6000,
-                                media_rate: 1,
+                                media_time: Some(6000),
+                                media_rate: 1.into(),
                                 ..Default::default()
                             }]
                         })
