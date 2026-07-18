@@ -150,9 +150,9 @@ mod tests {
         assert_eq!(decoded, expected);
     }
 
-    // media_time is a *signed* int(32) in version 0, so a value above i32::MAX (but
-    // within u32) must fall back to version 1. Encoding it as a 32-bit int would
-    // overflow into a negative media_time.
+    // media_time is a *signed* int(32) in version 0, so any value above i32::MAX (up to
+    // i64::MAX) must fall back to version 1 -- encoding it as a 32-bit int would overflow
+    // into a negative media_time. i32::MAX + 1 is the smallest such value.
     #[test]
     fn test_elst_media_time_above_i32_forces_v1() {
         let expected = Elst {
@@ -220,16 +220,33 @@ mod tests {
         assert_eq!(buf.as_slice(), raw);
     }
 
-    // A media_time below -1 is out of spec: decoding must fail rather than invent a value.
+    // A media_time below -1 is out of spec: decoding must fail rather than invent a
+    // value. Covered for both on-wire widths (version 0 int(32), version 1 int(64)).
     #[test]
-    fn test_elst_negative_media_time_rejected() {
+    fn test_elst_negative_media_time_rejected_v0() {
         let raw: &[u8] = &[
             0x00, 0x00, 0x00, 0x1C, // box size = 28
             b'e', b'l', b's', b't', //
             0x00, 0x00, 0x00, 0x00, // version 0, flags 0
             0x00, 0x00, 0x00, 0x01, // entry_count = 1
             0x00, 0x00, 0x03, 0xE8, // segment_duration = 1000
-            0xFF, 0xFF, 0xFF, 0xFE, // media_time = -2 (invalid)
+            0xFF, 0xFF, 0xFF, 0xFE, // media_time = -2 (invalid, 32-bit)
+            0x00, 0x01, 0x00, 0x00, // media_rate = 1.0
+        ];
+        assert!(Elst::decode(&mut &raw[..]).is_err());
+    }
+
+    #[test]
+    fn test_elst_negative_media_time_rejected_v1() {
+        let raw: &[u8] = &[
+            0x00, 0x00, 0x00, 0x24, // box size = 36
+            b'e', b'l', b's', b't', //
+            0x01, 0x00, 0x00, 0x00, // version 1, flags 0
+            0x00, 0x00, 0x00, 0x01, // entry_count = 1
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
+            0xE8, // segment_duration = 1000 (64-bit)
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFE, // media_time = -2 (invalid, 64-bit)
             0x00, 0x01, 0x00, 0x00, // media_rate = 1.0
         ];
         assert!(Elst::decode(&mut &raw[..]).is_err());
