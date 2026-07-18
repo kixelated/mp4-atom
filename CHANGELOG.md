@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0](https://github.com/kixelated/mp4-atom/compare/v0.13.0...v0.14.0) - 2026-07-18
+
+### Fixed
+
+- fix ctts offset version handling ([#207](https://github.com/kixelated/mp4-atom/pull/207))
+- fix ipma 15-bit property associations ([#210](https://github.com/kixelated/mp4-atom/pull/210))
+
+### Other
+
+- signed media_time (empty edit as None), signed media_rate, compact version 0 ([#178](https://github.com/kixelated/mp4-atom/pull/178))
+- bound component allocation capacity ([#200](https://github.com/kixelated/mp4-atom/pull/200))
+- encode required flags value ([#209](https://github.com/kixelated/mp4-atom/pull/209))
+- decode `desc` as a data-wrapped item ([#175](https://github.com/kixelated/mp4-atom/pull/175))
+
 ## [0.13.0](https://github.com/kixelated/mp4-atom/compare/v0.12.1...v0.13.0) - 2026-07-14
 
 ### Other
