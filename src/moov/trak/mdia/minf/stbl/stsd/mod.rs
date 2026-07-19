@@ -125,7 +125,7 @@ pub enum Codec {
     Samr(Samr),
 
     // Unknown
-    Unknown(FourCC),
+    Unknown(FourCC, Vec<u8>),
 }
 
 impl Decode for Codec {
@@ -157,9 +157,23 @@ impl Decode for Codec {
             Any::S16l(atom) => atom.into(),
             Any::Wvtt(atom) => atom.into(),
             Any::Samr(atom) => atom.into(),
+            unknown @ Any::Unknown(..) => {
+                crate::decode_unknown(&unknown, Stsd::KIND)?;
+
+                let Any::Unknown(kind, body) = unknown else {
+                    unreachable!()
+                };
+                Self::Unknown(kind, body)
+            }
             unknown => {
                 crate::decode_unknown(&unknown, Stsd::KIND)?;
-                Self::Unknown(unknown.kind())
+
+                // The atom kind is known elsewhere in the hierarchy, but is not a supported
+                // sample entry. Re-encode its body so the unknown entry remains a valid box.
+                let kind = unknown.kind();
+                let mut encoded = Vec::new();
+                unknown.encode(&mut encoded)?;
+                Self::Unknown(kind, encoded.split_off(8))
             }
         })
     }
@@ -168,7 +182,19 @@ impl Decode for Codec {
 impl Encode for Codec {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         match self {
-            Self::Unknown(kind) => kind.encode(buf),
+            Self::Unknown(kind, body) => {
+                let start = buf.len();
+                0u32.encode(buf)?;
+                kind.encode(buf)?;
+                body.encode(buf)?;
+
+                let size: u32 = (buf.len() - start)
+                    .try_into()
+                    .map_err(|_| Error::TooLarge(*kind))?;
+                buf.set_slice(start, &size.to_be_bytes());
+
+                Ok(())
+            }
             Self::Avc1(atom) => atom.encode(buf),
             Self::Hev1(atom) => atom.encode(buf),
             Self::Hvc1(atom) => atom.encode(buf),
