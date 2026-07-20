@@ -111,9 +111,11 @@ mod tests {
                             profile: 2,
                             freq_index: 4,
                             chan_conf: 2,
+                            ..Default::default()
                         },
                     },
                     sl_config: esds::SLConfig::default(),
+                    ..Default::default()
                 },
             },
             btrt: Some(Btrt {
@@ -165,9 +167,11 @@ mod tests {
                         profile: 2,
                         freq_index: 4,
                         chan_conf: 2,
+                        ..Default::default()
                     },
                 },
                 sl_config: esds::SLConfig::default(),
+                ..Default::default()
             },
         };
 
@@ -230,9 +234,11 @@ mod tests {
                             profile: 2,
                             freq_index: 4,
                             chan_conf: 2,
+                            ..Default::default()
                         },
                     },
                     sl_config: esds::SLConfig::default(),
+                    ..Default::default()
                 },
             },
             btrt: None,
