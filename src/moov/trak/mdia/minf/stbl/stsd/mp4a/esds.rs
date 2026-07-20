@@ -30,7 +30,7 @@ impl AtomExt for Esds {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        Descriptor::from(self.es_desc).encode(buf)
+        Descriptor::from(self.es_desc.clone()).encode(buf)
     }
 }
 
@@ -49,11 +49,14 @@ macro_rules! descriptors {
                 let tag = u8::decode(buf)?;
 
                 let mut size: u32 = 0;
-                for _ in 0..4 {
+                for index in 0..4 {
                     let b = u8::decode(buf)?;
                     size = (size << 7) | (b & 0x7F) as u32;
                     if b & 0x80 == 0 {
                         break;
+                    }
+                    if index == 3 {
+                        return Err(Error::InvalidSize);
                     }
                 }
 
@@ -93,14 +96,24 @@ macro_rules! descriptors {
                     },
                 };
 
-                let mut size = tmp.len() as u32;
-                while size > 0 {
-                    let mut b = (size & 0x7F) as u8;
+                let mut size = u32::try_from(tmp.len()).map_err(|_| Error::InvalidSize)?;
+                if size > 0x0FFF_FFFF {
+                    return Err(Error::InvalidSize);
+                }
+
+                let mut encoded = [0u8; 4];
+                let mut index = encoded.len();
+                loop {
+                    index -= 1;
+                    encoded[index] = (size & 0x7F) as u8;
                     size >>= 7;
-                    if size > 0 {
-                        b |= 0x80;
+                    if size == 0 {
+                        break;
                     }
-                    b.encode(buf)?;
+                }
+                for index in index..encoded.len() {
+                    let continuation = index + 1 < encoded.len();
+                    (encoded[index] | u8::from(continuation) << 7).encode(buf)?;
                 }
 
                 tmp.encode(buf)
@@ -135,10 +148,15 @@ descriptors! {
     SLConfig,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EsDescriptor {
     pub es_id: u16,
+
+    pub depends_on_es_id: Option<u16>,
+    pub url: Option<Vec<u8>>,
+    pub ocr_es_id: Option<u16>,
+    pub stream_priority: u8,
 
     pub dec_config: DecoderConfig,
     pub sl_config: SLConfig,
@@ -151,7 +169,16 @@ impl EsDescriptor {
 impl Decode for EsDescriptor {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let es_id = u16::decode(buf)?;
-        u8::decode(buf)?; // XXX flags must be 0
+        let flags = u8::decode(buf)?;
+        let stream_priority = flags & 0x1F;
+        let depends_on_es_id = (flags & 0x80 != 0).then(|| u16::decode(buf)).transpose()?;
+        let url = if flags & 0x40 != 0 {
+            let size = u8::decode(buf)? as usize;
+            Some(Vec::decode_exact(buf, size)?)
+        } else {
+            None
+        };
+        let ocr_es_id = (flags & 0x20 != 0).then(|| u16::decode(buf)).transpose()?;
 
         let mut dec_config = None;
         let mut sl_config = None;
@@ -167,6 +194,10 @@ impl Decode for EsDescriptor {
 
         Ok(EsDescriptor {
             es_id,
+            depends_on_es_id,
+            url,
+            ocr_es_id,
+            stream_priority,
             dec_config: dec_config.ok_or(Error::MissingDescriptor(DecoderConfig::TAG))?,
             sl_config: sl_config.ok_or(Error::MissingDescriptor(SLConfig::TAG))?,
         })
@@ -175,8 +206,30 @@ impl Decode for EsDescriptor {
 
 impl Encode for EsDescriptor {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        if self.stream_priority > 0x1F {
+            return Err(Error::InvalidSize);
+        }
+
+        let url_size = self
+            .url
+            .as_ref()
+            .map(Vec::len)
+            .map(u8::try_from)
+            .transpose()
+            .map_err(|_| Error::InvalidSize)?;
+
         self.es_id.encode(buf)?;
-        0u8.encode(buf)?;
+        let flags = u8::from(self.depends_on_es_id.is_some()) << 7
+            | u8::from(self.url.is_some()) << 6
+            | u8::from(self.ocr_es_id.is_some()) << 5
+            | self.stream_priority;
+        flags.encode(buf)?;
+        self.depends_on_es_id.encode(buf)?;
+        if let (Some(url), Some(size)) = (&self.url, url_size) {
+            size.encode(buf)?;
+            url.encode(buf)?;
+        }
+        self.ocr_es_id.encode(buf)?;
 
         Descriptor::from(self.dec_config).encode(buf)?;
         Descriptor::from(self.sl_config).encode(buf)?;
@@ -252,6 +305,7 @@ impl Encode for DecoderConfig {
 pub struct DecoderSpecific {
     pub profile: u8,
     pub freq_index: u8,
+    pub sample_rate: Option<u32>,
     pub chan_conf: u8,
 }
 
@@ -261,41 +315,28 @@ impl DecoderSpecific {
 
 impl Decode for DecoderSpecific {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
-        let byte_a = u8::decode(buf)?;
-        let byte_b = u8::decode(buf)?;
+        let size = buf.remaining();
+        let data = buf.slice(size);
+        let mut bit_offset = 0;
 
-        let mut profile = byte_a >> 3;
+        let mut profile = decode_bits(data, &mut bit_offset, 5)? as u8;
         if profile == 31 {
-            profile = 32 + ((byte_a & 7) | (byte_b >> 5));
+            profile = 32 + decode_bits(data, &mut bit_offset, 6)? as u8;
         }
 
-        let freq_index = if profile > 31 {
-            (byte_b >> 1) & 0x0F
+        let freq_index = decode_bits(data, &mut bit_offset, 4)? as u8;
+        let sample_rate = if freq_index == 15 {
+            Some(decode_bits(data, &mut bit_offset, 24)?)
         } else {
-            ((byte_a & 0x07) << 1) + (byte_b >> 7)
+            None
         };
-
-        let chan_conf;
-        if freq_index == 15 {
-            // Skip the 24 bit sample rate
-            // TODO this needs to be implemented in encode
-            let sample_rate = u24::decode(buf)?;
-            chan_conf = ((u32::from(sample_rate) >> 4) & 0x0F) as u8;
-        } else if profile > 31 {
-            let byte_c = u8::decode(buf)?;
-            chan_conf = (byte_b & 1) | (byte_c & 0xE0);
-        } else {
-            chan_conf = (byte_b >> 3) & 0x0F;
-        }
-
-        if buf.has_remaining() {
-            tracing::warn!("PLEASE FIX: failed to consume all bytes in DecoderSpecificDescriptor");
-            buf.advance(buf.remaining());
-        }
+        let chan_conf = decode_bits(data, &mut bit_offset, 4)? as u8;
+        buf.advance(size);
 
         Ok(DecoderSpecific {
             profile,
             freq_index,
+            sample_rate,
             chan_conf,
         })
     }
@@ -303,10 +344,57 @@ impl Decode for DecoderSpecific {
 
 impl Encode for DecoderSpecific {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        ((self.profile << 3) + (self.freq_index >> 1)).encode(buf)?;
-        ((self.freq_index << 7) + (self.chan_conf << 3)).encode(buf)?;
+        if self.profile == 31
+            || self.profile > 95
+            || self.freq_index > 15
+            || self.chan_conf > 15
+            || (self.freq_index == 15) != self.sample_rate.is_some()
+            || self.sample_rate.is_some_and(|rate| rate > 0xFF_FFFF)
+        {
+            return Err(Error::InvalidSize);
+        }
+
+        let mut encoded = Vec::new();
+        let mut bit_offset = 0;
+        if self.profile < 31 {
+            encode_bits(&mut encoded, &mut bit_offset, self.profile as u32, 5);
+        } else {
+            encode_bits(&mut encoded, &mut bit_offset, 31, 5);
+            encode_bits(&mut encoded, &mut bit_offset, (self.profile - 32) as u32, 6);
+        }
+        encode_bits(&mut encoded, &mut bit_offset, self.freq_index as u32, 4);
+        if let Some(sample_rate) = self.sample_rate {
+            encode_bits(&mut encoded, &mut bit_offset, sample_rate, 24);
+        }
+        encode_bits(&mut encoded, &mut bit_offset, self.chan_conf as u32, 4);
+        encoded.encode(buf)?;
 
         Ok(())
+    }
+}
+
+fn decode_bits(data: &[u8], bit_offset: &mut usize, count: usize) -> Result<u32> {
+    if data.len() * 8 < *bit_offset + count {
+        return Err(Error::OutOfBounds);
+    }
+
+    let mut value = 0;
+    for _ in 0..count {
+        let byte = data[*bit_offset / 8];
+        let bit = (byte >> (7 - *bit_offset % 8)) & 1;
+        value = (value << 1) | u32::from(bit);
+        *bit_offset += 1;
+    }
+    Ok(value)
+}
+
+fn encode_bits(encoded: &mut Vec<u8>, bit_offset: &mut usize, value: u32, count: usize) {
+    for shift in (0..count).rev() {
+        if (*bit_offset).is_multiple_of(8) {
+            encoded.push(0);
+        }
+        encoded[*bit_offset / 8] |= ((value >> shift) as u8 & 1) << (7 - *bit_offset % 8);
+        *bit_offset += 1;
     }
 }
 
@@ -329,5 +417,95 @@ impl Encode for SLConfig {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         2u8.encode(buf)?; // pre-defined
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn descriptor_size_uses_most_significant_group_first() {
+        let descriptor = Descriptor::Unknown(0x7F, vec![0xAA; 200]);
+        let mut encoded = Vec::new();
+        descriptor.encode(&mut encoded).unwrap();
+
+        assert_eq!(&encoded[..3], &[0x7F, 0x81, 0x48]);
+        let mut encoded = encoded.as_slice();
+        assert_eq!(Descriptor::decode(&mut encoded).unwrap(), descriptor);
+        assert!(encoded.is_empty());
+    }
+
+    #[test]
+    fn empty_descriptor_has_a_size_byte() {
+        let descriptor = Descriptor::Unknown(0x7F, Vec::new());
+        let mut encoded = Vec::new();
+        descriptor.encode(&mut encoded).unwrap();
+
+        assert_eq!(encoded, [0x7F, 0x00]);
+        assert_eq!(
+            Descriptor::decode(&mut encoded.as_slice()).unwrap(),
+            descriptor
+        );
+    }
+
+    #[test]
+    fn descriptor_size_rejects_more_than_four_bytes() {
+        let mut encoded = &[0x7F, 0x80, 0x80, 0x80, 0x80][..];
+        assert!(matches!(
+            Descriptor::decode(&mut encoded),
+            Err(Error::InvalidSize)
+        ));
+    }
+
+    #[test]
+    fn es_descriptor_flags_round_trip() {
+        let descriptor = Descriptor::from(EsDescriptor {
+            es_id: 0x1234,
+            depends_on_es_id: Some(0x5678),
+            url: Some(b"https://example.com/audio".to_vec()),
+            ocr_es_id: Some(0x9ABC),
+            stream_priority: 17,
+            dec_config: DecoderConfig::default(),
+            sl_config: SLConfig::default(),
+        });
+
+        descriptor.assert_encode_decode();
+    }
+
+    #[test]
+    fn extended_audio_object_type_and_channel_config_round_trip() {
+        let config = DecoderSpecific {
+            profile: 42,
+            freq_index: 4,
+            sample_rate: None,
+            chan_conf: 9,
+        };
+        let mut encoded = Vec::new();
+        config.encode(&mut encoded).unwrap();
+
+        assert_eq!(encoded, [0xF9, 0x49, 0x20]);
+        assert_eq!(
+            DecoderSpecific::decode(&mut encoded.as_slice()).unwrap(),
+            config
+        );
+    }
+
+    #[test]
+    fn explicit_sample_rate_round_trip() {
+        let config = DecoderSpecific {
+            profile: 2,
+            freq_index: 15,
+            sample_rate: Some(48_000),
+            chan_conf: 2,
+        };
+        let mut encoded = Vec::new();
+        config.encode(&mut encoded).unwrap();
+
+        assert_eq!(encoded, [0x17, 0x80, 0x5D, 0xC0, 0x10]);
+        assert_eq!(
+            DecoderSpecific::decode(&mut encoded.as_slice()).unwrap(),
+            config
+        );
     }
 }

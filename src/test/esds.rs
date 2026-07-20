@@ -175,11 +175,13 @@ fn esds() {
                                                 dec_specific: esds::DecoderSpecific {
                                                     profile: 2,
                                                     freq_index: 4,
+                                                    sample_rate: None,
                                                     chan_conf: 2,
                                                 },
                                                 ..Default::default()
                                             },
                                             sl_config: esds::SLConfig{},
+                                            ..Default::default()
                                         },
                                     },
                                     btrt: Some(Btrt { buffer_size_db: 0, max_bitrate: 128000, avg_bitrate: 128000 }),

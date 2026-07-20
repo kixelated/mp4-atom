@@ -249,10 +249,12 @@ fn avcc_ext() {
                                                 dec_specific: esds::DecoderSpecific {
                                                     profile: 2,
                                                     freq_index: 3,
+                                                    sample_rate: None,
                                                     chan_conf: 2,
                                                 },
                                             },
                                             sl_config: esds::SLConfig::default(),
+                                            ..Default::default()
                                         },
                                     },
                                     btrt: Some(Btrt {
