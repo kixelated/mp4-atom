@@ -109,6 +109,7 @@ mod tests {
             Ac3 {
                 audio: Audio {
                     data_reference_index: 1,
+                    version: AudioVersion::V0,
                     channel_count: 2,
                     sample_size: 16,
                     sample_rate: 44100.into()
@@ -130,6 +131,7 @@ mod tests {
         let ac3 = Ac3 {
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 16,
                 sample_rate: 44100.into(),

@@ -93,6 +93,7 @@ mod tests {
         let expected = Mp4a {
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 16,
                 sample_rate: 48000.into(),
@@ -147,6 +148,7 @@ mod tests {
     fn test_mp4a_quicktime_wave() {
         let audio = Audio {
             data_reference_index: 1,
+            version: AudioVersion::V0,
             channel_count: 2,
             sample_size: 16,
             sample_rate: 48000.into(),
@@ -212,6 +214,7 @@ mod tests {
         let expected = Mp4a {
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 16,
                 sample_rate: 48000.into(),
