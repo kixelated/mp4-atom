@@ -64,11 +64,20 @@ fn encode_descriptor<T: Encode, B: BufMut>(tag: u8, body: &T, buf: &mut B) -> Re
     let mut tmp = Vec::new();
     body.encode(&mut tmp)?;
 
-    let mut size = tmp.len() as u32;
-    while size > 0 {
-        let mut b = (size & 0x7F) as u8;
-        size >>= 7;
-        if size > 0 {
+    // Base-128 length prefix, most-significant 7-bit group first (ISO/IEC
+    // 14496-1 §8.3.3, matching this crate's `size << 7 | byte` decoder), and
+    // always at least one byte so a zero-length body still carries its
+    // mandatory `0x00` size prefix.
+    let size = tmp.len() as u32;
+    let mut groups = 1;
+    let mut s = size >> 7;
+    while s > 0 {
+        groups += 1;
+        s >>= 7;
+    }
+    for i in (0..groups).rev() {
+        let mut b = ((size >> (7 * i)) & 0x7F) as u8;
+        if i > 0 {
             b |= 0x80;
         }
         b.encode(buf)?;
@@ -310,7 +319,8 @@ fn parse_audio_specific_config(raw: &[u8]) -> (u8, u8, u8) {
 
     let mut profile = byte_a >> 3;
     if profile == 31 {
-        profile = 32 + ((byte_a & 7) | (byte_b >> 5));
+        // Escape: 6-bit audioObjectTypeExt = byte_a[2:0] << 3 | byte_b[7:5].
+        profile = 32 + (((byte_a & 7) << 3) | (byte_b >> 5));
     }
 
     let freq_index = if profile > 31 {
@@ -330,7 +340,8 @@ fn parse_audio_specific_config(raw: &[u8]) -> (u8, u8, u8) {
         }
     } else if profile > 31 {
         if raw.len() >= 3 {
-            (byte_b & 1) | (raw[2] & 0xE0)
+            // 4-bit channelConfiguration = byte_b[0] << 3 | raw[2][7:5].
+            ((byte_b & 1) << 3) | (raw[2] >> 5)
         } else {
             0
         }
@@ -464,5 +475,68 @@ mod tests {
         esds.encode(&mut buf).unwrap();
         let again = Esds::decode(&mut buf.as_slice()).unwrap();
         assert_eq!(again, esds);
+    }
+
+    // A zero-length descriptor must still carry its mandatory 1-byte length
+    // prefix (`[tag, 0x00]`). Emitting just the tag would let the following
+    // sibling's first byte be misread as this descriptor's length, corrupting
+    // the rest of the tree.
+    #[test]
+    fn test_unknown_descriptor_empty_body_roundtrips() {
+        let mut buf = Vec::new();
+        Descriptor::Unknown(0x7F, Vec::new())
+            .encode(&mut buf)
+            .unwrap();
+        // A second descriptor: if the empty body dropped its length byte, this
+        // one would be swallowed and fail to decode.
+        Descriptor::from(SLConfig {}).encode(&mut buf).unwrap();
+
+        assert_eq!(&buf[..2], &[0x7F, 0x00], "empty body still emits a length");
+
+        let mut cur = buf.as_slice();
+        assert_eq!(
+            Descriptor::decode(&mut cur).unwrap(),
+            Descriptor::Unknown(0x7F, Vec::new())
+        );
+        assert_eq!(
+            Descriptor::decode(&mut cur).unwrap().tag(),
+            SLConfig::TAG,
+            "the following descriptor is intact"
+        );
+    }
+
+    // A body >= 128 bytes needs a multi-byte base-128 length. It must be emitted
+    // most-significant group first, so the decoder (which accumulates
+    // `size << 7 | byte`) reads it back unchanged. 200 => `[0x81, 0x48]`.
+    #[test]
+    fn test_descriptor_multibyte_length_roundtrips() {
+        let body = vec![0xABu8; 200];
+        let mut buf = Vec::new();
+        Descriptor::Unknown(0x7F, body.clone())
+            .encode(&mut buf)
+            .unwrap();
+        assert_eq!(
+            &buf[..3],
+            &[0x7F, 0x81, 0x48],
+            "length 200, MSB group first"
+        );
+
+        let mut cur = buf.as_slice();
+        assert_eq!(
+            Descriptor::decode(&mut cur).unwrap(),
+            Descriptor::Unknown(0x7F, body)
+        );
+    }
+
+    // AudioSpecificConfig with the 5-bit audioObjectType == 31 escape. The real
+    // AOT is `32 + audioObjectTypeExt`, a 6-bit field split as byte_a[2:0]<<3 |
+    // byte_b[7:5]; the 4-bit channelConfiguration is byte_b[0]<<3 | raw[2][7:5].
+    // These bytes encode AOT 42, samplingFrequencyIndex 4, channelConfig 9.
+    #[test]
+    fn test_asc_escape_bit_packing() {
+        let (profile, freq_index, chan_conf) = parse_audio_specific_config(&[0xF9, 0x49, 0x20]);
+        assert_eq!(profile, 42, "32 + ((0xF9 & 7) << 3 | 0x49 >> 5)");
+        assert_eq!(freq_index, 4, "(0x49 >> 1) & 0x0F");
+        assert_eq!(chan_conf, 9, "((0x49 & 1) << 3) | (0x20 >> 5)");
     }
 }
