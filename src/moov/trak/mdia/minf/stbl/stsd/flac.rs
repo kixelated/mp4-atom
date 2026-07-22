@@ -20,6 +20,7 @@ impl Atom for Flac {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Self {
             audio,

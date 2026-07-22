@@ -40,6 +40,8 @@ impl Atom for Mfra {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
+
         Ok(Self {
             mfro: mfro.ok_or(Error::MissingBox(Mfro::KIND))?,
             tfra,

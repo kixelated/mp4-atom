@@ -37,6 +37,7 @@ impl Atom for Mp4a {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Mp4a {
             audio,
