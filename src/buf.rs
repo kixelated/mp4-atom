@@ -55,6 +55,22 @@ impl<T: Buf + ?Sized> Buf for &mut T {
     }
 }
 
+/// Drain trailing padding left after an atom's child boxes.
+///
+/// Some muxers — QuickTime in particular — append a few bytes (commonly a
+/// 4-byte zero "terminator") after the last child box of a container atom or
+/// sample entry. Such a remainder is shorter than a box header (8 bytes), so it
+/// cannot be a box and can only be padding: drain it instead of failing the
+/// whole atom with [`Error::UnderDecode`](crate::Error::UnderDecode), matching
+/// ffmpeg, GPAC and other demuxers. A remainder of 8 or more bytes is left
+/// untouched so genuine trailing corruption is still reported.
+pub(crate) fn skip_trailing_padding<B: Buf>(buf: &mut B) {
+    let n = buf.remaining();
+    if n > 0 && n < 8 {
+        buf.advance(n);
+    }
+}
+
 #[cfg(feature = "bytes")]
 impl Buf for bytes::Bytes {
     fn remaining(&self) -> usize {
