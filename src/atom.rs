@@ -207,6 +207,9 @@ macro_rules! nested {
                         unknown => Self::decode_unknown(&unknown)?,
                     }
                 }
+                // Tolerate a sub-header padding remainder (e.g. a QuickTime zero
+                // terminator) after the child boxes.
+                skip_trailing_padding(buf);
 
                 Ok(Self {
                     $([<$required:lower>]: [<$required:lower>].ok_or(Error::MissingBox($required::KIND))? ,)*

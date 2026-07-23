@@ -70,6 +70,7 @@ impl Atom for Wvtt {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Self {
             plaintext,

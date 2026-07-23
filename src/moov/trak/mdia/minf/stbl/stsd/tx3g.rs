@@ -79,6 +79,7 @@ impl Atom for Tx3g {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Tx3g {
             data_reference_index,
