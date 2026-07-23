@@ -246,11 +246,12 @@ fn avcc_ext() {
                                                 buffer_size_db: u24::default(),
                                                 max_bitrate: 160000,
                                                 avg_bitrate: 160000,
-                                                dec_specific: esds::DecoderSpecific {
+                                                dec_specific: Some(esds::DecoderSpecific {
                                                     profile: 2,
                                                     freq_index: 3,
                                                     chan_conf: 2,
-                                                },
+                                                    raw: vec![0x11, 0x90],
+                                                }),
                                             },
                                             sl_config: esds::SLConfig::default(),
                                         },
