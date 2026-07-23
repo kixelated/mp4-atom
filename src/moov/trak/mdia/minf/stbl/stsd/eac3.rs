@@ -116,7 +116,23 @@ impl Atom for Ec3SpecificBox {
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        let header = self.data_rate << 3 | self.substreams.len().saturating_sub(1) as u16;
+        // num_ind_sub is a 3-bit field encoding (count - 1), so there must be
+        // between 1 and 8 substreams. An empty vec would otherwise write a
+        // header claiming one substream while emitting none.
+        if self.substreams.is_empty() {
+            return Err(Error::MissingContent(
+                "dec3 requires at least one substream",
+            ));
+        }
+        if self.substreams.len() > 8 {
+            return Err(Error::OutOfRange);
+        }
+        // data_rate is a 13-bit field; larger values would overflow into
+        // num_ind_sub instead of being silently truncated.
+        if self.data_rate > 0x1FFF {
+            return Err(Error::OutOfRange);
+        }
+        let header = self.data_rate << 3 | (self.substreams.len() as u16 - 1);
         header.encode(buf)?;
         for substream in &self.substreams {
             // low bit is reserved = 0

@@ -116,10 +116,14 @@ impl From<u24> for u32 {
 }
 
 impl TryFrom<u32> for u24 {
-    type Error = std::array::TryFromSliceError;
+    type Error = Error;
 
-    fn try_from(value: u32) -> std::result::Result<Self, Self::Error> {
-        Ok(Self(value.to_be_bytes()[1..].try_into()?))
+    fn try_from(value: u32) -> Result<Self> {
+        if value > Self::MAX {
+            return Err(Error::OutOfRange);
+        }
+        let b = value.to_be_bytes();
+        Ok(Self([b[1], b[2], b[3]]))
     }
 }
 
@@ -140,6 +144,10 @@ impl ToBytes for u24 {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct u48([u8; 6]);
 
+impl u48 {
+    pub const MAX: u64 = 0x0000_FFFF_FFFF_FFFF;
+}
+
 impl Decode for u48 {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self(<[u8; 6]>::decode(buf)?))
@@ -153,10 +161,14 @@ impl Encode for u48 {
 }
 
 impl TryFrom<u64> for u48 {
-    type Error = std::array::TryFromSliceError;
+    type Error = Error;
 
-    fn try_from(value: u64) -> std::result::Result<Self, Self::Error> {
-        Ok(Self(value.to_be_bytes()[2..].try_into()?))
+    fn try_from(value: u64) -> Result<Self> {
+        if value > Self::MAX {
+            return Err(Error::OutOfRange);
+        }
+        let b = value.to_be_bytes();
+        Ok(Self([b[2], b[3], b[4], b[5], b[6], b[7]]))
     }
 }
 
@@ -237,7 +249,10 @@ where
         if self.dec.is_zero() {
             write!(f, "{:?}", self.int)
         } else {
-            write!(f, "{:?}", f64::from(self.int) / f64::from(self.dec))
+            // `int` is the integer part and `dec` is the raw fractional part
+            // scaled by 2^(bits in T), e.g. a 16.16 value uses FixedPoint<u16>.
+            let denom = 2f64.powi((std::mem::size_of::<T>() * 8) as i32);
+            write!(f, "{:?}", f64::from(self.int) + f64::from(self.dec) / denom)
         }
     }
 }

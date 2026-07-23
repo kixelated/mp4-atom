@@ -48,17 +48,24 @@ pub enum FlacMetadataBlock {
         number_of_interchannel_samples: u64,
         md5_checksum: Vec<u8>,
     },
-    Padding,
-    Application,
-    SeekTable,
+    /// A padding block. The raw (typically all-zero) payload is retained so the
+    /// block round-trips instead of being silently dropped.
+    Padding(Vec<u8>),
+    Application(Vec<u8>),
+    SeekTable(Vec<u8>),
     VorbisComment {
         vendor_string: String,
         comments: Vec<String>,
     },
-    CueSheet,
-    Picture,
-    Reserved,
-    Forbidden,
+    CueSheet(Vec<u8>),
+    Picture(Vec<u8>),
+    /// A block whose type is in the reserved range (7..=126). The `block_type`
+    /// is retained so it can be re-emitted unchanged.
+    Reserved {
+        block_type: u8,
+        data: Vec<u8>,
+    },
+    Forbidden(Vec<u8>),
 }
 
 impl FlacMetadataBlock {
@@ -67,6 +74,22 @@ impl FlacMetadataBlock {
             true => (0x80 | block_type).encode(buf),
             false => block_type.encode(buf),
         }
+    }
+
+    /// Encode an opaque metadata block whose payload we retain verbatim.
+    fn encode_raw<B: BufMut>(
+        buf: &mut B,
+        block_type: u8,
+        is_last: bool,
+        data: &[u8],
+    ) -> Result<()> {
+        Self::encode_initial_byte(buf, block_type, is_last)?;
+        let length: u24 = (data.len() as u32)
+            .try_into()
+            .map_err(|_| Error::TooLarge(Dfla::KIND))?;
+        length.encode(buf)?;
+        data.encode(buf)?;
+        Ok(())
     }
     fn encode<B: BufMut>(&self, buf: &mut B, is_last: bool) -> Result<()> {
         match self {
@@ -105,9 +128,9 @@ impl FlacMetadataBlock {
                     .map_err(|_| Error::TooLarge(Dfla::KIND))?;
                 buf.set_slice(length_position - 3, &length.to_be_bytes());
             }
-            FlacMetadataBlock::Padding => { /* cannot write this yet */ }
-            FlacMetadataBlock::Application => { /* cannot write this yet */ }
-            FlacMetadataBlock::SeekTable => { /* cannot write this yet */ }
+            FlacMetadataBlock::Padding(data) => Self::encode_raw(buf, 1, is_last, data)?,
+            FlacMetadataBlock::Application(data) => Self::encode_raw(buf, 2, is_last, data)?,
+            FlacMetadataBlock::SeekTable(data) => Self::encode_raw(buf, 3, is_last, data)?,
             FlacMetadataBlock::VorbisComment {
                 vendor_string,
                 comments,
@@ -134,10 +157,12 @@ impl FlacMetadataBlock {
                     .map_err(|_| Error::TooLarge(Dfla::KIND))?;
                 buf.set_slice(length_position - 3, &length.to_be_bytes());
             }
-            FlacMetadataBlock::CueSheet => { /* cannot write this yet */ }
-            FlacMetadataBlock::Picture => { /* cannot write this yet */ }
-            FlacMetadataBlock::Reserved => { /* No way to write this */ }
-            FlacMetadataBlock::Forbidden => { /* No way to write this */ }
+            FlacMetadataBlock::CueSheet(data) => Self::encode_raw(buf, 5, is_last, data)?,
+            FlacMetadataBlock::Picture(data) => Self::encode_raw(buf, 6, is_last, data)?,
+            FlacMetadataBlock::Reserved { block_type, data } => {
+                Self::encode_raw(buf, *block_type, is_last, data)?
+            }
+            FlacMetadataBlock::Forbidden(data) => Self::encode_raw(buf, 127, is_last, data)?,
         }
         Ok(())
     }
@@ -223,14 +248,17 @@ impl AtomExt for Dfla {
             let block_data: Vec<u8> = Vec::decode_exact(buf, length as usize)?;
             let metadata_block = match block_type {
                 0 => parse_stream_info(&block_data)?,
-                1 => FlacMetadataBlock::Padding,
-                2 => FlacMetadataBlock::Application,
-                3 => FlacMetadataBlock::SeekTable,
+                1 => FlacMetadataBlock::Padding(block_data),
+                2 => FlacMetadataBlock::Application(block_data),
+                3 => FlacMetadataBlock::SeekTable(block_data),
                 4 => parse_vorbis_comment(&block_data)?,
-                5 => FlacMetadataBlock::CueSheet,
-                6 => FlacMetadataBlock::Picture,
-                7..=126 => FlacMetadataBlock::Reserved,
-                127 => FlacMetadataBlock::Forbidden,
+                5 => FlacMetadataBlock::CueSheet(block_data),
+                6 => FlacMetadataBlock::Picture(block_data),
+                7..=126 => FlacMetadataBlock::Reserved {
+                    block_type,
+                    data: block_data,
+                },
+                127 => FlacMetadataBlock::Forbidden(block_data),
                 _ => unreachable!("FLAC Metadata Block type is only 7 bits"),
             };
             metadata_blocks.push(metadata_block);
@@ -312,6 +340,34 @@ mod tests {
         dfla.encode(&mut buf).unwrap();
 
         assert_eq!(buf.as_slice(), ENCODED_DFLA);
+    }
+
+    #[test]
+    fn test_dfla_padding_round_trip() {
+        // A StreamInfo block followed by a trailing Padding block (as libFLAC
+        // typically emits). The padding must survive a decode/encode round-trip
+        // and carry the last-metadata-block flag.
+        let dfla = Dfla {
+            blocks: vec![
+                FlacMetadataBlock::StreamInfo {
+                    minimum_block_size: 4608,
+                    maximum_block_size: 4608,
+                    minimum_frame_size: 0u32.try_into().unwrap(),
+                    maximum_frame_size: 0u32.try_into().unwrap(),
+                    sample_rate: 44100,
+                    num_channels_minus_one: 1,
+                    bits_per_sample_minus_one: 15,
+                    number_of_interchannel_samples: 0,
+                    md5_checksum: vec![0; 16],
+                },
+                FlacMetadataBlock::Padding(vec![0; 8]),
+            ],
+        };
+
+        let mut buf = Vec::new();
+        dfla.encode(&mut buf).unwrap();
+        let decoded = Dfla::decode(&mut buf.as_ref()).unwrap();
+        assert_eq!(decoded, dfla);
     }
 
     // Streaminfo metadata block plus Vorbis Comment metadata block

@@ -68,8 +68,8 @@ macro_rules! any {
                     Any::Unknown(_, data) => data.encode(buf),
                 }?;
 
-                let size: u32 = (buf.len() - start).try_into().map_err(|_| Error::TooLarge(self.kind()))?;
-                buf.set_slice(start, &size.to_be_bytes());
+                let len = buf.len() - start;
+                write_box_size(buf, start, len, self.kind())?;
 
                 Ok(())
             }
