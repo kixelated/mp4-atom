@@ -13,20 +13,24 @@ use crate::*;
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Udta {
-    pub cprt: Option<Cprt>,
-    pub kind: Option<Kind>,
+    /// Zero or more, one per language (ISO/IEC 14496-12 §8.10.2).
+    pub cprt: Vec<Cprt>,
+    /// Zero or more, one per role/kind label (ISO/IEC 14496-12 §8.10.4).
+    pub kind: Vec<Kind>,
+    /// Zero or one (ISO/IEC 14496-12 §8.11.1).
     pub meta: Option<Meta>,
-    pub rtng: Option<Rtng>,
+    /// Zero or more, one per language (3GPP TS 26.244 clause 8).
+    pub rtng: Vec<Rtng>,
 }
 
 impl Atom for Udta {
     const KIND: FourCC = FourCC::new(b"udta");
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
-        let mut cprt = None;
-        let mut kind = None;
+        let mut cprt = Vec::new();
+        let mut kind = Vec::new();
         let mut meta = None;
-        let mut rtng = None;
+        let mut rtng = Vec::new();
 
         // `udta` is a free-form user-data container. QuickTime writes a
         // track-name `name` box here, whose fourcc collides with the iTunes
@@ -40,11 +44,23 @@ impl Atom for Udta {
                 // A child whose declared size exceeds what remains is truncated.
                 return Err(Error::OutOfBounds);
             }
+            // Multiplicity follows the specs: `cprt` and `kind` are "zero or
+            // more" (ISO/IEC 14496-12 §8.10.2 — one copyright notice per
+            // language — and §8.10.4 — one box per role value), and 3GPP
+            // TS 26.244 clause 8 admits each asset box (`rtng` included) once
+            // per language, so repeats accumulate. `meta` is "zero or one" per
+            // container (ISO/IEC 14496-12 §8.11.1), so a second one is
+            // malformed.
             match header.kind {
-                Cprt::KIND => cprt = Some(Cprt::decode_atom(&header, buf)?),
-                Kind::KIND => kind = Some(Kind::decode_atom(&header, buf)?),
-                Meta::KIND => meta = Some(Meta::decode_atom(&header, buf)?),
-                Rtng::KIND => rtng = Some(Rtng::decode_atom(&header, buf)?),
+                Cprt::KIND => cprt.push(Cprt::decode_atom(&header, buf)?),
+                Kind::KIND => kind.push(Kind::decode_atom(&header, buf)?),
+                Meta::KIND => {
+                    if meta.is_some() {
+                        return Err(Error::DuplicateBox(Meta::KIND));
+                    }
+                    meta = Some(Meta::decode_atom(&header, buf)?);
+                }
+                Rtng::KIND => rtng.push(Rtng::decode_atom(&header, buf)?),
                 // `free`/`skip` are padding boxes; drop them.
                 Free::KIND | Skip::KIND => {
                     buf.advance(size);
@@ -83,10 +99,10 @@ mod tests {
     #[test]
     fn test_udta_empty() {
         let expected = Udta {
-            cprt: None,
+            cprt: vec![],
             meta: None,
-            kind: None,
-            rtng: None,
+            kind: vec![],
+            rtng: vec![],
         };
 
         let mut buf = Vec::new();
@@ -100,10 +116,10 @@ mod tests {
     #[test]
     fn test_udta() {
         let expected = Udta {
-            cprt: Some(Cprt {
+            cprt: vec![Cprt {
                 language: "und".into(),
                 notice: "MIT or Apache".into(),
-            }),
+            }],
             meta: Some(Meta {
                 hdlr: Hdlr {
                     handler: FourCC::new(b"fake"),
@@ -111,16 +127,16 @@ mod tests {
                 },
                 items: vec![],
             }),
-            kind: Some(Kind {
+            kind: vec![Kind {
                 scheme_uri: "http://www.w3.org/TR/html5/".into(),
                 value: "".into(),
-            }),
-            rtng: Some(Rtng {
+            }],
+            rtng: vec![Rtng {
                 entity: b"BBFC".into(),
                 criteria: b"PG13".into(),
                 language: "eng".into(),
                 rating_info: "test info".into(),
-            }),
+            }],
         };
 
         let mut buf = Vec::new();
@@ -152,7 +168,7 @@ mod tests {
         assert_eq!(
             udta,
             Udta {
-                cprt: Some(Cprt { language: "und".into(), notice: "ENST IsoMedia Conformance Files - ENST (c) 2006 - Rights released for ISO Conformance use".into() }),
+                cprt: vec![Cprt { language: "und".into(), notice: "ENST IsoMedia Conformance Files - ENST (c) 2006 - Rights released for ISO Conformance use".into() }],
                 ..Default::default()
             }
         );
@@ -180,10 +196,10 @@ mod tests {
         assert_eq!(
             udta,
             Udta {
-                kind: Some(Kind {
+                kind: vec![Kind {
                     scheme_uri: "urn:mpeg:dash:role:2011".into(),
                     value: "main".into()
-                }),
+                }],
                 ..Default::default()
             }
         );
@@ -213,8 +229,9 @@ mod tests {
         buf[0..4].copy_from_slice(&size);
 
         let udta = Udta::decode(&mut buf.as_slice()).expect("trailing padding must be tolerated");
-        assert!(
-            udta.cprt.is_some(),
+        assert_eq!(
+            udta.cprt.len(),
+            1,
             "the real child still decodes, the padding is dropped"
         );
     }
@@ -229,6 +246,87 @@ mod tests {
         match Udta::decode(&mut buf) {
             Err(Error::UnexpectedBox(kind)) => assert_eq!(kind, FourCC::new(b"name")),
             other => panic!("expected UnexpectedBox(name), got {other:?}"),
+        }
+    }
+
+    // Repeated `cprt`/`kind`/`rtng` children are spec-legal — ISO/IEC 14496-12
+    // declares both CopyrightBox (§8.10.2) and KindBox (§8.10.4) as quantity
+    // "zero or more" (one copyright per language, one kind per role value),
+    // and 3GPP TS 26.244 clause 8 admits "zero or more sub-boxes of each kind,
+    // zero or one for each language" of the asset boxes, `rtng` included.
+    // Repeats must accumulate — not error, not overwrite each other.
+    #[test]
+    fn test_udta_repeated_children() {
+        let expected = Udta {
+            cprt: vec![
+                Cprt {
+                    language: "eng".into(),
+                    notice: "All rights reserved".into(),
+                },
+                Cprt {
+                    language: "fra".into(),
+                    notice: "Tous droits réservés".into(),
+                },
+            ],
+            kind: vec![
+                Kind {
+                    scheme_uri: "urn:mpeg:dash:role:2011".into(),
+                    value: "main".into(),
+                },
+                Kind {
+                    scheme_uri: "urn:mpeg:dash:role:2011".into(),
+                    value: "caption".into(),
+                },
+            ],
+            meta: None,
+            rtng: vec![
+                Rtng {
+                    entity: b"BBFC".into(),
+                    criteria: b"PG13".into(),
+                    language: "eng".into(),
+                    rating_info: "parental guidance".into(),
+                },
+                Rtng {
+                    entity: b"BBFC".into(),
+                    criteria: b"PG13".into(),
+                    language: "fra".into(),
+                    rating_info: "accord parental".into(),
+                },
+            ],
+        };
+
+        let mut buf = Vec::new();
+        expected.encode(&mut buf).unwrap();
+
+        let mut buf = buf.as_ref();
+        let output = Udta::decode(&mut buf).unwrap();
+        assert_eq!(output, expected);
+    }
+
+    // `meta` is quantity "zero or one" per container (ISO/IEC 14496-12
+    // §8.11.1) — unlike the repeatable children above, a second one is
+    // malformed and must be rejected, not silently overwritten.
+    #[test]
+    fn test_udta_duplicate_meta() {
+        let meta = Meta {
+            hdlr: Hdlr {
+                handler: FourCC::new(b"fake"),
+                name: "".into(),
+            },
+            items: vec![],
+        };
+        let mut body = Vec::new();
+        meta.encode(&mut body).unwrap();
+        meta.encode(&mut body).unwrap();
+
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&((body.len() + 8) as u32).to_be_bytes());
+        bytes.extend_from_slice(b"udta");
+        bytes.extend_from_slice(&body);
+
+        match Udta::decode(&mut bytes.as_slice()) {
+            Err(Error::DuplicateBox(kind)) => assert_eq!(kind, Meta::KIND),
+            other => panic!("expected DuplicateBox(meta), got {other:?}"),
         }
     }
 }
