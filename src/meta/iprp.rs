@@ -56,6 +56,9 @@ pub struct PropertyAssociation {
 impl PropertyAssociation {
     fn encode<B: BufMut>(&self, buf: &mut B, prop_index_15_bit: bool) -> Result<()> {
         if prop_index_15_bit {
+            if self.property_index > 0x7fff {
+                return Err(Error::TooLarge(Ipma::KIND));
+            }
             let flag_and_prop_index = if self.essential {
                 0x8000 | self.property_index
             } else {
@@ -92,7 +95,11 @@ impl PropertyAssociations {
         } else {
             self.item_id.encode(buf)?;
         }
-        let association_count: u8 = self.associations.len() as u8;
+        let association_count: u8 = self
+            .associations
+            .len()
+            .try_into()
+            .map_err(|_| Error::TooLarge(Ipma::KIND))?;
         association_count.encode(buf)?;
         for association in &self.associations {
             association.encode(buf, prop_index_15_bit)?;
@@ -111,7 +118,7 @@ ext! {
     name: Ipma,
     versions: [0, 1],
     flags: {
-        prop_index_15_bits = 1,
+        prop_index_15_bits = 0,
     }
 }
 
@@ -182,5 +189,59 @@ impl AtomExt for Ipma {
             });
         }
         Ok(Self { item_properties })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const IPMA_WITH_15_BIT_INDEX: &[u8] = &[
+        0x00, 0x00, 0x00, 0x15, b'i', b'p', b'm', b'a', 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x01, 0x01, 0x80, 0x80,
+    ];
+
+    fn ipma(property_index: u16, association_count: usize) -> Ipma {
+        Ipma {
+            item_properties: vec![PropertyAssociations {
+                item_id: 1,
+                associations: vec![
+                    PropertyAssociation {
+                        essential: true,
+                        property_index,
+                    };
+                    association_count
+                ],
+            }],
+        }
+    }
+
+    #[test]
+    fn decode_15_bit_property_index() {
+        let decoded = Ipma::decode(&mut &IPMA_WITH_15_BIT_INDEX[..]).unwrap();
+
+        assert_eq!(decoded, ipma(0x80, 1));
+    }
+
+    #[test]
+    fn encode_15_bit_property_index() {
+        let mut encoded = Vec::new();
+        ipma(0x80, 1).encode(&mut encoded).unwrap();
+
+        assert_eq!(encoded, IPMA_WITH_15_BIT_INDEX);
+    }
+
+    #[test]
+    fn reject_property_index_above_15_bits() {
+        let result = ipma(0x8000, 1).encode(&mut Vec::new());
+
+        assert!(matches!(result, Err(Error::TooLarge(Ipma::KIND))));
+    }
+
+    #[test]
+    fn reject_more_than_255_associations() {
+        let result = ipma(1, 256).encode(&mut Vec::new());
+
+        assert!(matches!(result, Err(Error::TooLarge(Ipma::KIND))));
     }
 }

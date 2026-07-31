@@ -37,16 +37,21 @@ macro_rules! any {
 
         impl DecodeMaybe for Any {
             fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>> {
-                let header = match Header::decode_maybe(buf)? {
+                // Decode the header from a view so an incomplete atom leaves
+                // the caller's buffer untouched.
+                let remaining = buf.remaining();
+                let mut peek = buf.slice(remaining);
+                let header = match Header::decode_maybe(&mut peek)? {
                     Some(header) => header,
                     None => return Ok(None),
                 };
 
-                let size = header.size.unwrap_or(buf.remaining());
-                if size > buf.remaining() {
+                let size = header.size.unwrap_or(peek.remaining());
+                if size > peek.remaining() {
                     return Ok(None);
                 }
 
+                buf.advance(remaining - peek.remaining());
                 Ok(Some(Self::decode_atom(&header, buf)?))
             }
         }
@@ -379,5 +384,20 @@ impl ReadAtom for Any {
     fn read_atom<R: Read + ?Sized>(header: &Header, r: &mut R) -> Result<Self> {
         let body = &mut header.read_body(r)?;
         Any::decode_atom(header, body)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const PARTIAL_FTYP: &[u8] = b"\0\0\0\x14ftypisom";
+
+    #[test]
+    fn decode_maybe_preserves_incomplete_atom() {
+        let mut buf = PARTIAL_FTYP;
+
+        assert!(Any::decode_maybe(&mut buf).unwrap().is_none());
+        assert_eq!(buf, PARTIAL_FTYP);
     }
 }

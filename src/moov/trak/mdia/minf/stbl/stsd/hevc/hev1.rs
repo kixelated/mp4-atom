@@ -38,6 +38,7 @@ impl Atom for Hev1 {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Hev1 {
             visual,

@@ -51,4 +51,13 @@ mod tests {
         let result = Ftyp::decode(&mut buf.as_slice()).expect("failed to decode");
         assert_eq!(decoded, result);
     }
+
+    #[test]
+    fn decode_maybe_preserves_incomplete_atom() {
+        const PARTIAL: &[u8] = b"\0\0\0\x14ftypisom";
+        let mut buf = PARTIAL;
+
+        assert!(Ftyp::decode_maybe(&mut buf).unwrap().is_none());
+        assert_eq!(buf, PARTIAL);
+    }
 }
