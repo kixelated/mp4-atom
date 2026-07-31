@@ -358,7 +358,7 @@ fn avc_encrypted_segment() {
             first_offset: 32,
             references: vec![SegmentReference {
                 reference_type: false,
-                reference_size: 345327,
+                referenced_size: 345327,
                 subsegment_duration: 78078000,
                 starts_with_sap: true,
                 sap_type: 0,

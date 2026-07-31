@@ -1,6 +1,6 @@
 use crate::*;
 
-// SegmentIndexBox, ISO/IEC 14496-12 Section 8.16.3
+// SegmentIndexBox, ISO/IEC 14496-12:2026 Section 8.14.3
 // This is called out in CMAF (23000-19) and DASH (23009-1).
 
 ext! {
@@ -13,7 +13,7 @@ ext! {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SegmentReference {
     pub reference_type: bool,
-    pub reference_size: u32,
+    pub referenced_size: u32,
     pub subsegment_duration: u32,
     pub starts_with_sap: bool,
     pub sap_type: u8,
@@ -47,9 +47,9 @@ impl AtomExt for Sidx {
         let reference_count = u16::decode(buf)?;
         let mut references = Vec::with_capacity(std::cmp::min(reference_count as usize, 128));
         for _ in 0..reference_count {
-            let reference_type_and_size = u32::decode(buf)?;
-            let reference_type = (reference_type_and_size & 0x8000_0000) == 0x8000_0000;
-            let reference_size = reference_type_and_size & 0x7FFF_FFFF;
+            let referenced_type_and_size = u32::decode(buf)?;
+            let reference_type = (referenced_type_and_size & 0x8000_0000) == 0x8000_0000;
+            let referenced_size = referenced_type_and_size & 0x7FFF_FFFF;
             let subsegment_duration = u32::decode(buf)?;
             let sap_flag_and_type_and_delta_time = u32::decode(buf)?;
             let starts_with_sap = (sap_flag_and_type_and_delta_time & 0x8000_0000) == 0x8000_0000;
@@ -57,7 +57,7 @@ impl AtomExt for Sidx {
             let sap_delta_time = sap_flag_and_type_and_delta_time & 0x0FFF_FFFF;
             let reference = SegmentReference {
                 reference_type,
-                reference_size,
+                referenced_size,
                 subsegment_duration,
                 starts_with_sap,
                 sap_type,
@@ -101,18 +101,18 @@ impl AtomExt for Sidx {
             .map_err(|_| Error::TooLarge(Self::KIND))?;
         reference_count.encode(buf)?;
         for reference in &self.references {
-            if reference.reference_size > 0x7FFF_FFFF
+            if reference.referenced_size > 0x7FFF_FFFF
                 || reference.sap_type > 0b111
                 || reference.sap_delta_time > 0x0FFF_FFFF
             {
                 return Err(Error::TooLarge(Self::KIND));
             }
 
-            let reference_type_and_size: u32 = match reference.reference_type {
-                true => 0x8000_0000 | reference.reference_size,
-                false => reference.reference_size,
+            let referenced_type_and_size: u32 = match reference.reference_type {
+                true => 0x8000_0000 | reference.referenced_size,
+                false => reference.referenced_size,
             };
-            reference_type_and_size.encode(buf)?;
+            referenced_type_and_size.encode(buf)?;
             reference.subsegment_duration.encode(buf)?;
             let sap_flag_and_type_and_delta_time = match reference.starts_with_sap {
                 true => {
@@ -173,7 +173,7 @@ mod tests {
                 first_offset: 0,
                 references: vec![SegmentReference {
                     reference_type: false,
-                    reference_size: 326784,
+                    referenced_size: 326784,
                     subsegment_duration: 4992,
                     starts_with_sap: true,
                     sap_type: 1,
@@ -193,7 +193,7 @@ mod tests {
             first_offset: 0,
             references: vec![SegmentReference {
                 reference_type: false,
-                reference_size: 326784,
+                referenced_size: 326784,
                 subsegment_duration: 4992,
                 starts_with_sap: true,
                 sap_type: 1,
@@ -222,7 +222,7 @@ mod tests {
 
         let reference = SegmentReference {
             reference_type: false,
-            reference_size: 0,
+            referenced_size: 0,
             subsegment_duration: 0,
             starts_with_sap: false,
             sap_type: 0,
@@ -230,7 +230,7 @@ mod tests {
         };
 
         assert_too_large(SegmentReference {
-            reference_size: 0x8000_0000,
+            referenced_size: 0x8000_0000,
             ..reference.clone()
         });
         assert_too_large(SegmentReference {
