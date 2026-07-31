@@ -440,7 +440,7 @@ mod tests {
         let iloc = Iloc {
             item_locations: vec![ItemLocation {
                 item_id: 0,
-                construction_method: 0x10,
+                construction_method: 3,
                 data_reference_index: 0,
                 base_offset: 0,
                 extents: vec![],
