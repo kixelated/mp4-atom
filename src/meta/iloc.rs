@@ -134,7 +134,7 @@ impl AtomExt for Iloc {
         let mut needs_version_2 = self.item_locations.len() > u16::MAX as usize;
 
         for item_location in &self.item_locations {
-            if item_location.construction_method > 0x0f {
+            if item_location.construction_method > 2 {
                 return Err(Error::InvalidSize);
             }
             if item_location.extents.len() > u16::MAX as usize {
