@@ -6,7 +6,7 @@ ext! {
     flags: {}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VpcC {
     pub profile: u8,
@@ -20,6 +20,21 @@ pub struct VpcC {
     pub codec_initialization_data: Vec<u8>,
 }
 
+impl Default for VpcC {
+    fn default() -> Self {
+        Self {
+            profile: 0,
+            level: 0, /* undefined */
+            bit_depth: 8,
+            chroma_subsampling: 0,
+            video_full_range_flag: false,
+            color_primaries: 1,          /* BT.709-6 */
+            transfer_characteristics: 1, /* BT.709-6 */
+            matrix_coefficients: 1,      /* BT.709-6 */
+            codec_initialization_data: Default::default(),
+        }
+    }
+}
 impl AtomExt for VpcC {
     const KIND_EXT: FourCC = FourCC::new(b"vpcC");
 
@@ -52,6 +67,15 @@ impl AtomExt for VpcC {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<VpccExt> {
+        if self.chroma_subsampling > 3 {
+            return Err(Error::Reserved);
+        }
+        if (self.matrix_coefficients == 0) && (self.chroma_subsampling != 3) {
+            return Err(Error::InvalidCombination(
+                "Matrix coefficient 0 (RGB) is only valid with chroma subsampling 3 (4:4:4)",
+            ));
+        }
+
         self.profile.encode(buf)?;
         self.level.encode(buf)?;
         ((self.bit_depth << 4)
@@ -82,7 +106,7 @@ mod tests {
             video_full_range_flag: false,
             color_primaries: 0,
             transfer_characteristics: 0,
-            matrix_coefficients: 0,
+            matrix_coefficients: 1,
             codec_initialization_data: vec![],
         };
         let mut buf = Vec::new();
@@ -95,10 +119,9 @@ mod tests {
 
     #[test]
     fn test_vpcc_chroma_subsampling() {
-        // chroma_subsampling is a 3-bit field: 0/1 = 4:2:0, 2 = 4:2:2, 3 = 4:4:4
-        for chroma_subsampling in [2, 3] {
+        for chroma_subsampling in 0..=3 {
             let expected = VpcC {
-                profile: 1,
+                profile: if chroma_subsampling < 2 { 0 } else { 1 },
                 level: 0x1F,
                 bit_depth: 8,
                 chroma_subsampling,
@@ -115,5 +138,54 @@ mod tests {
             let decoded = VpcC::decode(&mut buf).unwrap();
             assert_eq!(decoded, expected);
         }
+    }
+
+    #[test]
+    fn test_vpcc_rejects_reserved_chroma_subsampling() {
+        for chroma_subsampling in 4..=u8::MAX {
+            let vpcc = VpcC {
+                chroma_subsampling,
+                ..Default::default()
+            };
+
+            assert!(matches!(vpcc.encode(&mut Vec::new()), Err(Error::Reserved)));
+        }
+    }
+
+    #[test]
+    fn test_vpcc_12_bit() {
+        let expected = VpcC {
+            profile: 2,
+            level: 62,
+            bit_depth: 12,
+            chroma_subsampling: 3,
+            video_full_range_flag: false,
+            color_primaries: 0,
+            transfer_characteristics: 0,
+            matrix_coefficients: 0,
+            codec_initialization_data: vec![],
+        };
+        let mut buf = Vec::new();
+        expected.encode(&mut buf).unwrap();
+
+        let mut buf = buf.as_ref();
+        let decoded = VpcC::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn test_vpcc_rejects_rgb_subsampling() {
+        let vpcc = VpcC {
+            chroma_subsampling: 1,
+            matrix_coefficients: 0,
+            ..Default::default()
+        };
+
+        assert!(matches!(
+            vpcc.encode(&mut Vec::new()),
+            Err(Error::InvalidCombination(
+                "Matrix coefficient 0 (RGB) is only valid with chroma subsampling 3 (4:4:4)"
+            ))
+        ));
     }
 }

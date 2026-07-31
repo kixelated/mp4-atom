@@ -37,6 +37,7 @@ impl Atom for Mp4a {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Mp4a {
             audio,
@@ -107,11 +108,12 @@ mod tests {
                         buffer_size_db: Default::default(),
                         max_bitrate: 67695,
                         avg_bitrate: 67695,
-                        dec_specific: esds::DecoderSpecific {
+                        dec_specific: Some(esds::DecoderSpecific {
                             profile: 2,
                             freq_index: 4,
                             chan_conf: 2,
-                        },
+                            raw: vec![0x12, 0x10],
+                        }),
                     },
                     sl_config: esds::SLConfig::default(),
                 },
@@ -161,11 +163,12 @@ mod tests {
                     buffer_size_db: Default::default(),
                     max_bitrate: 67695,
                     avg_bitrate: 67695,
-                    dec_specific: esds::DecoderSpecific {
+                    dec_specific: Some(esds::DecoderSpecific {
                         profile: 2,
                         freq_index: 4,
                         chan_conf: 2,
-                    },
+                        raw: vec![0x12, 0x10],
+                    }),
                 },
                 sl_config: esds::SLConfig::default(),
             },
@@ -226,11 +229,12 @@ mod tests {
                         buffer_size_db: Default::default(),
                         max_bitrate: 67695,
                         avg_bitrate: 67695,
-                        dec_specific: esds::DecoderSpecific {
+                        dec_specific: Some(esds::DecoderSpecific {
                             profile: 2,
                             freq_index: 4,
                             chan_conf: 2,
-                        },
+                            raw: vec![0x12, 0x10],
+                        }),
                     },
                     sl_config: esds::SLConfig::default(),
                 },

@@ -37,6 +37,7 @@ impl Atom for Uncv {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Uncv {
             visual,

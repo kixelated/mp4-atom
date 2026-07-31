@@ -1,5 +1,7 @@
 use crate::coding::{Decode, Encode};
-use crate::{Any, Atom, Buf, BufMut, Ccst, DecodeMaybe, Error, FourCC, Result};
+use crate::{
+    skip_trailing_padding, Any, Atom, Buf, BufMut, Ccst, DecodeMaybe, Error, FourCC, Result,
+};
 
 use super::{Btrt, Colr, Pasp, Taic, Visual};
 
@@ -38,6 +40,7 @@ impl Atom for Av01 {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Av01 {
             visual,

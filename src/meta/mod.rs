@@ -106,6 +106,7 @@ impl Atom for Meta {
         while let Some(atom) = Any::decode_maybe(buf)? {
             items.push(atom);
         }
+        skip_trailing_padding(buf);
 
         Ok(Self { hdlr, items })
     }
@@ -139,6 +140,28 @@ mod tests {
         let mut buf = buf.as_ref();
         let output = Meta::decode(&mut buf).unwrap();
         assert_eq!(output, expected);
+    }
+
+    // The hand-written `meta` decode loop must also tolerate a sub-header
+    // padding remainder after its child boxes.
+    #[test]
+    fn test_meta_trailing_padding() {
+        let meta = Meta {
+            hdlr: Hdlr {
+                handler: b"mdir".into(),
+                name: "".into(),
+            },
+            items: Vec::new(),
+        };
+        let mut buf = Vec::new();
+        meta.encode(&mut buf).unwrap();
+        buf.extend_from_slice(&[0, 0, 0, 0]);
+        let size = (buf.len() as u32).to_be_bytes();
+        buf[0..4].copy_from_slice(&size);
+
+        let decoded =
+            Meta::decode(&mut buf.as_slice()).expect("trailing padding must be tolerated");
+        assert_eq!(decoded, meta);
     }
 
     #[test]

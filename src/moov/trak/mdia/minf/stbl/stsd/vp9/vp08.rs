@@ -30,6 +30,7 @@ impl Atom for Vp08 {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Self {
             visual,

@@ -35,6 +35,7 @@ impl Atom for Avc1 {
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Avc1 {
             visual,
@@ -101,6 +102,68 @@ mod tests {
         let mut buf = buf.as_ref();
         let decoded = Avc1::decode(&mut buf).unwrap();
         assert_eq!(decoded, expected);
+    }
+
+    // QuickTime muxers append a few bytes of padding (commonly a 4-byte zero
+    // terminator) after a sample entry's child boxes.
+    #[test]
+    fn test_avc1_trailing_padding() {
+        let base = Avc1 {
+            visual: Visual {
+                data_reference_index: 1,
+                width: 320,
+                height: 240,
+                horizresolution: 0x48.into(),
+                vertresolution: 0x48.into(),
+                frame_count: 1,
+                compressor: "".into(),
+                depth: 24,
+            },
+            avcc: Avcc {
+                configuration_version: 1,
+                avc_profile_indication: 100,
+                profile_compatibility: 0,
+                avc_level_indication: 13,
+                length_size: 4,
+                sequence_parameter_sets: vec![vec![0x67, 0x64, 0x00, 0x0D]],
+                picture_parameter_sets: vec![vec![0x68, 0xEB, 0xE3, 0xCB]],
+                ..Default::default()
+            },
+            colr: Some(Colr::default()),
+            ..Default::default()
+        };
+
+        // Build the entry with `pad` trailing zero bytes inside the box.
+        let with_padding = |pad: usize| {
+            let mut buf = Vec::new();
+            base.encode(&mut buf).unwrap();
+            buf.extend(std::iter::repeat_n(0u8, pad));
+            let size = (buf.len() as u32).to_be_bytes();
+            buf[0..4].copy_from_slice(&size);
+            buf
+        };
+
+        // A 1..=7-byte zero remainder is a sub-header fragment (too short to be a
+        // box) — `skip_trailing_padding` drains it and the entry decodes back to
+        // the original value.
+        for pad in [1usize, 4, 7] {
+            let buf = with_padding(pad);
+            let decoded = Avc1::decode(&mut buf.as_slice())
+                .unwrap_or_else(|e| panic!("{pad}-byte trailing padding must be tolerated: {e:?}"));
+            assert_eq!(
+                decoded, base,
+                "{pad}-byte padding dropped, entry otherwise unchanged"
+            );
+        }
+
+        // 8 zero bytes are a well-formed box header (size 0, null FourCC), NOT
+        // sub-header padding — `skip_trailing_padding`'s `<8`-byte contract does
+        // not drain them, so the strict child loop must still reject the entry.
+        let buf = with_padding(8);
+        assert!(
+            Avc1::decode(&mut buf.as_slice()).is_err(),
+            "an 8-byte remainder is a box header, not padding, and must be rejected"
+        );
     }
 
     #[test]
