@@ -12,6 +12,9 @@ mod flac;
 mod ftab;
 mod h264;
 mod hevc;
+mod metadata;
+mod mett;
+mod metx;
 mod mp4a;
 mod opus;
 mod pasp;
@@ -20,6 +23,7 @@ mod plaintext;
 mod taic;
 mod tx3g;
 mod uncv;
+mod urim;
 mod visual;
 mod vp9;
 mod wvtt;
@@ -38,6 +42,9 @@ pub use flac::*;
 pub use ftab::*;
 pub use h264::*;
 pub use hevc::*;
+pub use metadata::*;
+pub use mett::*;
+pub use metx::*;
 pub use mp4a::*;
 pub use opus::*;
 pub use pasp::*;
@@ -46,6 +53,7 @@ pub use plaintext::*;
 pub use taic::*;
 pub use tx3g::*;
 pub use uncv::*;
+pub use urim::*;
 pub use visual::*;
 pub use vp9::*;
 pub use wvtt::*;
@@ -124,6 +132,15 @@ pub enum Codec {
     // 3GPP Narrowband audio (3GPP TS 26.244 or ETSI TS 126 244)
     Samr(Samr),
 
+    // Text-based timed metadata
+    Mett(Mett),
+
+    // XML-based timed metadata
+    Metx(Metx),
+
+    // URI-based timed metadata
+    Urim(Urim),
+
     // Unknown
     Unknown(FourCC),
 }
@@ -157,6 +174,9 @@ impl Decode for Codec {
             Any::S16l(atom) => atom.into(),
             Any::Wvtt(atom) => atom.into(),
             Any::Samr(atom) => atom.into(),
+            Any::Mett(atom) => atom.into(),
+            Any::Metx(atom) => atom.into(),
+            Any::Urim(atom) => atom.into(),
             unknown => {
                 crate::decode_unknown(&unknown, Stsd::KIND)?;
                 Self::Unknown(unknown.kind())
@@ -194,6 +214,9 @@ impl Encode for Codec {
             Self::S16l(atom) => atom.encode(buf),
             Self::Wvtt(atom) => atom.encode(buf),
             Self::Samr(atom) => atom.encode(buf),
+            Self::Mett(atom) => atom.encode(buf),
+            Self::Metx(atom) => atom.encode(buf),
+            Self::Urim(atom) => atom.encode(buf),
         }
     }
 }
