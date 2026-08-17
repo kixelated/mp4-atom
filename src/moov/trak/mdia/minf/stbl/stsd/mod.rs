@@ -3,6 +3,7 @@ mod amr;
 mod audio;
 mod av01;
 mod btrt;
+mod camm;
 mod ccst;
 mod chnl;
 mod colr;
@@ -33,6 +34,7 @@ pub use amr::*;
 pub use audio::*;
 pub use av01::*;
 pub use btrt::*;
+pub use camm::*;
 pub use ccst::*;
 pub use chnl::*;
 pub use colr::*;
@@ -141,6 +143,9 @@ pub enum Codec {
     // URI-based timed metadata
     Urim(Urim),
 
+    // Camera motion metadata (gyroscope/accelerometer), used by Google devices
+    Camm(Camm),
+
     // Unknown
     Unknown(FourCC),
 }
@@ -177,6 +182,7 @@ impl Decode for Codec {
             Any::Mett(atom) => atom.into(),
             Any::Metx(atom) => atom.into(),
             Any::Urim(atom) => atom.into(),
+            Any::Camm(atom) => atom.into(),
             unknown => {
                 crate::decode_unknown(&unknown, Stsd::KIND)?;
                 Self::Unknown(unknown.kind())
@@ -217,6 +223,7 @@ impl Encode for Codec {
             Self::Mett(atom) => atom.encode(buf),
             Self::Metx(atom) => atom.encode(buf),
             Self::Urim(atom) => atom.encode(buf),
+            Self::Camm(atom) => atom.encode(buf),
         }
     }
 }
