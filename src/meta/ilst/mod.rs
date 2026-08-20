@@ -8,6 +8,7 @@ mod year;
 
 pub use covr::*;
 pub use cprt::*;
+pub use data::*;
 pub use desc::*;
 pub use name::*;
 pub use tool::*;
@@ -15,7 +16,12 @@ pub use year::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// Below this value, a child's raw fourcc looks like a big-endian 1-based
+/// index (top byte zero) rather than 4 ASCII/Latin1 tag characters — the
+/// scheme Apple's `mdta`-keyed metadata (see [`Keys`]) uses for `ilst` items.
+const MDTA_INDEX_LIMIT: u32 = 0x0100_0000;
+
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ilst {
     pub name: Option<Name>,
@@ -24,6 +30,10 @@ pub struct Ilst {
     pub desc: Option<Desc>,
     pub ctoo: Option<Tool>,      // 4CC: "©too"
     pub cprt: Option<Copyright>, // iTunes item, NOT the ISO CopyrightBox
+
+    /// Apple `mdta`-keyed items, keyed by their 1-based index into the
+    /// sibling [`Keys`] box's entries.
+    pub mdta: Vec<(u32, IlstData)>,
 }
 
 impl Atom for Ilst {
@@ -36,6 +46,7 @@ impl Atom for Ilst {
         let mut desc = None;
         let mut ctoo = None;
         let mut cprt = None;
+        let mut mdta = vec![];
 
         // `ilst` children live in the iTunes metadata namespace, which reuses
         // fourccs of unrelated ISO atoms — an ilst `cprt` item wraps a `data`
@@ -57,9 +68,22 @@ impl Atom for Ilst {
                 Tool::KIND => ctoo = Some(Tool::decode_atom(&header, buf)?),
                 Copyright::KIND => cprt = Some(Copyright::decode_atom(&header, buf)?),
                 kind => {
-                    let body = Vec::decode(&mut buf.slice(size))?;
+                    let index = u32::from(kind);
+
+                    let mdta_item = if index < MDTA_INDEX_LIMIT {
+                        IlstData::decode(&mut buf.slice(size)).ok()
+                    } else {
+                        None
+                    };
+
+                    if let Some(data) = mdta_item {
+                        mdta.push((index, data))
+                    } else {
+                        let body = Vec::decode(&mut buf.slice(size))?;
+                        Self::decode_unknown(&Any::Unknown(kind, body))?;
+                    }
+
                     buf.advance(size);
-                    Self::decode_unknown(&Any::Unknown(kind, body))?;
                 }
             }
         }
@@ -71,6 +95,7 @@ impl Atom for Ilst {
             desc,
             ctoo,
             cprt,
+            mdta,
         })
     }
 
@@ -81,6 +106,19 @@ impl Atom for Ilst {
         self.desc.encode(buf)?;
         self.ctoo.encode(buf)?;
         self.cprt.encode(buf)?;
+
+        for (index, data) in &self.mdta {
+            let start = buf.len();
+            0u32.encode(buf)?; // size placeholder
+            FourCC::from(*index).encode(buf)?;
+            data.encode(buf)?;
+
+            let size: u32 = (buf.len() - start)
+                .try_into()
+                .map_err(|_| Error::TooLarge(FourCC::from(*index)))?;
+            buf.set_slice(start, &size.to_be_bytes());
+        }
+
         Ok(())
     }
 }
@@ -173,5 +211,40 @@ mod tests {
             Err(Error::UnexpectedBox(kind)) => assert_eq!(kind, FourCC::new(b"\xa9ART")),
             other => panic!("expected UnexpectedBox, got {other:?}"),
         }
+    }
+
+    // Apple's `mdta`-keyed metadata scheme (used alongside a sibling `keys`
+    // box) keys each `ilst` item by a raw 1-based index rather than a
+    // well-known fourcc — the index is stored where a fourcc would be, with
+    // its top byte zero (so it can't collide with a real ASCII/Latin1 tag).
+    #[test]
+    fn test_ilst_mdta_item() {
+        let mut data_body = Vec::new();
+        data_body.extend_from_slice(&1u32.to_be_bytes()); // type indicator: UTF-8
+        data_body.extend_from_slice(&0u32.to_be_bytes()); // country + language
+        data_body.extend_from_slice(b"Apple");
+        let item = atom_box(&1u32.to_be_bytes(), &atom_box(b"data", &data_body));
+        let encoded = atom_box(b"ilst", &item);
+
+        let decoded = Ilst::decode(&mut encoded.as_slice()).unwrap();
+        assert_eq!(
+            decoded,
+            Ilst {
+                mdta: vec![(
+                    1,
+                    IlstData {
+                        country_indicator: 0,
+                        language_indicator: 0,
+                        value: IlstDataValue::Utf8("Apple".into()),
+                    }
+                )],
+                ..Default::default()
+            }
+        );
+
+        // The encoder writes the same long-style `data` layout back.
+        let mut reencoded = Vec::new();
+        decoded.encode(&mut reencoded).unwrap();
+        assert_eq!(reencoded, encoded);
     }
 }
