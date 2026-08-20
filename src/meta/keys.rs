@@ -32,6 +32,9 @@ impl AtomExt for Keys {
         for _ in 0..entry_count {
             let header = Header::decode(buf)?;
             let size = header.size.ok_or(Error::InvalidSize)?;
+            if size > buf.remaining() {
+                return Err(Error::OutOfBounds);
+            }
 
             let key_value = String::from_utf8(buf.slice(size).to_vec())
                 .map_err(|err| Error::InvalidString(err.to_string()))?;
@@ -97,5 +100,33 @@ mod tests {
 
         let decoded = Keys::decode(&mut buf.as_slice()).expect("failed to decode keys");
         assert_eq!(decoded, keys);
+    }
+
+    // A declared per-entry size larger than what's actually left in the box
+    // must be a decode error, not a panic from an out-of-bounds slice.
+    #[test]
+    fn test_keys_truncated_entry() {
+        let mut buf = Vec::new();
+        0u32.encode(&mut buf).unwrap(); // version + flags
+        1u32.encode(&mut buf).unwrap(); // entry_count
+        100u32.encode(&mut buf).unwrap(); // header size (way beyond what follows)
+        FourCC::new(b"mdta").encode(&mut buf).unwrap();
+        buf.extend_from_slice(b"short");
+
+        let err = Keys::decode_body(&mut buf.as_slice()).unwrap_err();
+        assert!(matches!(err, Error::OutOfBounds));
+    }
+
+    // A bogus/huge entry_count with no matching entries must fail cleanly
+    // once the buffer runs out, rather than allocate or loop unboundedly.
+    #[test]
+    fn test_keys_malformed_count() {
+        let mut buf = Vec::new();
+        0u32.encode(&mut buf).unwrap(); // version + flags
+        u32::MAX.encode(&mut buf).unwrap(); // entry_count
+        FourCC::new(b"mdta").encode(&mut buf).unwrap(); // truncated first header
+
+        let err = Keys::decode_body(&mut buf.as_slice()).unwrap_err();
+        assert!(matches!(err, Error::OutOfBounds));
     }
 }

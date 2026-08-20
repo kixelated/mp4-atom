@@ -108,6 +108,13 @@ impl Atom for Ilst {
         self.cprt.encode(buf)?;
 
         for (index, data) in &self.mdta {
+            if *index == 0 || *index >= MDTA_INDEX_LIMIT {
+                // A top-byte-nonzero index would encode as a FourCC that
+                // looks like (or collides with) a real ASCII/Latin1 tag,
+                // silently changing meaning on the next decode.
+                return Err(Error::Unsupported("mdta index out of range"));
+            }
+
             let start = buf.len();
             0u32.encode(buf)?; // size placeholder
             FourCC::from(*index).encode(buf)?;
@@ -246,5 +253,27 @@ mod tests {
         let mut reencoded = Vec::new();
         decoded.encode(&mut reencoded).unwrap();
         assert_eq!(reencoded, encoded);
+    }
+
+    // An out-of-range index would encode as a FourCC whose top byte is
+    // nonzero, which could look like (or collide with) a real ASCII/Latin1
+    // tag on the next decode -- reject it instead of silently corrupting it.
+    #[test]
+    fn test_ilst_mdta_index_out_of_range_rejected() {
+        let ilst = Ilst {
+            mdta: vec![(
+                MDTA_INDEX_LIMIT,
+                IlstData {
+                    country_indicator: 0,
+                    language_indicator: 0,
+                    value: IlstDataValue::Utf8("Apple".into()),
+                },
+            )],
+            ..Default::default()
+        };
+
+        let mut buf = Vec::new();
+        let err = ilst.encode(&mut buf).unwrap_err();
+        assert!(matches!(err, Error::Unsupported(_)));
     }
 }
