@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0](https://github.com/kixelated/mp4-atom/compare/v0.14.0...v0.15.0) - 2026-07-31
+
+### Fixed
+
+- correct name of sidx referenced_size element ([#224](https://github.com/kixelated/mp4-atom/pull/224))
+- consistency check vpcC matrix coefficients and chroma subsampling ([#221](https://github.com/kixelated/mp4-atom/pull/221))
+- fix transactional decode_maybe ([#211](https://github.com/kixelated/mp4-atom/pull/211))
+
+### Other
+
+- update of actions on the PR workflow ([#225](https://github.com/kixelated/mp4-atom/pull/225))
+- Reject oversized sidx reference fields ([#215](https://github.com/kixelated/mp4-atom/pull/215))
+- dispatch children by namespace ([#222](https://github.com/kixelated/mp4-atom/pull/222))
+- preserve the DecoderSpecificInfo payload, make it optional, tolerate trailing bytes ([#174](https://github.com/kixelated/mp4-atom/pull/174))
+- Validate vpcC chroma subsampling during encoding ([#198](https://github.com/kixelated/mp4-atom/pull/198))
+- error on truncated codec parameters ([#220](https://github.com/kixelated/mp4-atom/pull/220))
+
 ## [0.14.0](https://github.com/kixelated/mp4-atom/compare/v0.13.0...v0.14.0) - 2026-07-18
 
 ### Fixed

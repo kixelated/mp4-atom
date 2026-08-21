@@ -172,11 +172,12 @@ fn bbb() {
                                                 stream_type: 5,
                                                 max_bitrate: 125587,
                                                 avg_bitrate: 125587,
-                                                dec_specific: esds::DecoderSpecific {
+                                                dec_specific: Some(esds::DecoderSpecific {
                                                     profile: 2,
                                                     freq_index: 4,
                                                     chan_conf: 2,
-                                                },
+                                                    raw: vec![0x12, 0x10],
+                                                }),
                                                 ..Default::default()
                                             },
                                             sl_config: esds::SLConfig{},
