@@ -68,6 +68,9 @@ pub enum Error {
 
     #[error("invalid parameter combination: {0}")]
     InvalidCombination(&'static str),
+
+    #[error("unknown codec in sample description box")]
+    UnknownCodec,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

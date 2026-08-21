@@ -147,7 +147,7 @@ pub enum Codec {
     Camm(Camm),
 
     // Unknown
-    Unknown(FourCC),
+    Unknown(FourCC, Vec<u8>),
 }
 
 impl Decode for Codec {
@@ -183,9 +183,16 @@ impl Decode for Codec {
             Any::Metx(atom) => atom.into(),
             Any::Urim(atom) => atom.into(),
             Any::Camm(atom) => atom.into(),
+            Any::Unknown(four_cc, body) => Self::Unknown(four_cc, body),
             unknown => {
                 crate::decode_unknown(&unknown, Stsd::KIND)?;
-                Self::Unknown(unknown.kind())
+
+                // The atom kind is known elsewhere in the hierarchy, but is not a supported
+                // sample entry. Re-encode its body so the unknown entry remains a valid box.
+                let kind = unknown.kind();
+                let mut encoded = Vec::new();
+                unknown.encode(&mut encoded)?;
+                Self::Unknown(kind, encoded.split_off(8))
             }
         })
     }
@@ -194,7 +201,7 @@ impl Decode for Codec {
 impl Encode for Codec {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         match self {
-            Self::Unknown(kind) => kind.encode(buf),
+            Self::Unknown(..) => Err(Error::UnknownCodec),
             Self::Avc1(atom) => atom.encode(buf),
             Self::Hev1(atom) => atom.encode(buf),
             Self::Hvc1(atom) => atom.encode(buf),
@@ -252,5 +259,42 @@ impl AtomExt for Stsd {
         }
 
         Ok(())
+    }
+}
+
+mod tests {
+    #![cfg(not(feature = "strict"))]
+
+    #[test]
+    fn unknown_codec_parses() {
+        use crate::{Codec, Decode, FourCC, Stsd};
+
+        let input = b"\0\0\0\x1cstsd\0\0\0\0\0\0\0\x01\0\0\0\x0cdvh9\x01\x02\x03\x04";
+        let mut buf = input.as_slice();
+
+        let stsd = Stsd::decode(&mut buf).unwrap();
+        assert_eq!(
+            stsd.codecs,
+            vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
+        );
+    }
+
+    #[test]
+
+    fn unknown_codec_not_emitted() {
+        use crate::{Codec, Encode, FourCC, Stsd};
+
+        let stsd = Stsd {
+            codecs: vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])],
+        };
+        assert_eq!(
+            stsd.codecs,
+            vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
+        );
+        let mut output = Vec::new();
+        assert!(matches!(
+            stsd.encode(&mut output),
+            Err(crate::Error::UnknownCodec)
+        ));
     }
 }
