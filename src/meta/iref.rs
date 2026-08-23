@@ -29,18 +29,22 @@ impl AtomExt for Iref {
     const KIND_EXT: FourCC = FourCC::new(b"iref");
 
     fn decode_body_ext<B: Buf>(buf: &mut B, ext: IrefExt) -> Result<Self> {
-        let mut bytes_remaining = buf.remaining();
         let mut references = vec![];
-        while bytes_remaining > 0 {
+        while buf.has_remaining() {
+            let box_len = u32::decode(buf)? as usize;
+            let body_len = box_len.checked_sub(4).ok_or(Error::InvalidSize)?;
+            if body_len > buf.remaining() {
+                return Err(Error::InvalidSize);
+            }
+
+            let mut body = buf.slice(body_len);
             if ext.version == IrefVersion::V0 {
-                let box_len = u32::decode(buf)?;
-                bytes_remaining -= box_len as usize;
-                let reference_type = FourCC::decode(buf)?;
-                let from_item_id: u32 = u16::decode(buf)?.into();
-                let reference_count: u16 = u16::decode(buf)?;
+                let reference_type = FourCC::decode(&mut body)?;
+                let from_item_id: u32 = u16::decode(&mut body)?.into();
+                let reference_count: u16 = u16::decode(&mut body)?;
                 let mut to_item_ids: Vec<u32> = vec![];
                 for _ in 0..reference_count {
-                    let to_item_id: u32 = u16::decode(buf)?.into();
+                    let to_item_id: u32 = u16::decode(&mut body)?.into();
                     to_item_ids.push(to_item_id);
                 }
                 let reference = Reference {
@@ -50,14 +54,12 @@ impl AtomExt for Iref {
                 };
                 references.push(reference);
             } else {
-                let box_len = u32::decode(buf)?;
-                bytes_remaining -= box_len as usize;
-                let reference_type = FourCC::decode(buf)?;
-                let from_item_id: u32 = u32::decode(buf)?;
-                let reference_count: u16 = u16::decode(buf)?;
+                let reference_type = FourCC::decode(&mut body)?;
+                let from_item_id: u32 = u32::decode(&mut body)?;
+                let reference_count: u16 = u16::decode(&mut body)?;
                 let mut to_item_ids: Vec<u32> = vec![];
                 for _ in 0..reference_count {
-                    let to_item_id: u32 = u32::decode(buf)?;
+                    let to_item_id: u32 = u32::decode(&mut body)?;
                     to_item_ids.push(to_item_id);
                 }
                 let reference = Reference {
@@ -67,6 +69,11 @@ impl AtomExt for Iref {
                 };
                 references.push(reference);
             }
+
+            if body.has_remaining() {
+                return Err(Error::InvalidSize);
+            }
+            buf.advance(body_len);
         }
         Ok(Iref { references })
     }
@@ -109,5 +116,45 @@ impl AtomExt for Iref {
             }
         }
         Ok(IrefExt { version })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn oversized_nested_reference_returns_error() {
+        let body: &[u8] = &[
+            0x00, 0x00, 0x00, 0x20, // nested box length exceeds the iref body
+            b'd', b'i', b'm', b'g', // reference_type
+            0x00, 0x01, // from_item_id
+            0x00, 0x00, // reference_count
+        ];
+
+        assert!(matches!(
+            Iref::decode_body_ext(
+                &mut std::io::Cursor::new(body),
+                IrefExt {
+                    version: IrefVersion::V0,
+                },
+            ),
+            Err(Error::InvalidSize)
+        ));
+    }
+
+    #[test]
+    fn nested_reference_smaller_than_header_returns_error() {
+        let body: &[u8] = &[0x00, 0x00, 0x00, 0x03];
+
+        assert!(matches!(
+            Iref::decode_body_ext(
+                &mut std::io::Cursor::new(body),
+                IrefExt {
+                    version: IrefVersion::V0,
+                },
+            ),
+            Err(Error::InvalidSize)
+        ));
     }
 }
