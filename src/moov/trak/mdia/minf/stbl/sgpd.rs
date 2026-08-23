@@ -74,7 +74,7 @@ impl AtomExt for Sgpd {
             } else {
                 default_length
             };
-            let entry = AnySampleGroupEntry::decode(grouping_type, buf)?;
+            let entry = AnySampleGroupEntry::decode(grouping_type, description_length, buf)?;
             entries.push(SgpdEntry {
                 description_length,
                 entry,
@@ -110,11 +110,17 @@ impl AtomExt for Sgpd {
             static_mapping: self.static_mapping,
         };
         self.grouping_type.encode(buf)?;
-        if let Some(default_length) = self.default_length {
-            default_length.encode(buf)?;
+        if version >= SgpdVersion::V1 {
+            self.default_length
+                .ok_or(Error::MissingContent("sgpd default_length"))?
+                .encode(buf)?;
         }
-        if let Some(default_group_description_index) = self.default_group_description_index {
-            default_group_description_index.encode(buf)?;
+        if version >= SgpdVersion::V2 {
+            self.default_group_description_index
+                .ok_or(Error::MissingContent(
+                    "sgpd default_group_description_index",
+                ))?
+                .encode(buf)?;
         }
         (self.entries.len() as u32).encode(buf)?;
         for entry in &self.entries {
@@ -139,7 +145,11 @@ pub enum AnySampleGroupEntry {
 }
 
 impl AnySampleGroupEntry {
-    fn decode<B: Buf>(grouping_type: FourCC, buf: &mut B) -> Result<Self> {
+    fn decode<B: Buf>(
+        grouping_type: FourCC,
+        description_length: Option<u32>,
+        buf: &mut B,
+    ) -> Result<Self> {
         match grouping_type {
             REFS_4CC => {
                 let sample_id = u32::decode(buf)?;
@@ -154,7 +164,15 @@ impl AnySampleGroupEntry {
                     direct_reference_samples,
                 ))
             }
-            _ => Ok(Self::UnknownGroupingType(grouping_type, Vec::decode(buf)?)),
+            _ => {
+                let bytes = match description_length {
+                    Some(description_length) => {
+                        Vec::decode_exact(buf, description_length as usize)?
+                    }
+                    None => Vec::decode(buf)?,
+                };
+                Ok(Self::UnknownGroupingType(grouping_type, bytes))
+            }
         }
     }
 
@@ -235,6 +253,60 @@ mod tests {
         let mut buf = Vec::new();
         sgpd.encode(&mut buf).expect("encode should be successful");
         assert_eq!(SIMPLE_SGPD, &buf);
+    }
+
+    #[test]
+    fn sgpd_unknown_entries_respect_description_length() {
+        const MULTIPLE_ENTRIES: &[u8] = &[
+            0x00, 0x00, 0x00, 0x1C, 0x73, 0x67, 0x70, 0x64, 0x01, 0x00, 0x00, 0x00, 0x74, 0x65,
+            0x73, 0x74, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0xAA, 0xBB, 0xCC, 0xDD,
+        ];
+
+        let sgpd = Sgpd::decode(&mut Cursor::new(MULTIPLE_ENTRIES))
+            .expect("sgpd should decode successfully");
+
+        assert_eq!(
+            sgpd.entries,
+            vec![
+                SgpdEntry {
+                    description_length: Some(2),
+                    entry: AnySampleGroupEntry::UnknownGroupingType(
+                        FourCC::from(b"test"),
+                        vec![0xAA, 0xBB],
+                    ),
+                },
+                SgpdEntry {
+                    description_length: Some(2),
+                    entry: AnySampleGroupEntry::UnknownGroupingType(
+                        FourCC::from(b"test"),
+                        vec![0xCC, 0xDD],
+                    ),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn sgpd_essential_requires_version_3_defaults() {
+        let mut sgpd = Sgpd {
+            grouping_type: FourCC::from(b"test"),
+            default_length: None,
+            default_group_description_index: None,
+            static_group_description: false,
+            static_mapping: false,
+            essential: true,
+            entries: vec![],
+        };
+
+        let err = sgpd.encode(&mut Vec::new()).unwrap_err();
+        assert!(matches!(err, Error::MissingContent("sgpd default_length")));
+
+        sgpd.default_length = Some(0);
+        let err = sgpd.encode(&mut Vec::new()).unwrap_err();
+        assert!(matches!(
+            err,
+            Error::MissingContent("sgpd default_group_description_index")
+        ));
     }
 
     // From the MPEG File Format Conformance suite, heif/C041.heic
