@@ -101,6 +101,11 @@ pub trait BufMut {
 
     // Set a slice at a position in the buffer.
     fn set_slice(&mut self, pos: usize, val: &[u8]);
+
+    // Insert a slice into the buffer at `pos`, shifting any existing bytes at or
+    // after `pos` toward the end. Used to retrofit the 8-byte 64-bit `largesize`
+    // field into a box header once we discover the body exceeds `u32::MAX`.
+    fn insert_slice(&mut self, pos: usize, val: &[u8]);
 }
 
 impl BufMut for Vec<u8> {
@@ -114,6 +119,10 @@ impl BufMut for Vec<u8> {
 
     fn set_slice(&mut self, pos: usize, val: &[u8]) {
         self[pos..pos + val.len()].copy_from_slice(val);
+    }
+
+    fn insert_slice(&mut self, pos: usize, val: &[u8]) {
+        self.splice(pos..pos, val.iter().copied());
     }
 }
 
@@ -129,6 +138,10 @@ impl<T: BufMut + ?Sized> BufMut for &mut T {
     fn set_slice(&mut self, pos: usize, val: &[u8]) {
         (**self).set_slice(pos, val);
     }
+
+    fn insert_slice(&mut self, pos: usize, val: &[u8]) {
+        (**self).insert_slice(pos, val);
+    }
 }
 
 #[cfg(feature = "bytes")]
@@ -143,5 +156,11 @@ impl BufMut for bytes::BytesMut {
 
     fn set_slice(&mut self, pos: usize, val: &[u8]) {
         self[pos..pos + val.len()].copy_from_slice(val);
+    }
+
+    fn insert_slice(&mut self, pos: usize, val: &[u8]) {
+        let tail = self.split_off(pos);
+        self.extend_from_slice(val);
+        self.unsplit(tail);
     }
 }

@@ -54,7 +54,8 @@ impl Atom for Colr {
                 let colour_primaries = u16::decode(buf)?;
                 let transfer_characteristics = u16::decode(buf)?;
                 let matrix_coefficients = u16::decode(buf)?;
-                let full_range_flag = u8::decode(buf)? == 0x80;
+                // The high bit is full_range_flag; the low 7 bits are reserved.
+                let full_range_flag = u8::decode(buf)? & 0x80 != 0;
                 Ok(Colr::Nclx {
                     colour_primaries,
                     transfer_characteristics,

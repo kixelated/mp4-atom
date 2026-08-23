@@ -133,26 +133,31 @@ impl AtomExt for Subs {
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<Self::Ext> {
-        let ext = match &self
-            .entries
-            .first()
-            .and_then(|e| e.subsamples.first())
-            .map(|s| &s.size)
-        {
-            Some(SubsSubsampleSize::U16(_)) => SubsExt {
-                version: SubsVersion::V0,
-                flags: self.flags,
-            },
-            Some(SubsSubsampleSize::U32(_)) => SubsExt {
-                version: SubsVersion::V1,
-                flags: self.flags,
-            },
-            // Should I store the version somewhere so that I can always decode and encode back to
-            // the exact same bytes?
-            None => SubsExt {
-                version: SubsVersion::default(),
-                flags: self.flags,
-            },
+        // The subsample_size width is a per-box property tied to the version, so
+        // every subsample must use the same variant. Picking the version from
+        // only the first subsample (as before) would silently emit U16-sized
+        // values for later U32 subsamples (or vice versa), producing output that
+        // fails to decode back to the same value.
+        let mut has_u16 = false;
+        let mut has_u32 = false;
+        for entry in &self.entries {
+            for subsample in &entry.subsamples {
+                match subsample.size {
+                    SubsSubsampleSize::U16(_) => has_u16 = true,
+                    SubsSubsampleSize::U32(_) => has_u32 = true,
+                }
+            }
+        }
+        let version = match (has_u16, has_u32) {
+            // Mixed widths can't be represented in a single subs box.
+            (true, true) => return Err(Error::OutOfRange),
+            (false, true) => SubsVersion::V1,
+            (true, false) => SubsVersion::V0,
+            (false, false) => SubsVersion::default(),
+        };
+        let ext = SubsExt {
+            version,
+            flags: self.flags,
         };
         (self.entries.len() as u32).encode(buf)?;
         for entry in &self.entries {
@@ -168,6 +173,12 @@ impl AtomExt for Subs {
                     1u8.encode(buf)?;
                 } else {
                     0u8.encode(buf)?;
+                }
+                // codec_specific_parameters is a fixed 4-byte field; decode reads
+                // exactly 4 bytes, so reject any other length rather than emit a
+                // box that can't be decoded back.
+                if subsample.codec_specific_parameters.len() != 4 {
+                    return Err(Error::OutOfRange);
                 }
                 subsample.codec_specific_parameters.encode(buf)?;
             }

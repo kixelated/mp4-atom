@@ -33,7 +33,8 @@ impl AsyncReadFrom for Option<Header> {
                 let size = u64::from_be_bytes(buf);
                 let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
 
-                Some(size as usize)
+                // Avoid silent truncation of a 64-bit size on 32-bit targets.
+                Some(usize::try_from(size).map_err(|_| Error::TooLarge(kind))?)
             }
             _ => Some(size.checked_sub(8).ok_or(Error::InvalidSize)? as usize),
         };
