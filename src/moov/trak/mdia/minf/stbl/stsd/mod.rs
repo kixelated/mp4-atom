@@ -13,6 +13,7 @@ mod flac;
 mod ftab;
 mod h264;
 mod hevc;
+mod mebx;
 mod metadata;
 mod mett;
 mod metx;
@@ -44,6 +45,7 @@ pub use flac::*;
 pub use ftab::*;
 pub use h264::*;
 pub use hevc::*;
+pub use mebx::*;
 pub use metadata::*;
 pub use mett::*;
 pub use metx::*;
@@ -146,6 +148,9 @@ pub enum Codec {
     // Camera motion metadata (gyroscope/accelerometer), used by Google devices
     Camm(Camm),
 
+    // Structured/"boxed" timed metadata, QuickTime "Metadata Media"
+    Mebx(Mebx),
+
     // Unknown
     Unknown(FourCC, Vec<u8>),
 }
@@ -183,6 +188,7 @@ impl Decode for Codec {
             Any::Metx(atom) => atom.into(),
             Any::Urim(atom) => atom.into(),
             Any::Camm(atom) => atom.into(),
+            Any::Mebx(atom) => atom.into(),
             Any::Unknown(four_cc, body) => Self::Unknown(four_cc, body),
             unknown => {
                 crate::decode_unknown(&unknown, Stsd::KIND)?;
@@ -231,6 +237,7 @@ impl Encode for Codec {
             Self::Metx(atom) => atom.encode(buf),
             Self::Urim(atom) => atom.encode(buf),
             Self::Camm(atom) => atom.encode(buf),
+            Self::Mebx(atom) => atom.encode(buf),
         }
     }
 }
