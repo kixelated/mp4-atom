@@ -1,4 +1,5 @@
 mod av1;
+mod av1_mdta;
 mod bbb;
 mod esds;
 mod flac;
