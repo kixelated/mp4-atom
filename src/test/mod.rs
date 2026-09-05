@@ -7,5 +7,6 @@ mod h264;
 mod hevc;
 mod image;
 mod libavif_anim;
+mod mebx;
 mod uncompressed;
 mod vp9;
