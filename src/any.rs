@@ -325,6 +325,7 @@ any! {
                             Camm,
                             Mebx,
                                 Keyd,
+                                Dtyp,
                                 Loca,
                                 Setu,
                         Stts,

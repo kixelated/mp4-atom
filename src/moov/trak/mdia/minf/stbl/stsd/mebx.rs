@@ -31,6 +31,88 @@ impl Atom for Keyd {
     }
 }
 
+/// The value type declared by a [`Dtyp`] atom.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum DataType {
+    /// `datatype_namespace` `0`: a well-known type code shared with the
+    /// iTunes `data` atom (e.g. `1` = UTF-8, `21` = BE signed integer, `23` =
+    /// BE float32) -- see the [well-known types](https://developer.apple.com/documentation/quicktime-file-format/well-known_types) table.
+    WellKnown(u32),
+    /// `datatype_namespace` `1`: a namespace-specific type name (a
+    /// case-sensitive reverse-DNS string, e.g. for a custom/structured value
+    /// type not covered by a well-known type).
+    Custom(String),
+    /// A `datatype_namespace` this crate doesn't interpret (reserved for a
+    /// future revision of the spec, or a foreign metadata standard's own
+    /// numbering/naming scheme); the raw bytes are preserved as-is.
+    Unknown(u32, Vec<u8>),
+}
+
+/// Metadata Datatype Definition Atom ('dtyp').
+///
+/// Declares the value type of a metadata key. Optional -- a key with no
+/// `dtyp` has an implicit/unspecified type.
+///
+/// Apple/QuickTime-specific: not part of ISO/IEC 14496-12's own
+/// `MetadataKeyBox` (which instead only defines `keyd`/`loca`/`setu`), but a
+/// commonly-written extension child under the same box.
+///
+/// See Apple's [Metadata datatype definition atom](https://developer.apple.com/documentation/quicktime-file-format/metadata_datatype_definition_atom).
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Dtyp {
+    pub data_type: DataType,
+}
+
+impl Atom for Dtyp {
+    const KIND: FourCC = FourCC::new(b"dtyp");
+
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        let namespace = u32::decode(buf)?;
+        let data_type = match namespace {
+            0 => DataType::WellKnown(u32::decode(buf)?),
+            // A case-sensitive UTF-8 string without a null terminator,
+            // filling the rest of the atom.
+            1 => {
+                let remaining = buf.remaining();
+                let bytes = buf.slice(remaining).to_vec();
+                buf.advance(remaining);
+                DataType::Custom(
+                    String::from_utf8(bytes)
+                        .map_err(|err| Error::InvalidString(err.to_string()))?,
+                )
+            }
+            _ => {
+                let remaining = buf.remaining();
+                let raw = buf.slice(remaining).to_vec();
+                buf.advance(remaining);
+                DataType::Unknown(namespace, raw)
+            }
+        };
+        Ok(Self { data_type })
+    }
+
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        match &self.data_type {
+            DataType::WellKnown(code) => {
+                0u32.encode(buf)?;
+                code.encode(buf)
+            }
+            DataType::Custom(name) => {
+                1u32.encode(buf)?;
+                buf.append_slice(name.as_bytes());
+                Ok(())
+            }
+            DataType::Unknown(namespace, raw) => {
+                namespace.encode(buf)?;
+                buf.append_slice(raw);
+                Ok(())
+            }
+        }
+    }
+}
+
 /// Metadata Locale Box ('loca').
 ///
 /// Tags a key declaration as applying only to a specific locale, so a track
@@ -102,6 +184,7 @@ impl Atom for Setu {
 pub struct MebxKey {
     pub local_key_id: FourCC,
     pub keyd: Keyd,
+    pub dtyp: Option<Dtyp>,
     pub loca: Option<Loca>,
     pub setu: Option<Setu>,
 }
@@ -123,11 +206,13 @@ impl MebxKey {
         let mut body = buf.slice(size);
 
         let mut keyd = None;
+        let mut dtyp = None;
         let mut loca = None;
         let mut setu = None;
         while let Some(atom) = Any::decode_maybe(&mut body)? {
             match atom {
                 Any::Keyd(atom) => keyd = atom.into(),
+                Any::Dtyp(atom) => dtyp = atom.into(),
                 Any::Loca(atom) => loca = atom.into(),
                 Any::Setu(atom) => setu = atom.into(),
                 unknown => crate::decode_unknown(&unknown, header.kind)?,
@@ -138,6 +223,7 @@ impl MebxKey {
         Ok(Some(Self {
             local_key_id: header.kind,
             keyd: keyd.ok_or(Error::MissingBox(Keyd::KIND))?,
+            dtyp,
             loca,
             setu,
         }))
@@ -148,6 +234,7 @@ impl MebxKey {
         0u32.encode(buf)?; // size placeholder
         self.local_key_id.encode(buf)?;
         self.keyd.encode(buf)?;
+        self.dtyp.encode(buf)?;
         self.loca.encode(buf)?;
         self.setu.encode(buf)?;
 
@@ -263,6 +350,9 @@ mod tests {
                     key_namespace: FourCC::new(b"mdta"),
                     key_value: b"com.apple.quicktime.location.ISO6709".to_vec(),
                 },
+                dtyp: Some(Dtyp {
+                    data_type: DataType::WellKnown(1), // UTF-8
+                }),
                 loca: None,
                 setu: None,
             },
@@ -272,6 +362,9 @@ mod tests {
                     key_namespace: FourCC::new(b"mdta"),
                     key_value: b"com.example.custom-value".to_vec(),
                 },
+                dtyp: Some(Dtyp {
+                    data_type: DataType::Custom("com.example.custom-type".into()),
+                }),
                 loca: Some(Loca {
                     locale: "en-US".into(),
                 }),
@@ -383,5 +476,49 @@ mod tests {
 
         let decoded = Loca::decode(&mut buf.as_slice()).expect("failed to decode loca");
         assert_eq!(decoded, loca);
+    }
+
+    #[test]
+    fn test_dtyp_well_known_roundtrip() {
+        let dtyp = Dtyp {
+            data_type: DataType::WellKnown(23), // BE float32
+        };
+
+        let mut buf = Vec::new();
+        dtyp.encode(&mut buf).unwrap();
+
+        let decoded = Dtyp::decode(&mut buf.as_slice()).expect("failed to decode dtyp");
+        assert_eq!(decoded, dtyp);
+    }
+
+    #[test]
+    fn test_dtyp_custom_roundtrip() {
+        // The custom-namespace `datatype array` has no null terminator; it
+        // fills the rest of the atom.
+        let dtyp = Dtyp {
+            data_type: DataType::Custom("com.example.custom-type".into()),
+        };
+
+        let mut buf = Vec::new();
+        dtyp.encode(&mut buf).unwrap();
+
+        let decoded = Dtyp::decode(&mut buf.as_slice()).expect("failed to decode dtyp");
+        assert_eq!(decoded, dtyp);
+    }
+
+    #[test]
+    fn test_dtyp_unknown_namespace_preserves_bytes() {
+        // A `datatype_namespace` other than 0/1 should still round-trip its
+        // raw bytes unchanged, per spec ("should be ignored" but "some
+        // processing is still possible... such as copying it between tracks").
+        let dtyp = Dtyp {
+            data_type: DataType::Unknown(99, vec![1, 2, 3, 4]),
+        };
+
+        let mut buf = Vec::new();
+        dtyp.encode(&mut buf).unwrap();
+
+        let decoded = Dtyp::decode(&mut buf.as_slice()).expect("failed to decode dtyp");
+        assert_eq!(decoded, dtyp);
     }
 }
