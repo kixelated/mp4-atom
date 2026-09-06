@@ -351,6 +351,63 @@ impl From<usize> for Zeroed {
     }
 }
 
+#[derive(Copy, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ExtendedType([u8; 16]);
+
+impl ExtendedType {
+    pub const fn new(value: &[u8; 16]) -> Self {
+        ExtendedType(*value)
+    }
+}
+
+impl From<&[u8; 16]> for ExtendedType {
+    fn from(val: &[u8; 16]) -> ExtendedType {
+        ExtendedType(*val)
+    }
+}
+
+impl From<[u8; 16]> for ExtendedType {
+    fn from(val: [u8; 16]) -> ExtendedType {
+        ExtendedType(val)
+    }
+}
+
+impl From<ExtendedType> for [u8; 16] {
+    fn from(et: ExtendedType) -> [u8; 16] {
+        et.0
+    }
+}
+
+impl Encode for ExtendedType {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        self.0.encode(buf)
+    }
+}
+impl Decode for ExtendedType {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        Ok(ExtendedType(<[u8; 16]>::decode(buf)?))
+    }
+}
+
+impl fmt::Display for ExtendedType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:02x?}", self.0)
+    }
+}
+
+impl fmt::Debug for ExtendedType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:02x?}", self.0)
+    }
+}
+
+impl AsRef<[u8; 16]> for ExtendedType {
+    fn as_ref(&self) -> &[u8; 16] {
+        &self.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{Compressor, Decode as _, Encode as _};
