@@ -18,6 +18,10 @@ impl FourCC {
     pub const fn new(value: &[u8; 4]) -> Self {
         FourCC(*value)
     }
+
+    pub const fn from_u32(value: u32) -> Self {
+        FourCC(value.to_be_bytes())
+    }
 }
 
 impl From<u32> for FourCC {
