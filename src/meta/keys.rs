@@ -92,6 +92,23 @@ mod tests {
     }
 
     #[test]
+    fn test_keys_truncated_entry_does_not_panic() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&24u32.to_be_bytes()); // outer `keys` box size
+        buf.extend_from_slice(b"keys");
+        buf.extend_from_slice(&0u32.to_be_bytes()); // version + flags
+        buf.extend_from_slice(&1u32.to_be_bytes()); // entry_count = 1
+
+        // Inner entry header declares a body size of 100 bytes, but nothing
+        // actually follows within the outer box.
+        buf.extend_from_slice(&108u32.to_be_bytes());
+        buf.extend_from_slice(b"mdta");
+
+        let result = Keys::decode(&mut buf.as_slice());
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_keys_empty() {
         let keys = Keys::default();
 
