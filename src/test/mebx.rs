@@ -38,6 +38,7 @@ fn mebx() {
                 key_namespace: FourCC::new(b"me4c"),
                 key_value: local_key_id.to_vec(),
             },
+            dtyp: None,
             loca: loca.map(|locale| Loca {
                 locale: locale.into(),
             }),
