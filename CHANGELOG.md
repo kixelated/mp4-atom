@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0](https://github.com/kixelated/mp4-atom/compare/v0.15.0...v0.16.0) - 2026-09-07
+
+### Other
+
+- add support for Apples dtyp box ([#234](https://github.com/kixelated/mp4-atom/pull/234))
+- add additional test ([#233](https://github.com/kixelated/mp4-atom/pull/233))
+- add support for mebx ([#230](https://github.com/kixelated/mp4-atom/pull/230))
+- Add support for mdta-style meta data ([#228](https://github.com/kixelated/mp4-atom/pull/228))
+- add support for Nero-style Chapter List Box (`chpl`) ([#232](https://github.com/kixelated/mp4-atom/pull/232))
+- preserve unknown stsd codec bodies on parse, refuse to emit ([#229](https://github.com/kixelated/mp4-atom/pull/229))
+- Add support for metadata tracks ([#226](https://github.com/kixelated/mp4-atom/pull/226))
+
 ## [0.15.0](https://github.com/kixelated/mp4-atom/compare/v0.14.0...v0.15.0) - 2026-07-31
 
 ### Fixed
