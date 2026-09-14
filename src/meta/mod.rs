@@ -4,6 +4,7 @@ mod iloc;
 mod ilst;
 mod iprp;
 mod iref;
+mod keys;
 mod pitm;
 mod properties;
 
@@ -13,6 +14,7 @@ pub use iloc::*;
 pub use ilst::*;
 pub use iprp::*;
 pub use iref::*;
+pub use keys::*;
 pub use pitm::*;
 pub use properties::*;
 
@@ -50,6 +52,7 @@ meta_atom! {
         Iref,
         Idat,
         Ilst,
+        Keys,
 }
 
 // Implement helpers to make it easier to get these atoms.
