@@ -351,6 +351,7 @@ impl From<usize> for Zeroed {
     }
 }
 
+/// A 16-byte code used to identify UUID boxes.
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ExtendedType([u8; 16]);
@@ -410,7 +411,7 @@ impl AsRef<[u8; 16]> for ExtendedType {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Compressor, Decode as _, Encode as _};
+    use crate::{Compressor, Decode as _, Encode as _, ExtendedType};
 
     #[test]
     fn check_compressor_encode_minimal() {
@@ -472,5 +473,24 @@ mod tests {
         let mut buf = Vec::new();
         let result = compressor.encode(&mut buf);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extended_type_creation_and_conversion() {
+        let bytes: [u8; 16] = [
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
+            0x0e, 0x0f,
+        ];
+
+        let et_new = ExtendedType::new(&bytes);
+        let et_from = ExtendedType::from(bytes);
+        let et_ref_from = ExtendedType::from(&bytes);
+
+        assert_eq!(et_new, et_from);
+        assert_eq!(et_from, et_ref_from);
+
+        let output = <[u8; 16]>::from(et_new);
+
+        assert_eq!(bytes, output);
     }
 }
