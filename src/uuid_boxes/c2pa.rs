@@ -1,5 +1,7 @@
 use crate::*;
 
+/// Represents the C2PA box/atom.
+/// https://spec.c2pa.org/specifications/specifications/2.4/specs/C2PA_Specification.html#uuid_box
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct C2pa {
@@ -44,13 +46,13 @@ mod tests {
 
         let mut buf = Vec::new();
 
-        let _ = C2pa::encode_uuid_body_ext(&input, &mut buf)?;
+        C2pa::encode_uuid_body_ext(&input, &mut buf)?;
 
         let mut cursor = &buf[..];
 
-        let ouput = C2pa::decode_uuid_body_ext(&mut cursor, ())?;
+        let output = C2pa::decode_uuid_body_ext(&mut cursor, ())?;
 
-        assert_eq!(input, ouput);
+        assert_eq!(input, output);
 
         Ok(())
     }
