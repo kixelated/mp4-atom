@@ -40,6 +40,8 @@ impl<T: UuidAtomExt> UuidAtom for T {
     }
 }
 
+// This can be encapuslated in a macro to allow new uuid boxes to be made
+// without adding new match arms. In the same way as in ./any.rs
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[non_exhaustive]
@@ -48,7 +50,6 @@ pub enum Uuid {
     Unknown(ExtendedType, Vec<u8>),
 }
 
-// This should be made in a macro to support all defined box types TODO
 impl Atom for Uuid {
     const KIND: FourCC = FourCC::new(b"uuid");
 
@@ -58,8 +59,6 @@ impl Atom for Uuid {
         match et {
             C2pa::EXTENDED_TYPE => Ok(Uuid::C2pa(C2pa::decode_uuid_body(buf)?)),
             _ => {
-                // Consider changing to use bytes lib
-                // implementation for efficency TODO
                 let payload = Vec::<u8>::decode(buf)?;
                 Ok(Uuid::Unknown(et, payload))
             }
