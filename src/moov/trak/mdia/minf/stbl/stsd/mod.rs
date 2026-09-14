@@ -13,6 +13,7 @@ mod flac;
 mod ftab;
 mod h264;
 mod hevc;
+mod jpeg;
 mod mebx;
 mod metadata;
 mod mett;
@@ -45,6 +46,7 @@ pub use flac::*;
 pub use ftab::*;
 pub use h264::*;
 pub use hevc::*;
+pub use jpeg::*;
 pub use mebx::*;
 pub use metadata::*;
 pub use mett::*;
@@ -78,6 +80,9 @@ pub struct Stsd {
 pub enum Codec {
     // H264
     Avc1(Avc1),
+
+    // Photo - JPEG (QuickTime Motion JPEG)
+    Jpeg(Jpeg),
 
     // HEVC: SPS/PPS/VPS is inline
     Hev1(Hev1),
@@ -160,6 +165,7 @@ impl Decode for Codec {
         let atom = Any::decode(buf)?;
         Ok(match atom {
             Any::Avc1(atom) => atom.into(),
+            Any::Jpeg(atom) => atom.into(),
             Any::Hev1(atom) => atom.into(),
             Any::Hvc1(atom) => atom.into(),
             Any::Vp08(atom) => atom.into(),
@@ -209,6 +215,7 @@ impl Encode for Codec {
         match self {
             Self::Unknown(..) => Err(Error::UnknownCodec),
             Self::Avc1(atom) => atom.encode(buf),
+            Self::Jpeg(atom) => atom.encode(buf),
             Self::Hev1(atom) => atom.encode(buf),
             Self::Hvc1(atom) => atom.encode(buf),
             Self::Vp08(atom) => atom.encode(buf),
