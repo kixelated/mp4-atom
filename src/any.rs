@@ -370,6 +370,7 @@ any! {
     Mfra,
         Tfra,
         Mfro,
+    Uuid,
     ],
     boxed: [
         Trak,
