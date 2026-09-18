@@ -213,7 +213,18 @@ impl Decode for Codec {
 impl Encode for Codec {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         match self {
-            Self::Unknown(..) => Err(Error::UnknownCodec),
+            Self::Unknown(kind, body) => {
+                let start = buf.len();
+                0u32.encode(buf)?; // size placeholder
+                kind.encode(buf)?;
+                buf.append_slice(body);
+
+                let size: u32 = (buf.len() - start)
+                    .try_into()
+                    .map_err(|_| Error::TooLarge(*kind))?;
+                buf.set_slice(start, &size.to_be_bytes());
+                Ok(())
+            }
             Self::Avc1(atom) => atom.encode(buf),
             Self::Jpeg(atom) => atom.encode(buf),
             Self::Hev1(atom) => atom.encode(buf),
@@ -294,21 +305,18 @@ mod tests {
     }
 
     #[test]
-
-    fn unknown_codec_not_emitted() {
-        use crate::{Codec, Encode, FourCC, Stsd};
+    fn unknown_codec_roundtrip() {
+        use crate::{Codec, Decode, Encode, FourCC, Stsd};
 
         let stsd = Stsd {
             codecs: vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])],
         };
-        assert_eq!(
-            stsd.codecs,
-            vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
-        );
+
         let mut output = Vec::new();
-        assert!(matches!(
-            stsd.encode(&mut output),
-            Err(crate::Error::UnknownCodec)
-        ));
+        stsd.encode(&mut output)
+            .expect("failed to encode unknown codec");
+
+        let decoded = Stsd::decode(&mut output.as_slice()).expect("failed to decode stsd");
+        assert_eq!(decoded, stsd);
     }
 }
