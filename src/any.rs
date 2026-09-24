@@ -292,6 +292,7 @@ any! {
                                 Hvcc, Lhvc,
                             Mp4a,
                                 Esds,
+                            Mp3,
                             Tx3g,
                                 Ftab,
                             Vp08, Vp09,
