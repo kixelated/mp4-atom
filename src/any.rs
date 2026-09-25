@@ -287,6 +287,7 @@ any! {
                                 Pasp,
                                 Taic,
                                 Fiel,
+                            Jpeg,
                             Hev1, Hvc1,
                                 Hvcc, Lhvc,
                             Mp4a,
