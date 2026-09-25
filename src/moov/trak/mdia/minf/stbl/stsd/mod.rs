@@ -18,6 +18,7 @@ mod mebx;
 mod metadata;
 mod mett;
 mod metx;
+mod mp3;
 mod mp4a;
 mod opus;
 mod pasp;
@@ -51,6 +52,7 @@ pub use mebx::*;
 pub use metadata::*;
 pub use mett::*;
 pub use metx::*;
+pub use mp3::*;
 pub use mp4a::*;
 pub use opus::*;
 pub use pasp::*;
@@ -101,6 +103,9 @@ pub enum Codec {
 
     // AAC
     Mp4a(Mp4a),
+
+    // MP3
+    Mp3(Mp3),
 
     // Text
     Tx3g(Tx3g),
@@ -171,6 +176,7 @@ impl Decode for Codec {
             Any::Vp08(atom) => atom.into(),
             Any::Vp09(atom) => atom.into(),
             Any::Mp4a(atom) => atom.into(),
+            Any::Mp3(atom) => atom.into(),
             Any::Tx3g(atom) => atom.into(),
             Any::Av01(atom) => atom.into(),
             Any::Opus(atom) => atom.into(),
@@ -221,6 +227,7 @@ impl Encode for Codec {
             Self::Vp08(atom) => atom.encode(buf),
             Self::Vp09(atom) => atom.encode(buf),
             Self::Mp4a(atom) => atom.encode(buf),
+            Self::Mp3(atom) => atom.encode(buf),
             Self::Tx3g(atom) => atom.encode(buf),
             Self::Av01(atom) => atom.encode(buf),
             Self::Opus(atom) => atom.encode(buf),
