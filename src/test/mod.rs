@@ -1,6 +1,7 @@
 mod av1;
 mod av1_mdta;
 mod bbb;
+mod c2pa;
 mod esds;
 mod flac;
 mod h264;
