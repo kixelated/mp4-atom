@@ -325,6 +325,8 @@ any! {
                                 Uri,
                                 UriI,
                             Camm,
+                            Evte,
+                                Silb,
                             Mebx,
                                 Keyd,
                                 Dtyp,
