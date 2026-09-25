@@ -147,13 +147,21 @@ impl Atom for Hvcc {
         let length_size_minus_one = self.length_size_minus_one & 0b11;
         (constant_frame_rate | num_temporal_layers | temporal_id_nested | length_size_minus_one)
             .encode(buf)?;
-        (self.arrays.len() as u8).encode(buf)?;
+        // numOfArrays is 8 bits, numNalus is 16 bits, and each NAL length is 16
+        // bits; reject values that would silently truncate.
+        u8::try_from(self.arrays.len())
+            .map_err(|_| Error::OutOfRange)?
+            .encode(buf)?;
         for arr in &self.arrays {
             ((arr.nal_unit_type & 0b111111) | (u8::from(arr.completeness) << 7)).encode(buf)?;
-            (arr.nalus.len() as u16).encode(buf)?;
+            u16::try_from(arr.nalus.len())
+                .map_err(|_| Error::OutOfRange)?
+                .encode(buf)?;
 
             for nalu in &arr.nalus {
-                (nalu.len() as u16).encode(buf)?;
+                u16::try_from(nalu.len())
+                    .map_err(|_| Error::OutOfRange)?
+                    .encode(buf)?;
                 nalu.encode(buf)?;
             }
         }

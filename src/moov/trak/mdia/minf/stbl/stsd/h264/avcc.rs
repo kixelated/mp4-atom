@@ -34,11 +34,31 @@ impl Default for AvccExt {
     }
 }
 
+/// Whether an AVCDecoderConfigurationRecord with this `profile_idc` carries the
+/// chroma/bit-depth extension block. Per ISO/IEC 14496-15 the extension is
+/// present for these High-profile indications (note the real High 4:4:4
+/// Predictive value is 244; some older spec text erroneously listed 144).
+fn profile_has_ext(profile_idc: u8) -> bool {
+    matches!(
+        profile_idc,
+        100 | 110 | 122 | 144 | 244 | 44 | 83 | 86 | 118 | 128 | 138 | 139 | 134 | 135
+    )
+}
+
 impl Avcc {
     pub fn new(sps: &[u8], pps: &[u8]) -> Result<Self> {
         if sps.len() < 4 {
             return Err(Error::OutOfBounds);
         }
+
+        // High profiles require the extension block; supply spec-compliant
+        // defaults (4:2:0, 8-bit) rather than emitting a record that omits it.
+        // TODO This information could be parsed out of the SPS.
+        let ext = if profile_has_ext(sps[1]) {
+            Some(AvccExt::default())
+        } else {
+            None
+        };
 
         Ok(Self {
             configuration_version: 1,
@@ -48,9 +68,7 @@ impl Avcc {
             length_size: 4,
             sequence_parameter_sets: vec![sps.into()],
             picture_parameter_sets: vec![pps.into()],
-
-            // TODO This information could be parsed out of the SPS
-            ext: None,
+            ext,
         })
     }
 }
@@ -86,9 +104,12 @@ impl Atom for Avcc {
             picture_parameter_sets.push(nal);
         }
 
-        // NOTE: Many encoders/decoders skip this extended avcC part.
-        // It's profile specific, but we don't really care and will parse it if present.
-        let ext = if buf.has_remaining() {
+        // The extension block is only defined for High profiles. Gating on the
+        // profile (rather than on leftover bytes) avoids misparsing trailing
+        // padding after a Baseline record as a chroma/bit-depth extension.
+        // Its absence on a High-profile record is tolerated (some encoders omit
+        // it), in which case any stray trailing bytes surface as UnderDecode.
+        let ext = if profile_has_ext(avc_profile_indication) && buf.has_remaining() {
             let chroma_format = u8::decode(buf)? & 0x3;
             let bit_depth_luma_minus8 = u8::decode(buf)? & 0x7;
             let bit_depth_chroma_minus8 = u8::decode(buf)? & 0x7;
@@ -136,15 +157,26 @@ impl Atom for Avcc {
         };
         (length_size | 0xFC).encode(buf)?;
 
+        // numOfSequenceParameterSets is a 5-bit field (top 3 bits reserved).
+        if self.sequence_parameter_sets.len() > 0x1F {
+            return Err(Error::OutOfRange);
+        }
         (self.sequence_parameter_sets.len() as u8 | 0xE0).encode(buf)?;
         for sps in &self.sequence_parameter_sets {
-            (sps.len() as u16).encode(buf)?;
+            u16::try_from(sps.len())
+                .map_err(|_| Error::OutOfRange)?
+                .encode(buf)?;
             sps.encode(buf)?;
         }
 
-        (self.picture_parameter_sets.len() as u8).encode(buf)?;
+        // numOfPictureParameterSets is an 8-bit field.
+        u8::try_from(self.picture_parameter_sets.len())
+            .map_err(|_| Error::OutOfRange)?
+            .encode(buf)?;
         for pps in &self.picture_parameter_sets {
-            (pps.len() as u16).encode(buf)?;
+            u16::try_from(pps.len())
+                .map_err(|_| Error::OutOfRange)?
+                .encode(buf)?;
             pps.encode(buf)?;
         }
 
@@ -168,9 +200,13 @@ impl Atom for Avcc {
             )
             .map(|n| n | 0b11111000)?
             .encode(buf)?;
-            (ext.sequence_parameter_sets_ext.len() as u8).encode(buf)?;
+            u8::try_from(ext.sequence_parameter_sets_ext.len())
+                .map_err(|_| Error::OutOfRange)?
+                .encode(buf)?;
             for sps in &ext.sequence_parameter_sets_ext {
-                (sps.len() as u16).encode(buf)?;
+                u16::try_from(sps.len())
+                    .map_err(|_| Error::OutOfRange)?
+                    .encode(buf)?;
                 sps.encode(buf)?;
             }
         }

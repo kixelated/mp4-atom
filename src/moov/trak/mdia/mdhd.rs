@@ -6,7 +6,7 @@ ext! {
     flags: {}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mdhd {
     pub creation_time: u64,
@@ -14,6 +14,21 @@ pub struct Mdhd {
     pub timescale: u32,
     pub duration: u64,
     pub language: String,
+}
+
+impl Default for Mdhd {
+    fn default() -> Self {
+        Self {
+            creation_time: 0,
+            modification_time: 0,
+            timescale: 0,
+            duration: 0,
+            // "und" (undetermined) is the ISO 639-2 code for an unspecified
+            // language. An empty string is not representable in the packed
+            // 15-bit form and would not survive an encode/decode round-trip.
+            language: "und".to_string(),
+        }
+    }
 }
 
 impl AtomExt for Mdhd {
@@ -78,6 +93,17 @@ mod tests {
             duration: 30439936,
             language: String::from("und"),
         };
+        let mut buf = Vec::new();
+        expected.encode(&mut buf).unwrap();
+
+        let mut buf = buf.as_ref();
+        let decoded = Mdhd::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn test_mdhd_default_round_trip() {
+        let expected = Mdhd::default();
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
 

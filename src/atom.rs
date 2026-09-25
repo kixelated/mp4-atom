@@ -24,13 +24,10 @@ impl<T: Atom> Encode for T {
         Self::KIND.encode(buf)?;
         self.encode_body(buf)?;
 
-        // Update the size field
-        // TODO support sizes larger than u32 (4GB)
-        let size: u32 = (buf.len() - start)
-            .try_into()
-            .map_err(|_| Error::TooLarge(T::KIND))?;
-
-        buf.set_slice(start, &size.to_be_bytes());
+        // Update the size field, switching to the 64-bit largesize form if the
+        // box exceeds u32::MAX.
+        let len = buf.len() - start;
+        write_box_size(buf, start, len, T::KIND)?;
 
         Ok(())
     }

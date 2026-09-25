@@ -57,6 +57,9 @@ pub enum Error {
     #[error("out of memory")]
     OutOfMemory,
 
+    #[error("value out of range")]
+    OutOfRange,
+
     #[error("reserved")]
     Reserved,
 

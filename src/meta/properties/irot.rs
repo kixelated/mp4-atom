@@ -19,7 +19,9 @@ impl Atom for Irot {
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        self.angle.encode(buf)
+        // Only the low 2 bits are meaningful; the upper 6 bits are reserved and
+        // masked off on decode, so mask here too for a symmetric round-trip.
+        (self.angle & 0x03).encode(buf)
     }
 }
 
