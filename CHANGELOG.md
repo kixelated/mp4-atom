@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1](https://github.com/kixelated/mp4-atom/compare/v0.16.0...v0.16.1) - 2026-09-26
+
+### Other
+
+- add support for evte ([#238](https://github.com/kixelated/mp4-atom/pull/238))
+
 ## [0.16.0](https://github.com/kixelated/mp4-atom/compare/v0.15.0...v0.16.0) - 2026-09-25
 
 ### Other
