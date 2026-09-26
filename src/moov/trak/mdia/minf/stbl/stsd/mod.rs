@@ -8,6 +8,7 @@ mod ccst;
 mod chnl;
 mod colr;
 mod eac3;
+mod evte;
 mod fiel;
 mod flac;
 mod ftab;
@@ -42,6 +43,7 @@ pub use ccst::*;
 pub use chnl::*;
 pub use colr::*;
 pub use eac3::*;
+pub use evte::*;
 pub use fiel::*;
 pub use flac::*;
 pub use ftab::*;
@@ -158,6 +160,10 @@ pub enum Codec {
     // Camera motion metadata (gyroscope/accelerometer), used by Google devices
     Camm(Camm),
 
+    // CMAF/DASH Event Message track, carrying `Emsg` boxes as samples
+    // (ISO/IEC 23001-18).
+    Evte(Evte),
+
     // Structured/"boxed" timed metadata, QuickTime "Metadata Media"
     Mebx(Mebx),
 
@@ -200,6 +206,7 @@ impl Decode for Codec {
             Any::Metx(atom) => atom.into(),
             Any::Urim(atom) => atom.into(),
             Any::Camm(atom) => atom.into(),
+            Any::Evte(atom) => atom.into(),
             Any::Mebx(atom) => atom.into(),
             Any::Unknown(four_cc, body) => Self::Unknown(four_cc, body),
             unknown => {
@@ -251,6 +258,7 @@ impl Encode for Codec {
             Self::Metx(atom) => atom.encode(buf),
             Self::Urim(atom) => atom.encode(buf),
             Self::Camm(atom) => atom.encode(buf),
+            Self::Evte(atom) => atom.encode(buf),
             Self::Mebx(atom) => atom.encode(buf),
         }
     }
