@@ -58,20 +58,11 @@ macro_rules! any {
 
         impl Encode for Any {
             fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-                let start = buf.len();
-                0u32.encode(buf)?;
-                self.kind().encode(buf)?;
-
-                match self {
+                buf.encode_atom(self.kind(), |buf| match self {
                     $(Any::$kind(inner) => Atom::encode_body(inner, buf),)*
                     $(Any::$boxed(boxed) => Atom::encode_body(boxed.as_ref(), buf),)*
                     Any::Unknown(_, data) => data.encode(buf),
-                }?;
-
-                let size: u32 = (buf.len() - start).try_into().map_err(|_| Error::TooLarge(self.kind()))?;
-                buf.set_slice(start, &size.to_be_bytes());
-
-                Ok(())
+                })
             }
         }
 

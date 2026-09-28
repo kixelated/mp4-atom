@@ -1,5 +1,7 @@
 use std::io::Cursor;
 
+use crate::{Encode, Error, FourCC, Result};
+
 /// A contiguous buffer of bytes.
 // We're not using bytes::Buf because of some strange bugs with take().
 pub trait Buf {
@@ -101,6 +103,27 @@ pub trait BufMut {
 
     // Set a slice at a position in the buffer.
     fn set_slice(&mut self, pos: usize, val: &[u8]);
+
+    /// Write a box header (`size(4) + kind(4)`) with a placeholder size, run
+    /// `f` to encode the body, then go back and patch the placeholder with
+    /// the total number of bytes written (header included).
+    fn encode_atom<F>(&mut self, kind: FourCC, f: F) -> Result<()>
+    where
+        Self: Sized,
+        F: FnOnce(&mut Self) -> Result<()>,
+    {
+        let start = self.len();
+        0u32.encode(self)?; // size placeholder
+        kind.encode(self)?;
+
+        f(self)?;
+
+        let size: u32 = (self.len() - start)
+            .try_into()
+            .map_err(|_| Error::TooLarge(kind))?;
+        self.set_slice(start, &size.to_be_bytes());
+        Ok(())
+    }
 }
 
 impl BufMut for Vec<u8> {
