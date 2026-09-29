@@ -115,15 +115,7 @@ impl Atom for Ilst {
                 return Err(Error::Unsupported("mdta index out of range"));
             }
 
-            let start = buf.len();
-            0u32.encode(buf)?; // size placeholder
-            FourCC::from(*index).encode(buf)?;
-            data.encode(buf)?;
-
-            let size: u32 = (buf.len() - start)
-                .try_into()
-                .map_err(|_| Error::TooLarge(FourCC::from(*index)))?;
-            buf.set_slice(start, &size.to_be_bytes());
+            buf.encode_atom(FourCC::from(*index), |buf| data.encode(buf))?;
         }
 
         Ok(())

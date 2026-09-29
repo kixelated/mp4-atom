@@ -230,19 +230,12 @@ impl MebxKey {
     }
 
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        let start = buf.len();
-        0u32.encode(buf)?; // size placeholder
-        self.local_key_id.encode(buf)?;
-        self.keyd.encode(buf)?;
-        self.dtyp.encode(buf)?;
-        self.loca.encode(buf)?;
-        self.setu.encode(buf)?;
-
-        let size: u32 = (buf.len() - start)
-            .try_into()
-            .map_err(|_| Error::TooLarge(self.local_key_id))?;
-        buf.set_slice(start, &size.to_be_bytes());
-        Ok(())
+        buf.encode_atom(self.local_key_id, |buf| {
+            self.keyd.encode(buf)?;
+            self.dtyp.encode(buf)?;
+            self.loca.encode(buf)?;
+            self.setu.encode(buf)
+        })
     }
 }
 
@@ -267,18 +260,12 @@ fn decode_keys<B: Buf>(header: &Header, buf: &mut B) -> Result<Vec<MebxKey>> {
 }
 
 fn encode_keys<B: BufMut>(keys: &[MebxKey], buf: &mut B) -> Result<()> {
-    let start = buf.len();
-    0u32.encode(buf)?; // size placeholder
-    KEYS_KIND.encode(buf)?;
-    for key in keys {
-        key.encode(buf)?;
-    }
-
-    let size: u32 = (buf.len() - start)
-        .try_into()
-        .map_err(|_| Error::TooLarge(KEYS_KIND))?;
-    buf.set_slice(start, &size.to_be_bytes());
-    Ok(())
+    buf.encode_atom(KEYS_KIND, |buf| {
+        for key in keys {
+            key.encode(buf)?;
+        }
+        Ok(())
+    })
 }
 
 /// BoxedMetadataSampleEntry ('mebx'), used for multiplexed/"boxed" timed
