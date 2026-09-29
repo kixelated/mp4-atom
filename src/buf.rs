@@ -107,11 +107,13 @@ pub trait BufMut {
     /// Write a box header (`size(4) + kind(4)`) with a placeholder size, run
     /// `f` to encode the body, then go back and patch the placeholder with
     /// the total number of bytes written (header included).
-    fn encode_atom<F>(&mut self, kind: FourCC, f: F) -> Result<()>
+    fn encode_atom<F>(&mut self, kind: impl Into<FourCC>, f: F) -> Result<()>
     where
         Self: Sized,
         F: FnOnce(&mut Self) -> Result<()>,
     {
+        let kind = kind.into();
+
         let start = self.len();
         0u32.encode(self)?; // size placeholder
         kind.encode(self)?;
