@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use crate::*;
 
 /// The content of a single sample in an Event Message track (the
@@ -48,11 +50,19 @@ impl EvteSample {
         }
     }
 
-    pub fn encode<B: BufMut>(emibs: &Vec<Emib>, buf: &mut B) -> Result<()> {
-        if emibs.is_empty() {
-            Emeb.encode(buf)
+    pub fn encode<B: BufMut>(
+        emibs: impl IntoIterator<Item = impl Borrow<Emib>>,
+        buf: &mut B,
+    ) -> Result<()> {
+        let mut wrote_atom = false;
+        for emib in emibs {
+            emib.borrow().encode(buf)?;
+            wrote_atom = true;
+        }
+        if wrote_atom {
+            Ok(())
         } else {
-            emibs.encode(buf)
+            Emeb.encode(buf)
         }
     }
 }
