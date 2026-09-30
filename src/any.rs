@@ -58,20 +58,11 @@ macro_rules! any {
 
         impl Encode for Any {
             fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-                let start = buf.len();
-                0u32.encode(buf)?;
-                self.kind().encode(buf)?;
-
-                match self {
+                buf.encode_atom(self.kind(), |buf| match self {
                     $(Any::$kind(inner) => Atom::encode_body(inner, buf),)*
                     $(Any::$boxed(boxed) => Atom::encode_body(boxed.as_ref(), buf),)*
                     Any::Unknown(_, data) => data.encode(buf),
-                }?;
-
-                let size: u32 = (buf.len() - start).try_into().map_err(|_| Error::TooLarge(self.kind()))?;
-                buf.set_slice(start, &size.to_be_bytes());
-
-                Ok(())
+                })
             }
         }
 
@@ -264,6 +255,7 @@ any! {
             Name,
             Rtng,
             Year,
+        Keys,
     Moov,
         Mvhd,
         Ainf,
@@ -286,10 +278,12 @@ any! {
                                 Pasp,
                                 Taic,
                                 Fiel,
+                            Jpeg,
                             Hev1, Hvc1,
                                 Hvcc, Lhvc,
                             Mp4a,
                                 Esds,
+                            Mp3,
                             Tx3g,
                                 Ftab,
                             Vp08, Vp09,
@@ -315,6 +309,20 @@ any! {
                                 Vlab,
                             Samr,
                                 Damr,
+                            Mett,
+                                TxtC,
+                            Metx,
+                            Urim,
+                                Uri,
+                                UriI,
+                            Camm,
+                            Evte,
+                                Silb,
+                            Mebx,
+                                Keyd,
+                                Dtyp,
+                                Loca,
+                                Setu,
                         Stts,
                         Stsc,
                         Stsz,
@@ -356,6 +364,7 @@ any! {
     Mfra,
         Tfra,
         Mfro,
+    Uuid,
     ],
     boxed: [
         Trak,

@@ -1,8 +1,10 @@
+mod chpl;
 mod cprt;
 mod kind;
 mod rtng;
 mod skip;
 
+pub use chpl::*;
 pub use cprt::*;
 pub use kind::*;
 pub use rtng::*;
@@ -13,6 +15,8 @@ use crate::*;
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Udta {
+    /// Zero or one, a Nero-style chapter list (not part of the ISO/QuickTime spec).
+    pub chpl: Option<Chpl>,
     /// Zero or more, one per language (ISO/IEC 14496-12 §8.10.2).
     pub cprt: Vec<Cprt>,
     /// Zero or more, one per role/kind label (ISO/IEC 14496-12 §8.10.4).
@@ -27,6 +31,7 @@ impl Atom for Udta {
     const KIND: FourCC = FourCC::new(b"udta");
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        let mut chpl = None;
         let mut cprt = Vec::new();
         let mut kind = Vec::new();
         let mut meta = None;
@@ -52,6 +57,12 @@ impl Atom for Udta {
             // container (ISO/IEC 14496-12 §8.11.1), so a second one is
             // malformed.
             match header.kind {
+                Chpl::KIND => {
+                    if chpl.is_some() {
+                        return Err(Error::DuplicateBox(Chpl::KIND));
+                    }
+                    chpl = Some(Chpl::decode_atom(&header, buf)?);
+                }
                 Cprt::KIND => cprt.push(Cprt::decode_atom(&header, buf)?),
                 Kind::KIND => kind.push(Kind::decode_atom(&header, buf)?),
                 Meta::KIND => {
@@ -76,6 +87,7 @@ impl Atom for Udta {
         skip_trailing_padding(buf);
 
         Ok(Udta {
+            chpl,
             cprt,
             kind,
             meta,
@@ -84,6 +96,7 @@ impl Atom for Udta {
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        self.chpl.encode(buf)?;
         self.cprt.encode(buf)?;
         self.meta.encode(buf)?;
         self.kind.encode(buf)?;
@@ -99,6 +112,7 @@ mod tests {
     #[test]
     fn test_udta_empty() {
         let expected = Udta {
+            chpl: None,
             cprt: vec![],
             meta: None,
             kind: vec![],
@@ -116,6 +130,7 @@ mod tests {
     #[test]
     fn test_udta() {
         let expected = Udta {
+            chpl: None,
             cprt: vec![Cprt {
                 language: "und".into(),
                 notice: "MIT or Apache".into(),
@@ -258,6 +273,7 @@ mod tests {
     #[test]
     fn test_udta_repeated_children() {
         let expected = Udta {
+            chpl: None,
             cprt: vec![
                 Cprt {
                     language: "eng".into(),

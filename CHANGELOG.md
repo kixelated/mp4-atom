@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0](https://github.com/kixelated/mp4-atom/compare/v0.15.0...v0.16.0) - 2026-09-25
+
+### Other
+
+- add support for .mp3 ([#237](https://github.com/kixelated/mp4-atom/pull/237))
+- Feature/UUID ([#231](https://github.com/kixelated/mp4-atom/pull/231))
+- add support for jpeg ([#235](https://github.com/kixelated/mp4-atom/pull/235))
+- add support for Apples dtyp box ([#234](https://github.com/kixelated/mp4-atom/pull/234))
+- add additional test ([#233](https://github.com/kixelated/mp4-atom/pull/233))
+- add support for mebx ([#230](https://github.com/kixelated/mp4-atom/pull/230))
+- Add support for mdta-style meta data ([#228](https://github.com/kixelated/mp4-atom/pull/228))
+- add support for Nero-style Chapter List Box (`chpl`) ([#232](https://github.com/kixelated/mp4-atom/pull/232))
+- preserve unknown stsd codec bodies on parse, refuse to emit ([#229](https://github.com/kixelated/mp4-atom/pull/229))
+- Add support for metadata tracks ([#226](https://github.com/kixelated/mp4-atom/pull/226))
+
+## [0.15.0](https://github.com/kixelated/mp4-atom/compare/v0.14.0...v0.15.0) - 2026-07-31
+
+### Fixed
+
+- correct name of sidx referenced_size element ([#224](https://github.com/kixelated/mp4-atom/pull/224))
+- consistency check vpcC matrix coefficients and chroma subsampling ([#221](https://github.com/kixelated/mp4-atom/pull/221))
+- fix transactional decode_maybe ([#211](https://github.com/kixelated/mp4-atom/pull/211))
+
+### Other
+
+- update of actions on the PR workflow ([#225](https://github.com/kixelated/mp4-atom/pull/225))
+- Reject oversized sidx reference fields ([#215](https://github.com/kixelated/mp4-atom/pull/215))
+- dispatch children by namespace ([#222](https://github.com/kixelated/mp4-atom/pull/222))
+- preserve the DecoderSpecificInfo payload, make it optional, tolerate trailing bytes ([#174](https://github.com/kixelated/mp4-atom/pull/174))
+- Validate vpcC chroma subsampling during encoding ([#198](https://github.com/kixelated/mp4-atom/pull/198))
+- error on truncated codec parameters ([#220](https://github.com/kixelated/mp4-atom/pull/220))
+
 ## [0.14.0](https://github.com/kixelated/mp4-atom/compare/v0.13.0...v0.14.0) - 2026-07-18
 
 ### Fixed
