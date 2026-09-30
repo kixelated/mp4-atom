@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1](https://github.com/kixelated/mp4-atom/compare/v0.16.0...v0.16.1) - 2026-09-30
+
+### Added
+
+- add MebxSample to decode samples of mebx tracks ([#242](https://github.com/kixelated/mp4-atom/pull/242))
+- add support for emib and emeb event message boxes ([#240](https://github.com/kixelated/mp4-atom/pull/240))
+
+### Other
+
+- preserve versioned fields on encode ([#203](https://github.com/kixelated/mp4-atom/pull/203))
+- add BufMut::encode_atom to dedupe size-header boilerplate ([#241](https://github.com/kixelated/mp4-atom/pull/241))
+- add support for evte ([#238](https://github.com/kixelated/mp4-atom/pull/238))
+
 ## [0.16.0](https://github.com/kixelated/mp4-atom/compare/v0.15.0...v0.16.0) - 2026-09-25
 
 ### Other
