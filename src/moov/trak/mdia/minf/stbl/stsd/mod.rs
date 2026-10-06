@@ -85,7 +85,7 @@ pub enum Codec {
     // H264
     Avc1(Avc1),
 
-    // H264: SPS/PPS/VPS is inline
+    // H264: SPS/PPS may also be inline
     Avc3(Avc3),
 
     // Photo - JPEG (QuickTime Motion JPEG)
