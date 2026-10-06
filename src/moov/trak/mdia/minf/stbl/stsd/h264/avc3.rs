@@ -2,7 +2,7 @@ use crate::*;
 
 /// An H.264 sample entry like [Avc1], except parameter sets may also be in-band in the samples.
 ///
-/// The `avcC` box is still required (ISO/IEC 14496-15 5.4.2.1.1) but may list no parameter sets.
+/// The `avcC` box is still required (ISO/IEC 14496-15:2022 5.4.2.1.1) but may list no parameter sets.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Avc3 {
