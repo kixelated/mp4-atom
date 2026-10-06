@@ -1,5 +1,7 @@
 use crate::*;
 
+/// Auxiliary information type and parameter shared by `saiz` and `saio`,
+/// ISO/IEC 14496-12:2022 Sect 8.7.8 / 8.7.9.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AuxInfo {
@@ -51,7 +53,12 @@ impl AtomExt for Saiz {
         let default_sample_info_size = u8::decode(buf)?;
         let sample_count = u32::decode(buf)?;
         if default_sample_info_size == 0 {
-            let mut sample_info_size = Vec::with_capacity(sample_count as usize);
+            // Each entry is a single byte; reject counts that cannot
+            // possibly fit in the remaining buffer before allocating.
+            if sample_count as usize > buf.remaining() {
+                return Err(Error::OutOfBounds);
+            }
+            let mut sample_info_size = Vec::with_capacity((sample_count as usize).min(4096));
             for _ in 0..sample_count {
                 sample_info_size.push(u8::decode(buf)?);
             }
@@ -115,7 +122,13 @@ impl AtomExt for Saio {
             });
         }
         let entry_count = u32::decode(buf)?;
-        let mut offsets = Vec::with_capacity(entry_count as usize);
+        // Entries are 4 bytes (v0) or 8 bytes (v1); reject counts that
+        // cannot possibly fit in the remaining buffer before allocating.
+        let per_entry = if ext.version == SaioVersion::V1 { 8 } else { 4 };
+        if entry_count as usize > buf.remaining() / per_entry {
+            return Err(Error::OutOfBounds);
+        }
+        let mut offsets = Vec::with_capacity((entry_count as usize).min(4096));
         for _ in 0..entry_count {
             if ext.version == SaioVersion::V0 {
                 let offset = u32::decode(buf)? as u64;
@@ -425,6 +438,32 @@ mod tests {
                 offsets: vec![1166],
             }
         );
+    }
+
+    // Regression for issue #156: a u32::MAX sample_count must fail
+    // cleanly without attempting a ~4 GiB upfront allocation.
+    const ENCODED_SAIZ_HUGE_COUNT: &[u8] = &[
+        0x00, 0x00, 0x00, 0x11, 0x73, 0x61, 0x69, 0x7a, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF,
+        0xFF, 0xFF,
+    ];
+
+    #[test]
+    fn test_saiz_huge_count() {
+        let buf: &mut std::io::Cursor<&&[u8]> = &mut std::io::Cursor::new(&ENCODED_SAIZ_HUGE_COUNT);
+        assert!(matches!(Saiz::decode(buf), Err(Error::OverDecode(_))));
+    }
+
+    // Regression for issue #156: a u32::MAX entry_count must fail
+    // cleanly without attempting a multi-GiB upfront allocation.
+    const ENCODED_SAIO_HUGE_COUNT: &[u8] = &[
+        0x00, 0x00, 0x00, 0x10, 0x73, 0x61, 0x69, 0x6f, 0x01, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF,
+        0xFF,
+    ];
+
+    #[test]
+    fn test_saio_huge_count() {
+        let buf: &mut std::io::Cursor<&&[u8]> = &mut std::io::Cursor::new(&ENCODED_SAIO_HUGE_COUNT);
+        assert!(matches!(Saio::decode(buf), Err(Error::OverDecode(_))));
     }
 
     #[test]

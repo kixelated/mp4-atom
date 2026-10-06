@@ -1,9 +1,13 @@
 mod av1;
+mod av1_mdta;
 mod bbb;
+mod c2pa;
 mod esds;
 mod flac;
 mod h264;
-mod heif;
 mod hevc;
+mod image;
+mod libavif_anim;
+mod mebx;
 mod uncompressed;
 mod vp9;

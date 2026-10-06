@@ -1,4 +1,4 @@
-use crate::FourCC;
+use crate::{Any, FourCC};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -65,6 +65,23 @@ pub enum Error {
 
     #[error("missing required content: {0}")]
     MissingContent(&'static str),
+
+    #[error("invalid parameter combination: {0}")]
+    InvalidCombination(&'static str),
+
+    #[error("unknown codec in sample description box")]
+    UnknownCodec,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+/// Either logs or returns an error depending on the strict feature flag.
+pub(crate) fn decode_unknown(atom: &Any, parent: FourCC) -> Result<()> {
+    if cfg!(feature = "strict") || cfg!(test) {
+        tracing::error!(kind = %atom.kind(), parent = %parent, "unexpected box");
+        return Err(Error::UnexpectedBox(atom.kind()));
+    } else {
+        tracing::warn!(kind = %atom.kind(), parent = %parent, "unexpected box");
+    }
+    Ok(())
+}

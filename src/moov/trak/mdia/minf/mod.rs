@@ -1,11 +1,17 @@
 mod dinf;
+mod hmhd;
+mod nmhd;
 mod smhd;
 mod stbl;
+mod sthd;
 mod vmhd;
 
 pub use dinf::*;
+pub use hmhd::*;
+pub use nmhd::*;
 pub use smhd::*;
 pub use stbl::*;
+pub use sthd::*;
 pub use vmhd::*;
 
 use crate::*;
@@ -15,6 +21,9 @@ use crate::*;
 pub struct Minf {
     pub vmhd: Option<Vmhd>,
     pub smhd: Option<Smhd>,
+    pub nmhd: Option<Nmhd>,
+    pub sthd: Option<Sthd>,
+    pub hmhd: Option<Hmhd>,
     pub dinf: Dinf,
     pub stbl: Stbl,
 }
@@ -24,7 +33,7 @@ impl Atom for Minf {
 
     nested! {
         required: [ Dinf, Stbl ],
-        optional: [ Vmhd, Smhd ],
+        optional: [ Vmhd, Smhd, Nmhd, Sthd, Hmhd ],
         multiple: [],
     }
 }

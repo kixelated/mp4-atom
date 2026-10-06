@@ -20,9 +20,10 @@ impl Atom for Ac3 {
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Ac3SpecificBox(atom) => dac3 = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Self {
             audio,

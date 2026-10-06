@@ -1,8 +1,10 @@
+mod ainf;
 mod mvex;
 mod mvhd;
 mod trak;
 mod udta;
 
+pub use ainf::*;
 pub use mvex::*;
 pub use mvhd::*;
 pub use trak::*;
@@ -18,6 +20,7 @@ pub struct Moov {
     pub mvex: Option<Mvex>,
     pub trak: Vec<Trak>,
     pub udta: Option<Udta>,
+    pub ainf: Option<Ainf>,
 }
 
 impl Atom for Moov {
@@ -25,7 +28,7 @@ impl Atom for Moov {
 
     nested! {
         required: [ Mvhd ],
-        optional: [ Meta, Mvex, Udta ],
+        optional: [ Ainf, Meta, Mvex, Udta ],
         multiple: [ Trak ],
     }
 }
@@ -33,6 +36,21 @@ impl Atom for Moov {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn rejects_truncated_child_body() {
+        let mut encoded = Vec::new();
+        Moov::default().encode(&mut encoded).unwrap();
+
+        encoded.extend_from_slice(b"\0\0\0\x20trak");
+        let size = u32::try_from(encoded.len()).unwrap();
+        encoded[..4].copy_from_slice(&size.to_be_bytes());
+
+        assert!(matches!(
+            Moov::decode(&mut encoded.as_slice()),
+            Err(Error::UnderDecode(kind)) if kind == Moov::KIND
+        ));
+    }
 
     #[test]
     fn test_meta() {
@@ -145,6 +163,7 @@ mod test {
                         modification_time: 3773812694,
                         track_id: 1,
                         enabled: true,
+                        in_movie: true,
                         width: 1920.into(),
                         height: 1080.into(),
                         ..Default::default()
@@ -152,13 +171,12 @@ mod test {
                     edts: Some(Edts {
                         elst: Some(Elst {
                             entries: vec![ElstEntry {
-                                media_time: 6000,
-                                media_rate: 1,
+                                media_time: Some(6000),
+                                media_rate: 1.into(),
                                 ..Default::default()
                             }]
                         })
                     }),
-                    meta: None,
                     mdia: Mdia {
                         mdhd: Mdhd {
                             creation_time: 3773812694,
@@ -180,7 +198,6 @@ mod test {
                                     blue: 0
                                 }
                             }),
-                            smhd: None,
                             dinf: Dinf {
                                 dref: Dref {
                                     urls: vec![Url::default()]
@@ -196,7 +213,7 @@ mod test {
                                             horizresolution: 72.into(),
                                             vertresolution: 72.into(),
                                             frame_count: 1,
-                                            compressor: "\nAVC Coding".into(),
+                                            compressor: "AVC Coding".into(),
                                             depth: 24,
                                         },
                                         avcc: Avcc {
@@ -219,17 +236,19 @@ mod test {
                                         colr: None,
                                         pasp: None,
                                         taic: None,
+                                        fiel: None,
                                     }
                                     .into()],
                                 },
                                 stco: Some(Stco::default()),
                                 ..Default::default()
-                            }
+                            },
+                            ..Default::default()
                         }
                     },
-                    udta: None
+                    ..Default::default()
                 }],
-                udta: None,
+                ..Default::default()
             }
         )
     }

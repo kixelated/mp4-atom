@@ -37,36 +37,32 @@ macro_rules! any {
 
         impl DecodeMaybe for Any {
             fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>> {
-                let header = match Header::decode_maybe(buf)? {
+                // Decode the header from a view so an incomplete atom leaves
+                // the caller's buffer untouched.
+                let remaining = buf.remaining();
+                let mut peek = buf.slice(remaining);
+                let header = match Header::decode_maybe(&mut peek)? {
                     Some(header) => header,
                     None => return Ok(None),
                 };
 
-                let size = header.size.unwrap_or(buf.remaining());
-                if size > buf.remaining() {
+                let size = header.size.unwrap_or(peek.remaining());
+                if size > peek.remaining() {
                     return Ok(None);
                 }
 
+                buf.advance(remaining - peek.remaining());
                 Ok(Some(Self::decode_atom(&header, buf)?))
             }
         }
 
         impl Encode for Any {
             fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-                let start = buf.len();
-                0u32.encode(buf)?;
-                self.kind().encode(buf)?;
-
-                match self {
+                buf.encode_atom(self.kind(), |buf| match self {
                     $(Any::$kind(inner) => Atom::encode_body(inner, buf),)*
                     $(Any::$boxed(boxed) => Atom::encode_body(boxed.as_ref(), buf),)*
                     Any::Unknown(_, data) => data.encode(buf),
-                }?;
-
-                let size: u32 = (buf.len() - start).try_into().map_err(|_| Error::TooLarge(self.kind()))?;
-                buf.set_slice(start, &size.to_be_bytes());
-
-                Ok(())
+                })
             }
         }
 
@@ -255,11 +251,17 @@ any! {
         Ilst,
             Covr,
             Desc,
+            Tool, // "©too"
             Name,
+            Rtng,
             Year,
+        Keys,
     Moov,
         Mvhd,
+        Ainf,
         Udta,
+            Cprt,
+            Kind,
             Skip,
         // Trak, // boxed to avoid large size differences between variants
             Tkhd,
@@ -275,11 +277,15 @@ any! {
                                 Colr,
                                 Pasp,
                                 Taic,
+                                Fiel,
+                            Jpeg,
                             Hev1, Hvc1,
-                                Hvcc,
+                                Hvcc, Lhvc,
                             Mp4a,
                                 Esds,
+                            Mp3,
                             Tx3g,
+                                Ftab,
                             Vp08, Vp09,
                                 VpcC,
                             Av01,
@@ -295,12 +301,35 @@ any! {
                                 Ac3SpecificBox,
                             Eac3,
                                 Ec3SpecificBox,
+                            Sowt, Twos, Lpcm, Ipcm, Fpcm, In24, In32, Fl32, Fl64, S16l,
+                                PcmC,
+                                Chnl,
+                            Wvtt,
+                                VttC,
+                                Vlab,
+                            Samr,
+                                Damr,
+                            Mett,
+                                TxtC,
+                            Metx,
+                            Urim,
+                                Uri,
+                                UriI,
+                            Camm,
+                            Evte,
+                                Silb,
+                            Mebx,
+                                Keyd,
+                                Dtyp,
+                                Loca,
+                                Setu,
                         Stts,
                         Stsc,
                         Stsz,
                         Stss,
                         Stco,
                         Co64,
+                        Cslg,
                         Ctts,
                         Sbgp,
                         Sgpd,
@@ -309,10 +338,14 @@ any! {
                         Saiz,
                     Dinf,
                         Dref,
+                    Hmhd,
+                    Nmhd,
                     Smhd,
+                    Sthd,
                     Vmhd,
             Edts,
                 Elst,
+            Tref,
         Mvex,
             Mehd,
             Trex,
@@ -323,8 +356,15 @@ any! {
             Tfhd,
             Tfdt,
             Trun,
+            Senc,
     Mdat,
     Free,
+    Sidx,
+    Prft,
+    Mfra,
+        Tfra,
+        Mfro,
+    Uuid,
     ],
     boxed: [
         Trak,
@@ -332,13 +372,13 @@ any! {
 }
 
 impl ReadFrom for Any {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         <Option<Any> as ReadFrom>::read_from(r)?.ok_or(Error::UnexpectedEof)
     }
 }
 
 impl ReadFrom for Option<Any> {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         let header = match <Option<Header> as ReadFrom>::read_from(r)? {
             Some(header) => header,
             None => return Ok(None),
@@ -350,8 +390,23 @@ impl ReadFrom for Option<Any> {
 }
 
 impl ReadAtom for Any {
-    fn read_atom<R: Read>(header: &Header, r: &mut R) -> Result<Self> {
+    fn read_atom<R: Read + ?Sized>(header: &Header, r: &mut R) -> Result<Self> {
         let body = &mut header.read_body(r)?;
         Any::decode_atom(header, body)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const PARTIAL_FTYP: &[u8] = b"\0\0\0\x14ftypisom";
+
+    #[test]
+    fn decode_maybe_preserves_incomplete_atom() {
+        let mut buf = PARTIAL_FTYP;
+
+        assert!(Any::decode_maybe(&mut buf).unwrap().is_none());
+        assert_eq!(buf, PARTIAL_FTYP);
     }
 }

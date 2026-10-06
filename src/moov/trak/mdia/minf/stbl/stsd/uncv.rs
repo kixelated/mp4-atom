@@ -1,6 +1,6 @@
 use crate::*;
 
-use super::{Btrt, Pasp, Visual};
+use super::{Btrt, Pasp, Taic, Visual};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -11,6 +11,7 @@ pub struct Uncv {
     pub btrt: Option<Btrt>,
     pub ccst: Option<Ccst>,
     pub pasp: Option<Pasp>,
+    pub taic: Option<Taic>,
 }
 
 impl Atom for Uncv {
@@ -24,6 +25,7 @@ impl Atom for Uncv {
         let mut uncc = None;
         let mut btrt = None;
         let mut pasp = None;
+        let mut taic = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Cmpd(atom) => cmpd = atom.into(),
@@ -31,9 +33,11 @@ impl Atom for Uncv {
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Ccst(atom) => ccst = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                Any::Taic(atom) => taic = atom.into(),
+                unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Uncv {
             visual,
@@ -42,24 +46,18 @@ impl Atom for Uncv {
             btrt,
             ccst,
             pasp,
+            taic,
         })
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
-        if self.cmpd.is_some() {
-            self.cmpd.encode(buf)?;
-        }
+        self.cmpd.encode(buf)?;
         self.uncc.encode(buf)?;
-        if self.btrt.is_some() {
-            self.btrt.encode(buf)?;
-        }
-        if self.ccst.is_some() {
-            self.ccst.encode(buf)?;
-        }
-        if self.pasp.is_some() {
-            self.pasp.encode(buf)?;
-        }
+        self.btrt.encode(buf)?;
+        self.ccst.encode(buf)?;
+        self.pasp.encode(buf)?;
+        self.taic.encode(buf)?;
 
         Ok(())
     }
@@ -83,7 +81,8 @@ impl Atom for Cmpd {
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         let component_count = u32::decode(buf)?;
-        let mut components: Vec<Component> = Vec::with_capacity(component_count as usize);
+        let mut components: Vec<Component> =
+            Vec::with_capacity((component_count as usize).min(1024));
         for _ in 0..component_count {
             let component_type = u16::decode(buf)?;
             if component_type >= 0x8000 {
@@ -172,7 +171,7 @@ impl AtomExt for UncC {
             UncCVersion::V0 => {
                 let profile = FourCC::decode(buf)?;
                 let component_count = u32::decode(buf)?;
-                let mut components = Vec::with_capacity(component_count as usize);
+                let mut components = Vec::with_capacity((component_count as usize).min(1024));
                 for _ in 0..component_count {
                     components.push(UncompressedComponent {
                         component_index: u16::decode(buf)?,
@@ -299,6 +298,17 @@ mod tests {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
 
+    // Regression for issue #180: attacker-controlled component counts must not
+    // cause a multi-gigabyte upfront allocation before decoding fails.
+    const ENCODED_CMPD_HUGE_COUNT: &[u8] = &[
+        0x00, 0x00, 0x00, 0x0c, 0x63, 0x6d, 0x70, 0x64, 0xff, 0xff, 0xff, 0xff,
+    ];
+
+    const ENCODED_UNCC_HUGE_COUNT: &[u8] = &[
+        0x00, 0x00, 0x00, 0x14, 0x75, 0x6e, 0x63, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0xff, 0xff, 0xff, 0xff,
+    ];
+
     #[test]
     fn test_cmpd_decode() {
         let buf: &mut std::io::Cursor<&&[u8]> = &mut std::io::Cursor::new(&ENCODED_CMPD);
@@ -324,6 +334,12 @@ mod tests {
                 ]
             },
         );
+    }
+
+    #[test]
+    fn test_cmpd_huge_count() {
+        let buf = &mut std::io::Cursor::new(&ENCODED_CMPD_HUGE_COUNT);
+        assert!(matches!(Cmpd::decode(buf), Err(Error::OverDecode(_))));
     }
 
     #[test]
@@ -396,6 +412,12 @@ mod tests {
                 num_tile_rows_minus_one: 0
             }
         );
+    }
+
+    #[test]
+    fn test_uncc_huge_count() {
+        let buf = &mut std::io::Cursor::new(&ENCODED_UNCC_HUGE_COUNT);
+        assert!(matches!(UncC::decode(buf), Err(Error::OverDecode(_))));
     }
 
     #[test]

@@ -1,18 +1,18 @@
 [package]
 name = "mp4-atom"
 description = "A MP4/ISOBMFF atom decoder and encoder"
-authors = ["Luke Curley <kixelated@gmail.com>"]
+authors = ["Luke Curley <kixelated@gmail.com>", "Brad Hards <bradh@frogmouth.net>"]
 repository = "https://github.com/kixelated/mp4-atom"
 license = "MIT OR Apache-2.0"
 
-version = "0.9.1"
+version = "0.16.1"
 edition = "2021"
 
 keywords = ["mp4", "isobmff", "mp4box", "audio", "video"]
 categories = ["multimedia::encoding"]
 
 [dependencies]
-paste = "1"
+pastey = "0.2"
 thiserror = "1"
 num = "0.4"
 tracing = "0.1"
@@ -26,6 +26,7 @@ serde = { version = "1", features = ["derive"], optional = true }
 tokio = ["dep:tokio"]
 bytes = ["dep:bytes"]
 serde = ["dep:serde", "bytes/serde"]
+strict = []
 
 [dev-dependencies]
 anyhow = "1"

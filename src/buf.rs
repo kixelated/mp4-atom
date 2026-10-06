@@ -1,8 +1,10 @@
 use std::io::Cursor;
 
+use crate::{Encode, Error, FourCC, Result};
+
 /// A contiguous buffer of bytes.
 // We're not using bytes::Buf because of some strange bugs with take().
-pub trait Buf: std::fmt::Debug {
+pub trait Buf {
     fn remaining(&self) -> usize;
     fn has_remaining(&self) -> bool {
         self.remaining() > 0
@@ -26,7 +28,7 @@ impl Buf for &[u8] {
     }
 }
 
-impl<T: AsRef<[u8]> + std::fmt::Debug> Buf for Cursor<T> {
+impl<T: AsRef<[u8]>> Buf for Cursor<T> {
     fn remaining(&self) -> usize {
         self.get_ref().as_ref().len() - self.position() as usize
     }
@@ -55,6 +57,22 @@ impl<T: Buf + ?Sized> Buf for &mut T {
     }
 }
 
+/// Drain trailing padding left after an atom's child boxes.
+///
+/// Some muxers — QuickTime in particular — append a few bytes (commonly a
+/// 4-byte zero "terminator") after the last child box of a container atom or
+/// sample entry. Such a remainder is shorter than a box header (8 bytes), so it
+/// cannot be a box and can only be padding: drain it instead of failing the
+/// whole atom with [`Error::UnderDecode`](crate::Error::UnderDecode), matching
+/// ffmpeg, GPAC and other demuxers. A remainder of 8 or more bytes is left
+/// untouched so genuine trailing corruption is still reported.
+pub(crate) fn skip_trailing_padding<B: Buf>(buf: &mut B) {
+    let n = buf.remaining();
+    if n > 0 && n < 8 {
+        buf.advance(n);
+    }
+}
+
 #[cfg(feature = "bytes")]
 impl Buf for bytes::Bytes {
     fn remaining(&self) -> usize {
@@ -72,7 +90,7 @@ impl Buf for bytes::Bytes {
 
 /// A mutable contiguous buffer of bytes.
 // We're not using bytes::BufMut because it doesn't allow seeking backwards (to set the size).
-pub trait BufMut: std::fmt::Debug {
+pub trait BufMut {
     // Returns the current length.
     fn len(&self) -> usize;
 
@@ -85,6 +103,29 @@ pub trait BufMut: std::fmt::Debug {
 
     // Set a slice at a position in the buffer.
     fn set_slice(&mut self, pos: usize, val: &[u8]);
+
+    /// Write a box header (`size(4) + kind(4)`) with a placeholder size, run
+    /// `f` to encode the body, then go back and patch the placeholder with
+    /// the total number of bytes written (header included).
+    fn encode_atom<F>(&mut self, kind: impl Into<FourCC>, f: F) -> Result<()>
+    where
+        Self: Sized,
+        F: FnOnce(&mut Self) -> Result<()>,
+    {
+        let kind = kind.into();
+
+        let start = self.len();
+        0u32.encode(self)?; // size placeholder
+        kind.encode(self)?;
+
+        f(self)?;
+
+        let size: u32 = (self.len() - start)
+            .try_into()
+            .map_err(|_| Error::TooLarge(kind))?;
+        self.set_slice(start, &size.to_be_bytes());
+        Ok(())
+    }
 }
 
 impl BufMut for Vec<u8> {

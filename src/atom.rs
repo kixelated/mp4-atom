@@ -8,26 +8,17 @@ pub trait Atom: Sized {
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self>;
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()>;
+
+    /// Either logs or returns an error depending on the environment/flag.
+    fn decode_unknown(atom: &crate::Any) -> Result<()> {
+        crate::decode_unknown(atom, Self::KIND)
+    }
 }
 
 impl<T: Atom> Encode for T {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        let start = buf.len();
-
-        // Encode a 0 for the size, we'll come back to it later
-        0u32.encode(buf)?;
-        Self::KIND.encode(buf)?;
-        self.encode_body(buf)?;
-
-        // Update the size field
         // TODO support sizes larger than u32 (4GB)
-        let size: u32 = (buf.len() - start)
-            .try_into()
-            .map_err(|_| Error::TooLarge(T::KIND))?;
-
-        buf.set_slice(start, &size.to_be_bytes());
-
-        Ok(())
+        buf.encode_atom(Self::KIND, |buf| self.encode_body(buf))
     }
 }
 
@@ -39,16 +30,21 @@ impl<T: Atom> Decode for T {
 
 impl<T: Atom> DecodeMaybe for T {
     fn decode_maybe<B: Buf>(buf: &mut B) -> Result<Option<Self>> {
-        let header = match Header::decode_maybe(buf)? {
+        // Decode the header from a view so an incomplete atom leaves the
+        // caller's buffer untouched.
+        let remaining = buf.remaining();
+        let mut peek = buf.slice(remaining);
+        let header = match Header::decode_maybe(&mut peek)? {
             Some(header) => header,
             None => return Ok(None),
         };
 
-        let size = header.size.unwrap_or(buf.remaining());
-        if size > buf.remaining() {
+        let size = header.size.unwrap_or(peek.remaining());
+        if size > peek.remaining() {
             return Ok(None);
         }
 
+        buf.advance(remaining - peek.remaining());
         let body = &mut buf.slice(size);
 
         let atom = match Self::decode_body(body) {
@@ -69,13 +65,13 @@ impl<T: Atom> DecodeMaybe for T {
 }
 
 impl<T: Atom> ReadFrom for T {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         <Option<T> as ReadFrom>::read_from(r)?.ok_or(Error::MissingBox(T::KIND))
     }
 }
 
 impl<T: Atom> ReadFrom for Option<T> {
-    fn read_from<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         let header = match <Option<Header> as ReadFrom>::read_from(r)? {
             Some(header) => header,
             None => return Ok(None),
@@ -99,13 +95,13 @@ impl<T: Atom> ReadFrom for Option<T> {
 }
 
 impl<T: Atom> ReadUntil for T {
-    fn read_until<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_until<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         <Option<T> as ReadUntil>::read_until(r)?.ok_or(Error::MissingBox(T::KIND))
     }
 }
 
 impl<T: Atom> ReadUntil for Option<T> {
-    fn read_until<R: Read>(r: &mut R) -> Result<Self> {
+    fn read_until<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
         while let Some(header) = <Option<Header> as ReadFrom>::read_from(r)? {
             if header.kind == T::KIND {
                 let body = &mut header.read_body(r)?;
@@ -148,7 +144,7 @@ impl<T: Atom> DecodeAtom for T {
 }
 
 impl<T: Atom> ReadAtom for T {
-    fn read_atom<R: Read>(header: &Header, r: &mut R) -> Result<Self> {
+    fn read_atom<R: Read + ?Sized>(header: &Header, r: &mut R) -> Result<Self> {
         if header.kind != T::KIND {
             return Err(Error::UnexpectedBox(header.kind));
         }
@@ -169,7 +165,7 @@ nested! {
 
 macro_rules! nested {
     (required: [$($required:ident),*$(,)?], optional: [$($optional:ident),*$(,)?], multiple: [$($multiple:ident),*$(,)?],) => {
-        paste::paste! {
+        pastey::paste! {
             fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
                 $( let mut [<$required:lower>] = None;)*
                 $( let mut [<$optional:lower>] = None;)*
@@ -192,14 +188,14 @@ macro_rules! nested {
                         $(Any::$multiple(atom) => {
                             [<$multiple:lower>].push(atom.into());
                         },)*
-                        Any::Unknown(kind, _) => {
-                            tracing::warn!("unknown box: {:?}", kind);
-                        },
-                        Any::Skip(atom) => tracing::debug!("skipping skip box of size {}", atom.zeroed.size),
-                        Any::Free(atom) => tracing::debug!("skipping free box of size {}", atom.zeroed.size),
-                        _ => return Err(Error::UnexpectedBox(atom.kind())),
+                        Any::Skip(atom) => tracing::debug!(size = atom.zeroed.size, "skipping skip box"),
+                        Any::Free(atom) => tracing::debug!(size = atom.zeroed.size, "skipping free box"),
+                        unknown => Self::decode_unknown(&unknown)?,
                     }
                 }
+                // Tolerate a sub-header padding remainder (e.g. a QuickTime zero
+                // terminator) after the child boxes.
+                skip_trailing_padding(buf);
 
                 Ok(Self {
                     $([<$required:lower>]: [<$required:lower>].ok_or(Error::MissingBox($required::KIND))? ,)*

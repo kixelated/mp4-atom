@@ -5,6 +5,7 @@ use crate::*;
 pub struct Opus {
     pub audio: Audio,
     pub dops: Dops,
+    pub btrt: Option<Btrt>,
 }
 
 impl Atom for Opus {
@@ -14,24 +15,29 @@ impl Atom for Opus {
         let audio = Audio::decode(buf)?;
 
         let mut dops = None;
+        let mut btrt = None;
 
-        // Find esds in mp4a or wave
+        // Find d0ps in mp4a or wave
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Dops(atom) => dops = atom.into(),
-                _ => tracing::warn!("unknown atom: {:?}", atom),
+                Any::Btrt(atom) => btrt = atom.into(),
+                unknown => Self::decode_unknown(&unknown)?,
             }
         }
+        skip_trailing_padding(buf);
 
         Ok(Self {
             audio,
             dops: dops.ok_or(Error::MissingBox(Dops::KIND))?,
+            btrt,
         })
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.audio.encode(buf)?;
         self.dops.encode(buf)?;
+        self.btrt.encode(buf)?;
         Ok(())
     }
 }

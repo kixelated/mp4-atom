@@ -6,6 +6,163 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1](https://github.com/kixelated/mp4-atom/compare/v0.16.0...v0.16.1) - 2026-09-30
+
+### Added
+
+- add MebxSample to decode samples of mebx tracks ([#242](https://github.com/kixelated/mp4-atom/pull/242))
+- add support for emib and emeb event message boxes ([#240](https://github.com/kixelated/mp4-atom/pull/240))
+
+### Other
+
+- preserve versioned fields on encode ([#203](https://github.com/kixelated/mp4-atom/pull/203))
+- add BufMut::encode_atom to dedupe size-header boilerplate ([#241](https://github.com/kixelated/mp4-atom/pull/241))
+- add support for evte ([#238](https://github.com/kixelated/mp4-atom/pull/238))
+
+## [0.16.0](https://github.com/kixelated/mp4-atom/compare/v0.15.0...v0.16.0) - 2026-09-25
+
+### Other
+
+- add support for .mp3 ([#237](https://github.com/kixelated/mp4-atom/pull/237))
+- Feature/UUID ([#231](https://github.com/kixelated/mp4-atom/pull/231))
+- add support for jpeg ([#235](https://github.com/kixelated/mp4-atom/pull/235))
+- add support for Apples dtyp box ([#234](https://github.com/kixelated/mp4-atom/pull/234))
+- add additional test ([#233](https://github.com/kixelated/mp4-atom/pull/233))
+- add support for mebx ([#230](https://github.com/kixelated/mp4-atom/pull/230))
+- Add support for mdta-style meta data ([#228](https://github.com/kixelated/mp4-atom/pull/228))
+- add support for Nero-style Chapter List Box (`chpl`) ([#232](https://github.com/kixelated/mp4-atom/pull/232))
+- preserve unknown stsd codec bodies on parse, refuse to emit ([#229](https://github.com/kixelated/mp4-atom/pull/229))
+- Add support for metadata tracks ([#226](https://github.com/kixelated/mp4-atom/pull/226))
+
+## [0.15.0](https://github.com/kixelated/mp4-atom/compare/v0.14.0...v0.15.0) - 2026-07-31
+
+### Fixed
+
+- correct name of sidx referenced_size element ([#224](https://github.com/kixelated/mp4-atom/pull/224))
+- consistency check vpcC matrix coefficients and chroma subsampling ([#221](https://github.com/kixelated/mp4-atom/pull/221))
+- fix transactional decode_maybe ([#211](https://github.com/kixelated/mp4-atom/pull/211))
+
+### Other
+
+- update of actions on the PR workflow ([#225](https://github.com/kixelated/mp4-atom/pull/225))
+- Reject oversized sidx reference fields ([#215](https://github.com/kixelated/mp4-atom/pull/215))
+- dispatch children by namespace ([#222](https://github.com/kixelated/mp4-atom/pull/222))
+- preserve the DecoderSpecificInfo payload, make it optional, tolerate trailing bytes ([#174](https://github.com/kixelated/mp4-atom/pull/174))
+- Validate vpcC chroma subsampling during encoding ([#198](https://github.com/kixelated/mp4-atom/pull/198))
+- error on truncated codec parameters ([#220](https://github.com/kixelated/mp4-atom/pull/220))
+
+## [0.14.0](https://github.com/kixelated/mp4-atom/compare/v0.13.0...v0.14.0) - 2026-07-18
+
+### Fixed
+
+- fix ctts offset version handling ([#207](https://github.com/kixelated/mp4-atom/pull/207))
+- fix ipma 15-bit property associations ([#210](https://github.com/kixelated/mp4-atom/pull/210))
+
+### Other
+
+- signed media_time (empty edit as None), signed media_rate, compact version 0 ([#178](https://github.com/kixelated/mp4-atom/pull/178))
+- bound component allocation capacity ([#200](https://github.com/kixelated/mp4-atom/pull/200))
+- encode required flags value ([#209](https://github.com/kixelated/mp4-atom/pull/209))
+- decode `desc` as a data-wrapped item ([#175](https://github.com/kixelated/mp4-atom/pull/175))
+
+## [0.13.0](https://github.com/kixelated/mp4-atom/compare/v0.12.1...v0.13.0) - 2026-07-14
+
+### Other
+
+- dispatch children against the iTunes namespace, add cprt item ([#172](https://github.com/kixelated/mp4-atom/pull/172))
+- find esds inside the QuickTime wave box ([#170](https://github.com/kixelated/mp4-atom/pull/170))
+
+## [0.12.1](https://github.com/kixelated/mp4-atom/compare/v0.12.0...v0.12.1) - 2026-07-07
+
+### Other
+
+- only require pcmC for ipcm/fpcm sample entries ([#167](https://github.com/kixelated/mp4-atom/pull/167))
+- decode chroma_subsampling as 3 bits, not 1 ([#168](https://github.com/kixelated/mp4-atom/pull/168))
+
+## [0.12.0](https://github.com/kixelated/mp4-atom/compare/v0.11.0...v0.12.0) - 2026-06-07
+
+### Other
+
+- Expose track_in_movie and track_size_is_aspect_ratio flags on Tkhd ([#146](https://github.com/kixelated/mp4-atom/pull/146))
+- return error for unsupported infe v1 ([#165](https://github.com/kixelated/mp4-atom/pull/165))
+
+## [0.11.0](https://github.com/kixelated/mp4-atom/compare/v0.10.1...v0.11.0) - 2026-05-18
+
+### Added
+
+- add support for nclc colour type in colr box ([#110](https://github.com/kixelated/mp4-atom/pull/110))
+
+### Fixed
+
+- preserve per-sample fields on trun encode roundtrip ([#160](https://github.com/kixelated/mp4-atom/pull/160))
+
+### Other
+
+- return Err(Reserved) on out-of-range *_size fields instead of panicking ([#163](https://github.com/kixelated/mp4-atom/pull/163))
+- bound Vec::with_capacity on counts ([#162](https://github.com/kixelated/mp4-atom/pull/162))
+- bound Vec::with_capacity in parse_vorbis_comment and Avcc ([#157](https://github.com/kixelated/mp4-atom/pull/157))
+- replace unmaintained `paste` with `pastey` ([#161](https://github.com/kixelated/mp4-atom/pull/161))
+- update related traits to support unsized reads and writes ([#145](https://github.com/kixelated/mp4-atom/pull/145))
+- minor cleanup in colr test code ([#155](https://github.com/kixelated/mp4-atom/pull/155))
+- make non-exhaustive, add unit tests ([#149](https://github.com/kixelated/mp4-atom/pull/149))
+- advance buffer cursor after reading prof/rICC profile ([#153](https://github.com/kixelated/mp4-atom/pull/153))
+- follow-up for self-contained flag fix, add tests ([#150](https://github.com/kixelated/mp4-atom/pull/150))
+- expose duration_is_empty and default_base_is_moof flags on Tfhd ([#151](https://github.com/kixelated/mp4-atom/pull/151))
+- Fix dref url self_contained flag bit position ([#147](https://github.com/kixelated/mp4-atom/pull/147))
+- implement LHVCDecoderConfigurationBox (lhvC) ([#141](https://github.com/kixelated/mp4-atom/pull/141))
+- Add Brad Hards to authors ([#144](https://github.com/kixelated/mp4-atom/pull/144))
+- implement 3GPP narrowband codec sample entry (samr) ([#135](https://github.com/kixelated/mp4-atom/pull/135))
+- fix up tests after recent commits ([#140](https://github.com/kixelated/mp4-atom/pull/140))
+- implement track reference (tref) box ([#139](https://github.com/kixelated/mp4-atom/pull/139))
+- implement Web Video Text Tracks (WebVTT) sample entry format ([#131](https://github.com/kixelated/mp4-atom/pull/131))
+- implement rtng box ([#136](https://github.com/kixelated/mp4-atom/pull/136))
+- implement ainf box. ([#122](https://github.com/kixelated/mp4-atom/pull/122))
+- add ccst support for AV1 ([#133](https://github.com/kixelated/mp4-atom/pull/133))
+- Add option for having taic box ([#132](https://github.com/kixelated/mp4-atom/pull/132))
+- implement hint media header (hmhd) box ([#115](https://github.com/kixelated/mp4-atom/pull/115))
+- Add support for "uri " infe boxes inside iinf ([#123](https://github.com/kixelated/mp4-atom/pull/123))
+
+## [0.10.1](https://github.com/kixelated/mp4-atom/compare/v0.10.0...v0.10.1) - 2026-01-23
+
+### Other
+
+- handle compressorname encoding of length ([#113](https://github.com/kixelated/mp4-atom/pull/113))
+- Add #[non_exhaustive] to Codec enum ([#114](https://github.com/kixelated/mp4-atom/pull/114))
+- add support for the refs sample groups ([#106](https://github.com/kixelated/mp4-atom/pull/106))
+- add cprt and kind child boxes ([#104](https://github.com/kixelated/mp4-atom/pull/104))
+- add support for ccst child in hvc1 ([#102](https://github.com/kixelated/mp4-atom/pull/102))
+- add nmhd and sthd boxes ([#103](https://github.com/kixelated/mp4-atom/pull/103))
+
+## [0.10.0](https://github.com/kixelated/mp4-atom/compare/v0.9.2...v0.10.0) - 2026-01-14
+
+### Other
+
+- add strict mode feature, enable on test ([#99](https://github.com/kixelated/mp4-atom/pull/99))
+- implement ftab box ([#100](https://github.com/kixelated/mp4-atom/pull/100))
+- implement mfra container and nested tfra and mfro boxes ([#98](https://github.com/kixelated/mp4-atom/pull/98))
+- add initial support for senc box ([#96](https://github.com/kixelated/mp4-atom/pull/96))
+- implement sidx box ([#94](https://github.com/kixelated/mp4-atom/pull/94))
+- avoid inlining a couple more test files ([#95](https://github.com/kixelated/mp4-atom/pull/95))
+- avoid checking for is_some() on encode, since encode is supported on Option<..> ([#93](https://github.com/kixelated/mp4-atom/pull/93))
+- Stop manually inlining test files. ([#90](https://github.com/kixelated/mp4-atom/pull/90))
+- implement prft box ([#91](https://github.com/kixelated/mp4-atom/pull/91))
+- add cslg box ([#89](https://github.com/kixelated/mp4-atom/pull/89))
+- add support for ilst "tool" box ([#86](https://github.com/kixelated/mp4-atom/pull/86))
+- add btrt, colr and pasp support for VP8 and VP9 codecs ([#88](https://github.com/kixelated/mp4-atom/pull/88))
+- add btrt box for Opus codec ([#87](https://github.com/kixelated/mp4-atom/pull/87))
+- implement box ([#85](https://github.com/kixelated/mp4-atom/pull/85))
+- Log unknown atoms instead of (sometimes) returning an error. ([#84](https://github.com/kixelated/mp4-atom/pull/84))
+- fix taic encoding ([#83](https://github.com/kixelated/mp4-atom/pull/83))
+- minor comment fix ([#82](https://github.com/kixelated/mp4-atom/pull/82))
+- add support for btrt box in uncompressed audio ([#80](https://github.com/kixelated/mp4-atom/pull/80))
+- Add support for raw audio as per ISO/IEC 23003-5 ([#78](https://github.com/kixelated/mp4-atom/pull/78))
+
+## [0.9.2](https://github.com/kixelated/mp4-atom/compare/v0.9.1...v0.9.2) - 2025-11-30
+
+### Other
+
+- Don't require fmt::Debug for Buf/BufMut. ([#73](https://github.com/kixelated/mp4-atom/pull/73))
+
 ## [0.9.1](https://github.com/kixelated/mp4-atom/compare/v0.9.0...v0.9.1) - 2025-11-09
 
 ### Added

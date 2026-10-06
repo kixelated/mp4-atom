@@ -129,19 +129,49 @@ impl AtomExt for Sgpd {
     }
 }
 
+const REFS_4CC: FourCC = FourCC::new(b"refs");
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AnySampleGroupEntry {
+    DirectReferenceSampleList(u32, Vec<u32>),
     UnknownGroupingType(FourCC, Vec<u8>),
 }
 
 impl AnySampleGroupEntry {
     fn decode<B: Buf>(grouping_type: FourCC, buf: &mut B) -> Result<Self> {
-        Ok(Self::UnknownGroupingType(grouping_type, Vec::decode(buf)?))
+        match grouping_type {
+            REFS_4CC => {
+                let sample_id = u32::decode(buf)?;
+                let num_direct_reference_samples = u8::decode(buf)? as usize;
+                let mut direct_reference_samples =
+                    Vec::with_capacity(std::cmp::min(num_direct_reference_samples, 16));
+                for _ in 0..num_direct_reference_samples {
+                    direct_reference_samples.push(u32::decode(buf)?);
+                }
+                Ok(Self::DirectReferenceSampleList(
+                    sample_id,
+                    direct_reference_samples,
+                ))
+            }
+            _ => Ok(Self::UnknownGroupingType(grouping_type, Vec::decode(buf)?)),
+        }
     }
 
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         match self {
+            Self::DirectReferenceSampleList(sample_id, direct_reference_samples) => {
+                sample_id.encode(buf)?;
+                let num_direct_reference_samples: u8 = direct_reference_samples
+                    .len()
+                    .try_into()
+                    .map_err(|_| Error::TooLarge(REFS_4CC))?;
+                num_direct_reference_samples.encode(buf)?;
+                for direct_reference_sample in direct_reference_samples {
+                    direct_reference_sample.encode(buf)?;
+                }
+                Ok(())
+            }
             Self::UnknownGroupingType(_, bytes) => bytes.encode(buf),
         }
     }
@@ -205,5 +235,45 @@ mod tests {
         let mut buf = Vec::new();
         sgpd.encode(&mut buf).expect("encode should be successful");
         assert_eq!(SIMPLE_SGPD, &buf);
+    }
+
+    // From the MPEG File Format Conformance suite, heif/C041.heic
+    const SGPD_ENCODED_C041: &[u8] = &[
+        0x00, 0x00, 0x00, 0x2e, 0x73, 0x67, 0x70, 0x64, 0x01, 0x00, 0x00, 0x00, 0x72, 0x65, 0x66,
+        0x73, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00,
+        0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01,
+        0x00,
+    ];
+
+    #[test]
+    fn sgpd_c041_decode() {
+        let mut buf = Cursor::new(SGPD_ENCODED_C041);
+        let sgpd = Sgpd::decode(&mut buf).expect("sgpd should decode successfully");
+        assert_eq!(
+            sgpd,
+            Sgpd {
+                grouping_type: FourCC::from(b"refs"),
+                default_length: Some(0),
+                default_group_description_index: None,
+                static_group_description: false,
+                static_mapping: false,
+                essential: false,
+                entries: vec![
+                    SgpdEntry {
+                        description_length: Some(9),
+                        entry: AnySampleGroupEntry::DirectReferenceSampleList(0, vec![1])
+                    },
+                    SgpdEntry {
+                        description_length: Some(5),
+                        entry: AnySampleGroupEntry::DirectReferenceSampleList(1, vec![])
+                    }
+                ],
+            }
+        );
+
+        let mut encoded = Vec::new();
+        sgpd.encode(&mut encoded).unwrap();
+
+        assert_eq!(encoded, SGPD_ENCODED_C041);
     }
 }

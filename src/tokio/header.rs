@@ -5,7 +5,7 @@ use super::*;
 use tokio::io::{AsyncRead, AsyncReadExt};
 
 impl AsyncReadFrom for Header {
-    async fn read_from<R: AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+    async fn read_from<R: AsyncRead + Unpin + ?Sized>(r: &mut R) -> Result<Self> {
         <Option<Header> as AsyncReadFrom>::read_from(r)
             .await?
             .ok_or(Error::UnexpectedEof)
@@ -13,7 +13,7 @@ impl AsyncReadFrom for Header {
 }
 
 impl AsyncReadFrom for Option<Header> {
-    async fn read_from<R: AsyncRead + Unpin>(r: &mut R) -> Result<Self> {
+    async fn read_from<R: AsyncRead + Unpin + ?Sized>(r: &mut R) -> Result<Self> {
         let mut buf = [0u8; 8];
         let n = r.read(&mut buf).await?;
         if n == 0 {
