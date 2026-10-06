@@ -85,6 +85,9 @@ pub enum Codec {
     // H264
     Avc1(Avc1),
 
+    // H264: SPS/PPS may also be inline
+    Avc3(Avc3),
+
     // Photo - JPEG (QuickTime Motion JPEG)
     Jpeg(Jpeg),
 
@@ -176,6 +179,7 @@ impl Decode for Codec {
         let atom = Any::decode(buf)?;
         Ok(match atom {
             Any::Avc1(atom) => atom.into(),
+            Any::Avc3(atom) => atom.into(),
             Any::Jpeg(atom) => atom.into(),
             Any::Hev1(atom) => atom.into(),
             Any::Hvc1(atom) => atom.into(),
@@ -228,6 +232,7 @@ impl Encode for Codec {
         match self {
             Self::Unknown(..) => Err(Error::UnknownCodec),
             Self::Avc1(atom) => atom.encode(buf),
+            Self::Avc3(atom) => atom.encode(buf),
             Self::Jpeg(atom) => atom.encode(buf),
             Self::Hev1(atom) => atom.encode(buf),
             Self::Hvc1(atom) => atom.encode(buf),
