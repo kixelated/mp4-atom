@@ -103,6 +103,7 @@ fn flac() {
                                 codecs: vec![Flac {
                                     audio: Audio {
                                         data_reference_index: 1,
+                                        version: AudioVersion::V0,
                                         channel_count: 1,
                                         sample_size: 8,
                                         sample_rate: 44100.into(),
