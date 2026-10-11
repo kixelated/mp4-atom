@@ -105,6 +105,10 @@ fn esds() {
                                     }),
                                     taic: None,
                                     fiel: None,
+                                    sv3d: None,
+                                    st3d: None,
+                                    vexu: None,
+                                    hfov: None,
                                 }
                                 .into()],
                             },
