@@ -9,10 +9,7 @@ pub struct Vp08 {
     pub btrt: Option<Btrt>,
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
-    pub sv3d: Option<Sv3d>,
-    pub st3d: Option<St3d>,
-    pub vexu: Option<Vexu>,
-    pub hfov: Option<Hfov>,
+    pub spatial: Spatial,
 }
 
 impl Atom for Vp08 {
@@ -25,21 +22,14 @@ impl Atom for Vp08 {
         let mut btrt = None;
         let mut colr = None;
         let mut pasp = None;
-        let mut sv3d = None;
-        let mut st3d = None;
-        let mut vexu = None;
-        let mut hfov = None;
+        let mut spatial = Spatial::default();
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::VpcC(atom) => vpcc = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
-                Any::Sv3d(atom) => sv3d = atom.into(),
-                Any::St3d(atom) => st3d = atom.into(),
-                Any::Vexu(atom) => vexu = atom.into(),
-                Any::Hfov(atom) => hfov = atom.into(),
-                unknown => Self::decode_unknown(&unknown)?,
+                atom => spatial.decode_child::<Self>(atom)?,
             }
         }
         skip_trailing_padding(buf);
@@ -50,23 +40,17 @@ impl Atom for Vp08 {
             btrt,
             colr,
             pasp,
-            sv3d,
-            st3d,
-            vexu,
-            hfov,
+            spatial,
         })
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
         self.vpcc.encode(buf)?;
+        self.spatial.encode(buf)?;
         self.btrt.encode(buf)?;
         self.colr.encode(buf)?;
         self.pasp.encode(buf)?;
-        self.sv3d.encode(buf)?;
-        self.st3d.encode(buf)?;
-        self.vexu.encode(buf)?;
-        self.hfov.encode(buf)?;
 
         Ok(())
     }

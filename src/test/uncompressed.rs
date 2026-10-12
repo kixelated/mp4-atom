@@ -171,10 +171,7 @@ fn uncompressed() {
                                     ccst: None,
                                     pasp: None,
                                     taic: None,
-                                    sv3d: None,
-                                    st3d: None,
-                                    vexu: None,
-                                    hfov: None,
+                                    spatial: Default::default(),
                                 })],
                             },
                             stts: Stts {

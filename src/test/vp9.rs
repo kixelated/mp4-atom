@@ -156,10 +156,7 @@ fn vp9() {
                                     btrt: None,
                                     colr: None,
                                     pasp: None,
-                                    sv3d: None,
-                                    st3d: None,
-                                    vexu: None,
-                                    hfov: None,
+                                    spatial: Default::default(),
                                 }
                                 .into()],
                             },

@@ -2,7 +2,11 @@ use crate::*;
 
 use super::sv3d::skip_child;
 
-/// Video Extended Usage Box (Apple Projected Media Profile / spatial video).
+/// Video Extended Usage Box, from Apple's [QuickTime and ISO Base Media File
+/// Formats and Spatial and Immersive Media][apple]. The other boxes in this
+/// file are its children, from the same document.
+///
+/// [apple]: https://developer.apple.com/av-foundation/Stereo-Video-ISOBMFF-Extensions.pdf
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vexu {
@@ -316,8 +320,11 @@ impl AtomExt for Pkin {
     }
 }
 
-/// Horizontal field of view, in units of 1/1000 degree. A sibling of `vexu`
-/// in the sample entry.
+/// Horizontal Field of View Box, from Apple's [QuickTime and ISO Base Media
+/// File Formats and Spatial and Immersive Media][apple], in units of 1/1000
+/// degree. A sibling of `vexu` in the sample entry.
+///
+/// [apple]: https://developer.apple.com/av-foundation/Stereo-Video-ISOBMFF-Extensions.pdf
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hfov {

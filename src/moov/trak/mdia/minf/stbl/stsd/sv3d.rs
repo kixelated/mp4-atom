@@ -1,9 +1,9 @@
 use crate::*;
 
-/// Spherical Video Box (Google Spherical Video V2).
+/// Spherical Video Box, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#spherical-video-box-sv3d).
 ///
-/// The children are optional: libavformat reads a file without them, and so
-/// does this crate.
+/// The spec requires `svhd` and `proj`; they are optional here so that
+/// incomplete metadata does not fail the whole sample entry.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sv3d {
@@ -48,6 +48,7 @@ impl Atom for Sv3d {
     }
 }
 
+/// Spherical Video Header, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#spherical-video-header-svhd).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Svhd {
@@ -70,8 +71,9 @@ impl AtomExt for Svhd {
     }
 }
 
-/// Projection Box. `kind` is `None` when the box names no projection this
-/// crate models.
+/// Projection Box, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#projection-box-proj).
+///
+/// `kind` is `None` when the box holds no projection this crate models.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Proj {
@@ -123,7 +125,8 @@ impl Atom for Proj {
     }
 }
 
-/// Projection Header: the pose, in 16.16 fixed-point degrees.
+/// Projection Header, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#projection-header-box-prhd):
+/// the pose, in 16.16 fixed-point degrees.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Prhd {
@@ -161,8 +164,8 @@ pub enum ProjKind {
     Mshp(Mshp),
 }
 
-/// Equirectangular projection. The bounds are 0.32 fixed-point fractions of
-/// the frame cropped from each edge.
+/// Equirectangular Projection, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#equirectangular-projection-box-equi).
+/// The bounds are 0.32 fixed-point fractions of the frame cropped from each edge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Equi {
@@ -194,7 +197,7 @@ impl AtomExt for Equi {
     }
 }
 
-/// Cubemap projection.
+/// Cubemap Projection, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#cubemap-projection-box-cbmp).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cbmp {
@@ -220,8 +223,8 @@ impl AtomExt for Cbmp {
     }
 }
 
-/// Mesh projection. `data` holds the `mesh` boxes, deflated when
-/// `encoding_four_cc` is `dfl8`.
+/// Mesh Projection, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#mesh-projection-box-mshp).
+/// `data` holds the `mesh` boxes, deflated when `encoding_four_cc` is `dfl8`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mshp {

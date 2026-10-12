@@ -10,10 +10,7 @@ pub struct Avc1 {
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
     pub fiel: Option<Fiel>,
-    pub sv3d: Option<Sv3d>,
-    pub st3d: Option<St3d>,
-    pub vexu: Option<Vexu>,
-    pub hfov: Option<Hfov>,
+    pub spatial: Spatial,
 }
 
 impl Atom for Avc1 {
@@ -28,10 +25,7 @@ impl Atom for Avc1 {
         let mut pasp = None;
         let mut taic = None;
         let mut fiel = None;
-        let mut sv3d = None;
-        let mut st3d = None;
-        let mut vexu = None;
-        let mut hfov = None;
+        let mut spatial = Spatial::default();
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Avcc(atom) => avcc = atom.into(),
@@ -40,11 +34,7 @@ impl Atom for Avc1 {
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
                 Any::Fiel(atom) => fiel = atom.into(),
-                Any::Sv3d(atom) => sv3d = atom.into(),
-                Any::St3d(atom) => st3d = atom.into(),
-                Any::Vexu(atom) => vexu = atom.into(),
-                Any::Hfov(atom) => hfov = atom.into(),
-                unknown => Self::decode_unknown(&unknown)?,
+                atom => spatial.decode_child::<Self>(atom)?,
             }
         }
         skip_trailing_padding(buf);
@@ -57,25 +47,19 @@ impl Atom for Avc1 {
             pasp,
             taic,
             fiel,
-            sv3d,
-            st3d,
-            vexu,
-            hfov,
+            spatial,
         })
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
         self.avcc.encode(buf)?;
+        self.spatial.encode(buf)?;
         self.btrt.encode(buf)?;
         self.colr.encode(buf)?;
         self.pasp.encode(buf)?;
         self.taic.encode(buf)?;
         self.fiel.encode(buf)?;
-        self.sv3d.encode(buf)?;
-        self.st3d.encode(buf)?;
-        self.vexu.encode(buf)?;
-        self.hfov.encode(buf)?;
         Ok(())
     }
 }
@@ -115,10 +99,7 @@ mod tests {
             pasp: None,
             taic: None,
             fiel: None,
-            sv3d: None,
-            st3d: None,
-            vexu: None,
-            hfov: None,
+            spatial: Default::default(),
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -236,10 +217,7 @@ mod tests {
                 field_count: 2,
                 field_order: 0,
             }),
-            sv3d: None,
-            st3d: None,
-            vexu: None,
-            hfov: None,
+            spatial: Default::default(),
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();

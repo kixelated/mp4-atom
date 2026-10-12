@@ -1,6 +1,6 @@
 use crate::*;
 
-/// Stereoscopic 3D Video Box (Google Spherical Video V2).
+/// Stereoscopic 3D Video Box, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#stereoscopic-3d-video-box-st3d).
 ///
 /// `stereo_mode` is kept as the wire byte so reserved values round-trip.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

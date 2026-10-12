@@ -237,10 +237,7 @@ mod test {
                                         pasp: None,
                                         taic: None,
                                         fiel: None,
-                                        sv3d: None,
-                                        st3d: None,
-                                        vexu: None,
-                                        hfov: None,
+                                        spatial: Default::default(),
                                     }
                                     .into()],
                                 },

@@ -204,31 +204,44 @@ fn hfov() {
 #[test]
 fn sample_entry() {
     let hvc1 = Hvc1 {
-        sv3d: Some(Sv3d {
-            svhd: None,
-            proj: Some(Proj {
-                prhd: Some(Prhd::default()),
-                kind: Some(ProjKind::Equi(Equi::default())),
+        pasp: Some(Pasp {
+            h_spacing: 1,
+            v_spacing: 1,
+        }),
+        spatial: Spatial {
+            st3d: Some(St3d {
+                stereo_mode: St3d::TOP_BOTTOM,
             }),
-        }),
-        st3d: Some(St3d {
-            stereo_mode: St3d::TOP_BOTTOM,
-        }),
-        vexu: Some(Vexu {
-            proj: Some(VexuProj {
-                prji: Prji {
-                    projection: Prji::RECTILINEAR,
-                },
+            sv3d: Some(Sv3d {
+                svhd: None,
+                proj: Some(Proj {
+                    prhd: Some(Prhd::default()),
+                    kind: Some(ProjKind::Equi(Equi::default())),
+                }),
             }),
-            ..Default::default()
-        }),
-        hfov: Some(Hfov {
-            horizontal_field_of_view: 63_400,
-        }),
+            vexu: Some(Vexu {
+                proj: Some(VexuProj {
+                    prji: Prji {
+                        projection: Prji::RECTILINEAR,
+                    },
+                }),
+                ..Default::default()
+            }),
+            hfov: Some(Hfov {
+                horizontal_field_of_view: 63_400,
+            }),
+        },
         ..Default::default()
     };
 
     let mut buf = Vec::new();
     hvc1.encode(&mut buf).unwrap();
     assert_eq!(Hvc1::decode(&mut buf.as_slice()).unwrap(), hvc1);
+
+    // Spherical Video V2: `st3d` then `sv3d`, after the configuration box and
+    // before the optional boxes.
+    let position = |kind: &[u8]| buf.windows(4).position(|w| w == kind).unwrap();
+    assert!(position(b"hvcC") < position(b"st3d"));
+    assert!(position(b"st3d") < position(b"sv3d"));
+    assert!(position(b"sv3d") < position(b"pasp"));
 }
