@@ -11,6 +11,7 @@ pub struct Hev1 {
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
     pub fiel: Option<Fiel>,
+    #[cfg_attr(feature = "serde", serde(default))]
     pub spatial: Spatial,
 }
 

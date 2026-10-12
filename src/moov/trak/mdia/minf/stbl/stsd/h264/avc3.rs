@@ -13,6 +13,7 @@ pub struct Avc3 {
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
     pub fiel: Option<Fiel>,
+    #[cfg_attr(feature = "serde", serde(default))]
     pub spatial: Spatial,
 }
 

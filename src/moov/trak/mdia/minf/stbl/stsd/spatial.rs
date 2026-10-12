@@ -22,13 +22,20 @@ impl Spatial {
     /// to the sample entry `T`.
     pub(crate) fn decode_child<T: Atom>(&mut self, atom: Any) -> Result<()> {
         match atom {
-            Any::St3d(atom) => self.st3d = Some(atom),
-            Any::Sv3d(atom) => self.sv3d = Some(atom),
-            Any::Vexu(atom) => self.vexu = Some(atom),
-            Any::Hfov(atom) => self.hfov = Some(atom),
-            unknown => T::decode_unknown(&unknown)?,
+            Any::St3d(atom) => set_once(&mut self.st3d, atom),
+            Any::Sv3d(atom) => set_once(&mut self.sv3d, atom),
+            Any::Vexu(atom) => set_once(&mut self.vexu, atom),
+            Any::Hfov(atom) => set_once(&mut self.hfov, atom),
+            unknown => T::decode_unknown(&unknown),
         }
-        Ok(())
+    }
+}
+
+/// Each of these boxes may appear at most once in a sample entry.
+fn set_once<T: Atom>(slot: &mut Option<T>, atom: T) -> Result<()> {
+    match slot.replace(atom) {
+        Some(_) => Err(Error::DuplicateBox(T::KIND)),
+        None => Ok(()),
     }
 }
 

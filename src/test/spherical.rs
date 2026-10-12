@@ -245,3 +245,17 @@ fn sample_entry() {
     assert!(position(b"st3d") < position(b"sv3d"));
     assert!(position(b"sv3d") < position(b"pasp"));
 }
+
+#[test]
+fn sample_entry_duplicate() {
+    let mut entry = Vec::new();
+    Hvc1::default().encode(&mut entry).unwrap();
+    entry.extend([full(b"st3d", &[0]), full(b"st3d", &[2])].concat());
+    let size = entry.len() as u32;
+    entry[..4].copy_from_slice(&size.to_be_bytes());
+
+    assert!(matches!(
+        Hvc1::decode(&mut entry.as_slice()),
+        Err(Error::DuplicateBox(kind)) if kind == St3d::KIND
+    ));
+}

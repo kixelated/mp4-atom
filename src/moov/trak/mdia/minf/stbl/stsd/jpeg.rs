@@ -23,6 +23,7 @@ pub struct Jpeg {
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
     pub fiel: Option<Fiel>,
+    #[cfg_attr(feature = "serde", serde(default))]
     pub spatial: Spatial,
 }
 

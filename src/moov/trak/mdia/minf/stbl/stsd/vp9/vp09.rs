@@ -9,6 +9,7 @@ pub struct Vp09 {
     pub btrt: Option<Btrt>,
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
+    #[cfg_attr(feature = "serde", serde(default))]
     pub spatial: Spatial,
 }
 

@@ -13,6 +13,7 @@ pub struct Hvc1 {
     pub taic: Option<Taic>,
     pub fiel: Option<Fiel>,
     pub ccst: Option<Ccst>,
+    #[cfg_attr(feature = "serde", serde(default))]
     pub spatial: Spatial,
 }
 

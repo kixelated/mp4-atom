@@ -15,6 +15,7 @@ pub struct Av01 {
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
+    #[cfg_attr(feature = "serde", serde(default))]
     pub spatial: Spatial,
 }
 
