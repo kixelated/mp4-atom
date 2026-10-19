@@ -12,8 +12,7 @@ pub struct Uncv {
     pub ccst: Option<Ccst>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub spatial: Spatial,
+    pub spatial: Option<Box<Spatial>>,
 }
 
 impl Atom for Uncv {
@@ -28,7 +27,7 @@ impl Atom for Uncv {
         let mut btrt = None;
         let mut pasp = None;
         let mut taic = None;
-        let mut spatial = Spatial::default();
+        let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Cmpd(atom) => cmpd = atom.into(),
@@ -37,7 +36,7 @@ impl Atom for Uncv {
                 Any::Ccst(atom) => ccst = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
-                atom => spatial.decode_child::<Self>(atom)?,
+                atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }
         skip_trailing_padding(buf);
@@ -58,9 +57,11 @@ impl Atom for Uncv {
         self.visual.encode(buf)?;
         self.cmpd.encode(buf)?;
         self.uncc.encode(buf)?;
-        self.spatial.encode(buf)?;
         self.btrt.encode(buf)?;
         self.ccst.encode(buf)?;
+        if let Some(spatial) = &self.spatial {
+            spatial.encode(buf)?;
+        }
         self.pasp.encode(buf)?;
         self.taic.encode(buf)?;
 

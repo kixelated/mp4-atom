@@ -1,51 +1,31 @@
 use crate::*;
 
+use super::spatial::{
+    decode_children, decode_slot, decode_variant, encode_kept, ignore_trailing, spatial_children,
+};
+
 /// Spherical Video Box, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#spherical-video-box-sv3d).
 ///
-/// The spec requires `svhd` and `proj`; they are optional here so that
-/// incomplete metadata does not fail the whole sample entry.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// The spec requires `svhd` and `proj`; they are optional here, as a parser
+/// does not validate. A writer sets both, and `prhd` in `proj`: a reader may
+/// expect `svhd`, `proj` and `prhd` in that order, which is how they are
+/// written, and ignore the projection when one is missing.
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(default))]
 pub struct Sv3d {
     pub svhd: Option<Svhd>,
     pub proj: Option<Proj>,
+    /// Children this crate does not model, repeats, and children that did not decode.
+    pub unknown: Vec<Any>,
 }
+
+impl Eq for Sv3d {}
 
 impl Atom for Sv3d {
     const KIND: FourCC = FourCC::new(b"sv3d");
 
-    // Children are dispatched by header, not through `Any`: Apple's `vexu`
-    // has an unrelated `proj` box.
-    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
-        let mut svhd = None;
-        let mut proj = None;
-
-        while let Some(header) = Header::decode_maybe(buf)? {
-            match header.kind {
-                Svhd::KIND => {
-                    if svhd.is_some() {
-                        return Err(Error::DuplicateBox(Svhd::KIND));
-                    }
-                    svhd = Some(Svhd::decode_atom(&header, buf)?);
-                }
-                Proj::KIND => {
-                    if proj.is_some() {
-                        return Err(Error::DuplicateBox(Proj::KIND));
-                    }
-                    proj = Some(Proj::decode_atom(&header, buf)?);
-                }
-                _ => skip_child::<Self, _>(&header, buf)?,
-            }
-        }
-        skip_trailing_padding(buf);
-
-        Ok(Sv3d { svhd, proj })
-    }
-
-    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        self.svhd.encode(buf)?;
-        self.proj.encode(buf)
-    }
+    spatial_children! { svhd: Svhd, proj: Proj }
 }
 
 /// Spherical Video Header, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#spherical-video-header-svhd).
@@ -56,72 +36,92 @@ pub struct Svhd {
 }
 
 impl AtomExt for Svhd {
-    type Ext = ();
+    type Ext = FullBoxV0;
 
     const KIND_EXT: FourCC = FourCC::new(b"svhd");
 
-    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
-        Ok(Svhd {
-            metadata_source: String::decode(buf)?,
-        })
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: FullBoxV0) -> Result<Self> {
+        let metadata_source = String::decode(buf)?;
+        ignore_trailing(Self::KIND_EXT, buf);
+        Ok(Svhd { metadata_source })
     }
 
-    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        self.metadata_source.as_str().encode(buf)
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<FullBoxV0> {
+        self.metadata_source.as_str().encode(buf)?;
+        Ok(FullBoxV0)
     }
 }
 
 /// Projection Box, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#projection-box-proj).
 ///
-/// `kind` is `None` when the box holds no projection this crate models.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// `kind` is `None` when the box holds no projection this crate models; a
+/// projection data box of any other type is kept in `unknown`.
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(default))]
 pub struct Proj {
     pub prhd: Option<Prhd>,
     pub kind: Option<ProjKind>,
+    /// Children this crate does not model, repeats, and children that did not decode.
+    pub unknown: Vec<Any>,
 }
+
+impl Eq for Proj {}
 
 impl Atom for Proj {
     const KIND: FourCC = FourCC::new(b"proj");
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
-        let mut prhd = None;
-        let mut kind = None;
-
-        while let Some(header) = Header::decode_maybe(buf)? {
-            let projection = match header.kind {
-                Prhd::KIND => {
-                    if prhd.is_some() {
-                        return Err(Error::DuplicateBox(Prhd::KIND));
-                    }
-                    prhd = Some(Prhd::decode_atom(&header, buf)?);
-                    continue;
-                }
-                Equi::KIND => ProjKind::Equi(Equi::decode_atom(&header, buf)?),
-                Cbmp::KIND => ProjKind::Cbmp(Cbmp::decode_atom(&header, buf)?),
-                Mshp::KIND => ProjKind::Mshp(Mshp::decode_atom(&header, buf)?),
-                _ => {
-                    skip_child::<Self, _>(&header, buf)?;
-                    continue;
-                }
-            };
-            if kind.replace(projection).is_some() {
-                return Err(Error::DuplicateBox(header.kind));
-            }
-        }
-        skip_trailing_padding(buf);
-
-        Ok(Proj { prhd, kind })
+        let mut proj = Proj::default();
+        // "There must not be more than one subclass of a ProjectionDataBox in a
+        // given `proj` box", so a second projection is kept as a repeat.
+        decode_children(buf, |kind, body| match kind {
+            Prhd::KIND => decode_slot(Self::KIND, &mut proj.prhd, body, &mut proj.unknown),
+            Equi::KIND => decode_variant(
+                Self::KIND,
+                &mut proj.kind,
+                body,
+                &mut proj.unknown,
+                ProjKind::Equi,
+            ),
+            Cbmp::KIND => decode_variant(
+                Self::KIND,
+                &mut proj.kind,
+                body,
+                &mut proj.unknown,
+                ProjKind::Cbmp,
+            ),
+            Mshp::KIND => decode_variant(
+                Self::KIND,
+                &mut proj.kind,
+                body,
+                &mut proj.unknown,
+                ProjKind::Mshp,
+            ),
+            kind => proj.unknown.push(Any::Unknown(kind, body.to_vec())),
+        })?;
+        Ok(proj)
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.prhd.encode(buf)?;
+        encode_kept(&self.unknown, |kind| kind == Prhd::KIND, buf)?;
         match &self.kind {
-            Some(ProjKind::Equi(atom)) => atom.encode(buf),
-            Some(ProjKind::Cbmp(atom)) => atom.encode(buf),
-            Some(ProjKind::Mshp(atom)) => atom.encode(buf),
-            None => Ok(()),
+            Some(ProjKind::Equi(atom)) => atom.encode(buf)?,
+            Some(ProjKind::Cbmp(atom)) => atom.encode(buf)?,
+            Some(ProjKind::Mshp(atom)) => atom.encode(buf)?,
+            None => {}
         }
+        encode_kept(
+            &self.unknown,
+            |kind| matches!(kind, Equi::KIND | Cbmp::KIND | Mshp::KIND),
+            buf,
+        )?;
+        encode_kept(
+            &self.unknown,
+            |kind| !matches!(kind, Prhd::KIND | Equi::KIND | Cbmp::KIND | Mshp::KIND),
+            buf,
+        )
     }
 }
 
@@ -136,22 +136,25 @@ pub struct Prhd {
 }
 
 impl AtomExt for Prhd {
-    type Ext = ();
+    type Ext = FullBoxV0;
 
     const KIND_EXT: FourCC = FourCC::new(b"prhd");
 
-    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
-        Ok(Prhd {
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: FullBoxV0) -> Result<Self> {
+        let prhd = Prhd {
             pose_yaw_degrees: i32::decode(buf)?,
             pose_pitch_degrees: i32::decode(buf)?,
             pose_roll_degrees: i32::decode(buf)?,
-        })
+        };
+        ignore_trailing(Self::KIND_EXT, buf);
+        Ok(prhd)
     }
 
-    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<FullBoxV0> {
         self.pose_yaw_degrees.encode(buf)?;
         self.pose_pitch_degrees.encode(buf)?;
-        self.pose_roll_degrees.encode(buf)
+        self.pose_roll_degrees.encode(buf)?;
+        Ok(FullBoxV0)
     }
 }
 
@@ -165,7 +168,8 @@ pub enum ProjKind {
 }
 
 /// Equirectangular Projection, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#equirectangular-projection-box-equi).
-/// The bounds are 0.32 fixed-point fractions of the frame cropped from each edge.
+/// The bounds are 0.32 fixed-point fractions of the projection, measured from
+/// each edge, that the frame does not cover; all zero for a full 360° frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Equi {
@@ -176,24 +180,27 @@ pub struct Equi {
 }
 
 impl AtomExt for Equi {
-    type Ext = ();
+    type Ext = FullBoxV0;
 
     const KIND_EXT: FourCC = FourCC::new(b"equi");
 
-    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
-        Ok(Equi {
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: FullBoxV0) -> Result<Self> {
+        let equi = Equi {
             projection_bounds_top: u32::decode(buf)?,
             projection_bounds_bottom: u32::decode(buf)?,
             projection_bounds_left: u32::decode(buf)?,
             projection_bounds_right: u32::decode(buf)?,
-        })
+        };
+        ignore_trailing(Self::KIND_EXT, buf);
+        Ok(equi)
     }
 
-    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<FullBoxV0> {
         self.projection_bounds_top.encode(buf)?;
         self.projection_bounds_bottom.encode(buf)?;
         self.projection_bounds_left.encode(buf)?;
-        self.projection_bounds_right.encode(buf)
+        self.projection_bounds_right.encode(buf)?;
+        Ok(FullBoxV0)
     }
 }
 
@@ -206,25 +213,31 @@ pub struct Cbmp {
 }
 
 impl AtomExt for Cbmp {
-    type Ext = ();
+    type Ext = FullBoxV0;
 
     const KIND_EXT: FourCC = FourCC::new(b"cbmp");
 
-    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
-        Ok(Cbmp {
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: FullBoxV0) -> Result<Self> {
+        let cbmp = Cbmp {
             layout: u32::decode(buf)?,
             padding: u32::decode(buf)?,
-        })
+        };
+        ignore_trailing(Self::KIND_EXT, buf);
+        Ok(cbmp)
     }
 
-    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<FullBoxV0> {
         self.layout.encode(buf)?;
-        self.padding.encode(buf)
+        self.padding.encode(buf)?;
+        Ok(FullBoxV0)
     }
 }
 
 /// Mesh Projection, [Spherical Video V2](https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md#mesh-projection-box-mshp).
-/// `data` holds the `mesh` boxes, deflated when `encoding_four_cc` is `dfl8`.
+/// `data` holds the `mesh` boxes and any boxes after them, compressed with raw
+/// DEFLATE (RFC 1951, no zlib or gzip header) when `encoding_four_cc` is
+/// `dfl8`, or as-is when it is `raw `. `crc` is the CRC-32 of every byte after
+/// it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mshp {
@@ -234,11 +247,11 @@ pub struct Mshp {
 }
 
 impl AtomExt for Mshp {
-    type Ext = ();
+    type Ext = FullBoxV0;
 
     const KIND_EXT: FourCC = FourCC::new(b"mshp");
 
-    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
+    fn decode_body_ext<B: Buf>(buf: &mut B, _ext: FullBoxV0) -> Result<Self> {
         Ok(Mshp {
             crc: u32::decode(buf)?,
             encoding_four_cc: FourCC::decode(buf)?,
@@ -246,24 +259,10 @@ impl AtomExt for Mshp {
         })
     }
 
-    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+    fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<FullBoxV0> {
         self.crc.encode(buf)?;
         self.encoding_four_cc.encode(buf)?;
-        self.data.encode(buf)
+        self.data.encode(buf)?;
+        Ok(FullBoxV0)
     }
-}
-
-/// Skip a child of a container that dispatches by header: `free`/`skip`
-/// silently, anything else through `decode_unknown`.
-pub(super) fn skip_child<T: Atom, B: Buf>(header: &Header, buf: &mut B) -> Result<()> {
-    let size = header.size.unwrap_or(buf.remaining());
-    if size > buf.remaining() {
-        return Err(Error::OutOfBounds);
-    }
-    if header.kind != Free::KIND && header.kind != Skip::KIND {
-        let body = Vec::decode(&mut buf.slice(size))?;
-        T::decode_unknown(&Any::Unknown(header.kind, body))?;
-    }
-    buf.advance(size);
-    Ok(())
 }

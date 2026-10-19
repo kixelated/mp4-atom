@@ -13,8 +13,7 @@ pub struct Avc3 {
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
     pub fiel: Option<Fiel>,
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub spatial: Spatial,
+    pub spatial: Option<Box<Spatial>>,
 }
 
 impl Atom for Avc3 {
@@ -29,7 +28,7 @@ impl Atom for Avc3 {
         let mut pasp = None;
         let mut taic = None;
         let mut fiel = None;
-        let mut spatial = Spatial::default();
+        let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Avcc(atom) => avcc = atom.into(),
@@ -38,7 +37,7 @@ impl Atom for Avc3 {
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
                 Any::Fiel(atom) => fiel = atom.into(),
-                atom => spatial.decode_child::<Self>(atom)?,
+                atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }
         skip_trailing_padding(buf);
@@ -58,9 +57,11 @@ impl Atom for Avc3 {
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         self.visual.encode(buf)?;
         self.avcc.encode(buf)?;
-        self.spatial.encode(buf)?;
         self.btrt.encode(buf)?;
         self.colr.encode(buf)?;
+        if let Some(spatial) = &self.spatial {
+            spatial.encode(buf)?;
+        }
         self.pasp.encode(buf)?;
         self.taic.encode(buf)?;
         self.fiel.encode(buf)?;
