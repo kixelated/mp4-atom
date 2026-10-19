@@ -23,6 +23,7 @@ pub struct Jpeg {
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
     pub fiel: Option<Fiel>,
+    pub spatial: Option<Box<Spatial>>,
 }
 
 impl Atom for Jpeg {
@@ -35,13 +36,14 @@ impl Atom for Jpeg {
         let mut colr = None;
         let mut pasp = None;
         let mut fiel = None;
+        let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Fiel(atom) => fiel = atom.into(),
-                unknown => Self::decode_unknown(&unknown)?,
+                atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }
         skip_trailing_padding(buf);
@@ -52,6 +54,7 @@ impl Atom for Jpeg {
             colr,
             pasp,
             fiel,
+            spatial,
         })
     }
 
@@ -59,6 +62,9 @@ impl Atom for Jpeg {
         self.visual.encode(buf)?;
         self.btrt.encode(buf)?;
         self.colr.encode(buf)?;
+        if let Some(spatial) = &self.spatial {
+            spatial.encode(buf)?;
+        }
         self.pasp.encode(buf)?;
         self.fiel.encode(buf)?;
 
@@ -91,6 +97,7 @@ mod tests {
                 v_spacing: 1,
             }),
             fiel: None,
+            spatial: Default::default(),
         };
 
         let mut buf = Vec::new();

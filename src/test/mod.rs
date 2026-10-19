@@ -9,5 +9,6 @@ mod hevc;
 mod image;
 mod libavif_anim;
 mod mebx;
+mod spherical;
 mod uncompressed;
 mod vp9;

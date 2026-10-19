@@ -9,6 +9,7 @@ pub struct Vp09 {
     pub btrt: Option<Btrt>,
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
+    pub spatial: Option<Box<Spatial>>,
 }
 
 impl Atom for Vp09 {
@@ -21,13 +22,14 @@ impl Atom for Vp09 {
         let mut btrt = None;
         let mut colr = None;
         let mut pasp = None;
+        let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::VpcC(atom) => vpcc = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
-                unknown => Self::decode_unknown(&unknown)?,
+                atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }
         skip_trailing_padding(buf);
@@ -38,6 +40,7 @@ impl Atom for Vp09 {
             btrt,
             colr,
             pasp,
+            spatial,
         })
     }
 
@@ -46,6 +49,9 @@ impl Atom for Vp09 {
         self.vpcc.encode(buf)?;
         self.btrt.encode(buf)?;
         self.colr.encode(buf)?;
+        if let Some(spatial) = &self.spatial {
+            spatial.encode(buf)?;
+        }
         self.pasp.encode(buf)?;
 
         Ok(())
@@ -68,6 +74,7 @@ mod tests {
             btrt: None,
             colr: None,
             pasp: None,
+            spatial: Default::default(),
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();

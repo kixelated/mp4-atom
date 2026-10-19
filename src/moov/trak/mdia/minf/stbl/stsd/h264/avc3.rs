@@ -13,6 +13,7 @@ pub struct Avc3 {
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
     pub fiel: Option<Fiel>,
+    pub spatial: Option<Box<Spatial>>,
 }
 
 impl Atom for Avc3 {
@@ -27,6 +28,7 @@ impl Atom for Avc3 {
         let mut pasp = None;
         let mut taic = None;
         let mut fiel = None;
+        let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Avcc(atom) => avcc = atom.into(),
@@ -35,7 +37,7 @@ impl Atom for Avc3 {
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
                 Any::Fiel(atom) => fiel = atom.into(),
-                unknown => Self::decode_unknown(&unknown)?,
+                atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }
         skip_trailing_padding(buf);
@@ -48,6 +50,7 @@ impl Atom for Avc3 {
             pasp,
             taic,
             fiel,
+            spatial,
         })
     }
 
@@ -56,6 +59,9 @@ impl Atom for Avc3 {
         self.avcc.encode(buf)?;
         self.btrt.encode(buf)?;
         self.colr.encode(buf)?;
+        if let Some(spatial) = &self.spatial {
+            spatial.encode(buf)?;
+        }
         self.pasp.encode(buf)?;
         self.taic.encode(buf)?;
         self.fiel.encode(buf)?;
@@ -184,6 +190,7 @@ mod tests {
                 field_count: 2,
                 field_order: 0,
             }),
+            spatial: Default::default(),
         });
     }
 }

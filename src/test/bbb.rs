@@ -105,6 +105,7 @@ fn bbb() {
                                     }),
                                     taic: None,
                                     fiel: None,
+                                    spatial: Default::default(),
                                 }
                                 .into()],
                             },

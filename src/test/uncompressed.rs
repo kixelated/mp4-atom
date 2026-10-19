@@ -171,6 +171,7 @@ fn uncompressed() {
                                     ccst: None,
                                     pasp: None,
                                     taic: None,
+                                    spatial: Default::default(),
                                 })],
                             },
                             stts: Stts {

@@ -3,7 +3,7 @@ use crate::{
     skip_trailing_padding, Any, Atom, Buf, BufMut, Ccst, DecodeMaybe, Error, FourCC, Result,
 };
 
-use super::{Btrt, Colr, Pasp, Taic, Visual};
+use super::{Btrt, Colr, Pasp, Spatial, Taic, Visual};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -15,6 +15,7 @@ pub struct Av01 {
     pub colr: Option<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
+    pub spatial: Option<Box<Spatial>>,
 }
 
 impl Atom for Av01 {
@@ -29,6 +30,7 @@ impl Atom for Av01 {
         let mut colr = None;
         let mut pasp = None;
         let mut taic = None;
+        let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Av1c(atom) => av1c = atom.into(),
@@ -37,7 +39,7 @@ impl Atom for Av01 {
                 Any::Colr(atom) => colr = atom.into(),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
-                unknown => Self::decode_unknown(&unknown)?,
+                atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }
         skip_trailing_padding(buf);
@@ -50,6 +52,7 @@ impl Atom for Av01 {
             colr,
             pasp,
             taic,
+            spatial,
         })
     }
 
@@ -59,6 +62,9 @@ impl Atom for Av01 {
         self.btrt.encode(buf)?;
         self.ccst.encode(buf)?;
         self.colr.encode(buf)?;
+        if let Some(spatial) = &self.spatial {
+            spatial.encode(buf)?;
+        }
         self.pasp.encode(buf)?;
         self.taic.encode(buf)?;
 

@@ -190,6 +190,7 @@ fn mebx() {
                                         taic: None,
                                         fiel: None,
                                         ccst: None,
+                                        spatial: Default::default(),
                                     }
                                     .into()],
                                 },
