@@ -119,12 +119,15 @@ impl Pcm {
             let mut limited = buf.slice(size);
 
             if header.kind == Chnl::KIND {
+                let channel_count = u16::try_from(audio.channel_count).map_err(|_| {
+                    Error::Unsupported("channel count exceeds the chnl version 0 limit")
+                })?;
                 // Decode channel layout by using the channel count
                 // information. We cannot rely on the decode_body
                 // implementation of Atom for channel layout box.
                 chnl = Some(Chnl::decode_body_with_channel_count(
                     &mut limited,
-                    audio.channel_count,
+                    channel_count,
                 )?);
             } else {
                 match Any::decode_atom(&header, &mut limited)? {
@@ -171,9 +174,9 @@ impl Pcm {
     /// - `in24` / `in32`: big-endian integer, 24 / 32 bits
     /// - `fl32` / `fl64`: big-endian float, 32 / 64 bits
     /// - `s16l`: little-endian integer, 16 bits
-    /// - `lpcm`: QTFF format flags are only defined for version 2 sound sample
-    ///   descriptions, which are not decoded here; defaults to big-endian
-    ///   integer, `sample_size` bits
+    /// - `lpcm`: QTFF format flags are stored in version 2 sound sample
+    ///   descriptions and preserved in [`AudioVersion::V2`], but are not
+    ///   interpreted here; defaults to big-endian integer, `sample_size` bits
     ///
     /// Returns `None` for an unknown fourcc, or for an `ipcm`/`fpcm` entry
     /// missing its mandatory `pcmC` box (which
@@ -324,6 +327,7 @@ mod tests {
             fourcc: FourCC::new(b"fpcm"),
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 16,
                 sample_rate: 48000.into(),
@@ -360,6 +364,7 @@ mod tests {
             fourcc: FourCC::new(b"ipcm"),
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 16,
                 sample_rate: 48000.into(),
@@ -397,6 +402,7 @@ mod tests {
             fourcc: FourCC::new(b"fpcm"),
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 16,
                 sample_rate: 48000.into(),
@@ -438,6 +444,7 @@ mod tests {
             fourcc: FourCC::new(b"fpcm"),
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 16,
                 sample_rate: 48000.into(),
@@ -478,6 +485,7 @@ mod tests {
             fourcc: FourCC::new(b"fpcm"),
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 16,
                 sample_rate: 48000.into(),
@@ -514,6 +522,7 @@ mod tests {
         let pcm = Lpcm {
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 24,
                 sample_rate: 48000.into(),
@@ -544,9 +553,10 @@ mod tests {
         Ipcm {
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 24,
-                sample_rate: FixedPoint::new(48000, 0),
+                sample_rate: 48000.0,
             },
             pcmc: Some(PcmC {
                 big_endian: true,
@@ -611,9 +621,10 @@ mod tests {
             Twos {
                 audio: Audio {
                     data_reference_index: 1,
+                    version: AudioVersion::V0,
                     channel_count: 2,
                     sample_size: 16,
-                    sample_rate: FixedPoint::new(48000, 0),
+                    sample_rate: 48000.0,
                 },
                 pcmc: None,
                 chnl: None,
@@ -658,6 +669,7 @@ mod tests {
         let ipcm = Ipcm {
             audio: Audio {
                 data_reference_index: 1,
+                version: AudioVersion::V0,
                 channel_count: 2,
                 sample_size: 16,
                 sample_rate: 48000.into(),
