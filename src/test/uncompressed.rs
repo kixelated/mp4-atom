@@ -171,6 +171,7 @@ fn uncompressed() {
                                     ccst: None,
                                     pasp: None,
                                     taic: None,
+                                    spatial: Default::default(),
                                 })],
                             },
                             stts: Stts {
@@ -233,7 +234,8 @@ fn uncompressed() {
                             language_indicator: 0,
                             text: "GPAC-2.5-DEV-rev2076-gd245ba575-rawff_amd2_2024-07-06".into()
                         }),
-                        cprt: None
+                        cprt: None,
+                        mdta: vec![]
                     }
                     .into(),],
                 }),

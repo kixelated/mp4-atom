@@ -17,22 +17,8 @@ pub trait Atom: Sized {
 
 impl<T: Atom> Encode for T {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        let start = buf.len();
-
-        // Encode a 0 for the size, we'll come back to it later
-        0u32.encode(buf)?;
-        Self::KIND.encode(buf)?;
-        self.encode_body(buf)?;
-
-        // Update the size field
         // TODO support sizes larger than u32 (4GB)
-        let size: u32 = (buf.len() - start)
-            .try_into()
-            .map_err(|_| Error::TooLarge(T::KIND))?;
-
-        buf.set_slice(start, &size.to_be_bytes());
-
-        Ok(())
+        buf.encode_atom(Self::KIND, |buf| self.encode_body(buf))
     }
 }
 

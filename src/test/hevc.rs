@@ -399,7 +399,8 @@ fn hevc() {
                             language_indicator: 0,
                             text: "Lavf61.7.100".into()
                         }),
-                        cprt: None
+                        cprt: None,
+                        mdta: vec![]
                     }
                     .into(),],
                 }),

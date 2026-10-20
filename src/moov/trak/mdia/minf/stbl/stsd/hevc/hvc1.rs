@@ -13,6 +13,7 @@ pub struct Hvc1 {
     pub taic: Option<Taic>,
     pub fiel: Option<Fiel>,
     pub ccst: Option<Ccst>,
+    pub spatial: Option<Box<Spatial>>,
 }
 
 impl Atom for Hvc1 {
@@ -29,6 +30,7 @@ impl Atom for Hvc1 {
         let mut taic = None;
         let mut fiel = None;
         let mut ccst = None;
+        let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Hvcc(atom) => hvcc = atom.into(),
@@ -39,7 +41,7 @@ impl Atom for Hvc1 {
                 Any::Taic(atom) => taic = atom.into(),
                 Any::Fiel(atom) => fiel = atom.into(),
                 Any::Ccst(atom) => ccst = atom.into(),
-                unknown => Self::decode_unknown(&unknown)?,
+                atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }
         skip_trailing_padding(buf);
@@ -54,6 +56,7 @@ impl Atom for Hvc1 {
             taic,
             fiel,
             ccst,
+            spatial,
         })
     }
 
@@ -63,6 +66,9 @@ impl Atom for Hvc1 {
         self.lhvc.encode(buf)?;
         self.btrt.encode(buf)?;
         self.colr.encode(buf)?;
+        if let Some(spatial) = &self.spatial {
+            spatial.encode(buf)?;
+        }
         self.pasp.encode(buf)?;
         self.taic.encode(buf)?;
         self.fiel.encode(buf)?;

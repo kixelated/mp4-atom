@@ -160,6 +160,7 @@ fn avcc_ext() {
                                     }),
                                     taic: None,
                                     fiel: None,
+                                    spatial: Default::default(),
                                 }
                                 .into()],
                             },

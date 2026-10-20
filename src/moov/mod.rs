@@ -237,6 +237,7 @@ mod test {
                                         pasp: None,
                                         taic: None,
                                         fiel: None,
+                                        spatial: Default::default(),
                                     }
                                     .into()],
                                 },

@@ -66,12 +66,11 @@ impl AtomExt for ItemInfoEntry {
             (self.item_id as u16).encode(buf)?;
             self.item_protection_index.encode(buf)?;
             self.item_name.as_str().encode(buf)?;
-            self.content_type.clone().unwrap().as_str().encode(buf)?;
-            self.content_encoding
-                .clone()
-                .unwrap_or("".to_string())
-                .as_str()
-                .encode(buf)?;
+            let content_type = self.content_type.as_deref().ok_or(Error::MissingContent(
+                "content_type required for infe version 0 or 1",
+            ))?;
+            content_type.encode(buf)?;
+            self.content_encoding.as_deref().unwrap_or("").encode(buf)?;
             if version == ItemInfoEntryVersion::V1 {
                 return Err(Error::Unsupported("infe version 1 extensions"));
             }
@@ -85,12 +84,11 @@ impl AtomExt for ItemInfoEntry {
             Some(self.item_type).encode(buf)?;
             self.item_name.as_str().encode(buf)?;
             if self.item_type == Some(FourCC::new(b"mime")) {
-                self.content_type.clone().unwrap().as_str().encode(buf)?;
-                self.content_encoding
-                    .clone()
-                    .unwrap_or("".to_string())
-                    .as_str()
-                    .encode(buf)?;
+                let content_type = self.content_type.as_deref().ok_or(Error::MissingContent(
+                    "content_type required with 'mime' item_type",
+                ))?;
+                content_type.encode(buf)?;
+                self.content_encoding.as_deref().unwrap_or("").encode(buf)?;
             } else if self.item_type == Some(FourCC::new(b"uri ")) {
                 let item_uri_type = self.item_uri_type.as_ref().ok_or(Error::MissingContent(
                     "item_uri_type required with 'uri ' item_type",
@@ -256,6 +254,56 @@ mod tests {
         101, 115, 116, 0,
     ];
 
+    const ENCODED_IINF_LIBAVIF_URI_V3: &[u8] = &[
+        0, 0, 0, 67, b'i', b'i', b'n', b'f', 0, 0, 0, 0, 0, 1, 0, 0, 0, 53, b'i', b'n', b'f', b'e',
+        3, 0, 0, 0, 0, 1, 0, 0, 0, 0, b'm', b'i', b'm', b'e', b'I', b't', b'e', b'm', 0, b'c',
+        b'o', b'n', b't', b'e', b'n', b't', b'-', b't', b'y', b'p', b'e', 0, b'u', b'n', b'k',
+        b'n', b'o', b'w', b'n', b'/', b'm', b'i', b'm', b'e', 0,
+    ];
+
+    /// Decodes an item info box version 3 entry.
+    #[test]
+    fn test_iinf_libavif_decode_mime_v3() {
+        let buf: &mut std::io::Cursor<&&[u8]> =
+            &mut std::io::Cursor::new(&ENCODED_IINF_LIBAVIF_URI_V3);
+
+        let iinf: Iinf = Iinf {
+            item_infos: vec![ItemInfoEntry {
+                item_id: 65536,
+                item_protection_index: 0,
+                item_type: Some(FourCC::new(b"mime")),
+                item_name: "Item".to_string(),
+                content_type: Some("content-type".to_string()),
+                content_encoding: Some("unknown/mime".to_string()),
+                item_uri_type: None,
+                item_not_in_presentation: false,
+            }],
+        };
+        let decoded = Iinf::decode(buf).unwrap();
+        assert_eq!(decoded, iinf);
+    }
+
+    /// Encodes a item info box version 3 entry.
+    #[test]
+    fn test_iinf_avif_encode_mime_v3() {
+        let iinf: Iinf = Iinf {
+            item_infos: vec![ItemInfoEntry {
+                item_id: 65536,
+                item_protection_index: 0,
+                item_type: Some(FourCC::new(b"mime")),
+                item_name: "Item".to_string(),
+                content_type: Some("content-type".to_string()),
+                content_encoding: Some("unknown/mime".to_string()),
+                item_uri_type: None,
+                item_not_in_presentation: false,
+            }],
+        };
+        let mut buf = Vec::new();
+        iinf.encode(&mut buf).unwrap();
+
+        assert_eq!(buf.as_slice(), ENCODED_IINF_LIBAVIF_URI_V3);
+    }
+
     /// Decodes a libavif-style `uri ` item info box.
     #[test]
     fn test_iinf_libavif_decode_uri() {
@@ -315,6 +363,52 @@ mod tests {
             }],
         };
         let mut buf = Vec::new();
+        assert!(matches!(
+            iinf.encode(&mut buf),
+            Err(Error::MissingContent(_))
+        ));
+    }
+
+    /// Rejects a version 0 item info entry when its required content type is missing.
+    #[test]
+    fn test_iinf_encode_v0_without_content_type_returns_error() {
+        let iinf = Iinf {
+            item_infos: vec![ItemInfoEntry {
+                item_id: 1,
+                item_protection_index: 0,
+                item_type: None,
+                item_name: "Item".to_string(),
+                content_type: None,
+                content_encoding: None,
+                item_uri_type: None,
+                item_not_in_presentation: false,
+            }],
+        };
+        let mut buf = Vec::new();
+
+        assert!(matches!(
+            iinf.encode(&mut buf),
+            Err(Error::MissingContent(_))
+        ));
+    }
+
+    /// Rejects a `mime` item info entry when its required content type is missing.
+    #[test]
+    fn test_iinf_encode_mime_without_content_type_returns_error() {
+        let iinf = Iinf {
+            item_infos: vec![ItemInfoEntry {
+                item_id: 1,
+                item_protection_index: 0,
+                item_type: Some(FourCC::new(b"mime")),
+                item_name: "Item".to_string(),
+                content_type: None,
+                content_encoding: None,
+                item_uri_type: None,
+                item_not_in_presentation: false,
+            }],
+        };
+        let mut buf = Vec::new();
+
         assert!(matches!(
             iinf.encode(&mut buf),
             Err(Error::MissingContent(_))
