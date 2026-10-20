@@ -30,7 +30,7 @@ impl AtomExt for Iref {
 
     fn decode_body_ext<B: Buf>(buf: &mut B, ext: IrefExt) -> Result<Self> {
         let mut references = vec![];
-        while buf.has_remaining() {
+        while buf.remaining() > 3 {
             let box_len = u32::decode(buf)? as usize;
             let body_len = box_len.checked_sub(4).ok_or(Error::InvalidSize)?;
             if body_len > buf.remaining() {
