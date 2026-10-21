@@ -115,9 +115,7 @@ fn bbb() {
                             stsc: Stsc {
                                 ..Default::default()
                             },
-                            stsz: Stsz {
-                                ..Default::default()
-                            },
+                            stsz: Some(Stsz::default()),
                             stco: Some(Stco { ..Default::default() }),
                             ..Default::default()
                         },
@@ -195,9 +193,7 @@ fn bbb() {
                             stsc: Stsc {
                                 ..Default::default()
                             },
-                            stsz: Stsz {
-                                ..Default::default()
-                            },
+                            stsz: Some(Stsz::default()),
                             stco: Some(Stco { ..Default::default() }),
                             ..Default::default()
                         },
