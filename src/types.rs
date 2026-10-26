@@ -237,7 +237,14 @@ where
         if self.dec.is_zero() {
             write!(f, "{:?}", self.int)
         } else {
-            write!(f, "{:?}", f64::from(self.int) / f64::from(self.dec))
+            // The fractional half counts units of 1/2^N, N being its bit width.
+            let scale = 2f64.powi(8 * size_of::<T>() as i32);
+            let mut dec = f64::from(self.dec);
+            if dec < 0.0 {
+                // A signed type: the bits are still an unsigned fraction.
+                dec += scale;
+            }
+            write!(f, "{:?}", f64::from(self.int) + dec / scale)
         }
     }
 }
@@ -411,7 +418,7 @@ impl AsRef<[u8; 16]> for ExtendedType {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Compressor, Decode as _, Encode as _, ExtendedType};
+    use crate::{Compressor, Decode as _, Encode as _, ExtendedType, FixedPoint};
 
     #[test]
     fn check_compressor_encode_minimal() {
@@ -473,6 +480,19 @@ mod tests {
         let mut buf = Vec::new();
         let result = compressor.encode(&mut buf);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn fixed_point_debug_prints_the_value() {
+        // 16.16
+        assert_eq!(format!("{:?}", FixedPoint::new(1u16, 0)), "1");
+        assert_eq!(format!("{:?}", FixedPoint::new(1u16, 0x8000)), "1.5");
+        assert_eq!(format!("{:?}", FixedPoint::new(0u16, 0x4000)), "0.25");
+        // 8.8
+        assert_eq!(format!("{:?}", FixedPoint::new(0u8, 0x80)), "0.5");
+        // Signed: the integer half is two's complement, the fraction unsigned.
+        assert_eq!(format!("{:?}", FixedPoint::new(-2i8, 0x40)), "-1.75");
+        assert_eq!(format!("{:?}", FixedPoint::new(-2i16, 0x4000)), "-1.75");
     }
 
     #[test]
