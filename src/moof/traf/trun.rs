@@ -13,6 +13,10 @@ ext! {
     }
 }
 
+/// A sample run with at least one per-sample field when nonempty.
+///
+/// Runs containing only a sample count are unsupported: this representation
+/// materializes each entry, so every entry needs bytes in the input to bound it.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Trun {
@@ -53,19 +57,18 @@ impl AtomExt for Trun {
             false => None,
         };
 
-        // Avoid a memory exhaustion attack.
-        // If none of the flags are set, then the trun entry has zero size, then we'll allocate `sample_count` entries.
-        // Rather than make the API worse, we just limit the number of (useless?) identical entries to 4096.
-        if !(ext.sample_duration
-            || ext.sample_size
-            || ext.sample_flags
-            || ext.sample_cts
-            || sample_count <= 4096)
+        // Every materialized entry needs a per-entry field in the input. A count
+        // alone could otherwise expand a small moof into arbitrarily many entries.
+        if sample_count != 0
+            && !(ext.sample_duration || ext.sample_size || ext.sample_flags || ext.sample_cts)
         {
-            return Err(Error::OutOfMemory);
+            return Err(Error::Unsupported(
+                "nonempty trun without per-sample fields",
+            ));
         }
 
-        let mut entries = Vec::with_capacity(sample_count.min(4096) as _);
+        // Grow only as fields are read, so a truncated table cannot allocate by count.
+        let mut entries = Vec::new();
 
         for _ in 0..sample_count {
             let duration = match ext.sample_duration {
@@ -126,6 +129,14 @@ impl AtomExt for Trun {
             sample_flags,
             sample_cts: self.entries.iter().any(|s| s.cts.is_some()),
         };
+
+        if !self.entries.is_empty()
+            && !(ext.sample_duration || ext.sample_size || ext.sample_flags || ext.sample_cts)
+        {
+            return Err(Error::Unsupported(
+                "nonempty trun without per-sample fields",
+            ));
+        }
 
         (self.entries.len() as u32).encode(buf)?;
 
@@ -336,36 +347,42 @@ mod test {
         assert_eq!(decoded.entries[1].size, Some(0));
     }
 
-    /// When all entries have None for a field, the flag is not set and
-    /// the field is omitted entirely (no unnecessary bytes written).
+    /// Field-less runs have no input bytes to back their sample count.
     #[test]
-    fn all_none_fields_omitted() {
-        let trun = Trun {
-            data_offset: Some(100),
-            entries: vec![
-                TrunEntry {
-                    duration: None,
-                    size: None,
-                    flags: None,
-                    cts: None,
-                },
-                TrunEntry {
-                    duration: None,
-                    size: None,
-                    flags: None,
-                    cts: None,
-                },
-            ],
+    fn fieldless_runs_are_refused() {
+        for count in [1, 4096, u32::MAX] {
+            for first_flags in [false, true] {
+                // Full-box header, sample count, optional first flags; no per-entry fields.
+                let mut body = vec![0, 0, 0, if first_flags { 4 } else { 0 }];
+                body.extend_from_slice(&count.to_be_bytes());
+                if first_flags {
+                    body.extend_from_slice(&0u32.to_be_bytes());
+                }
+                assert!(matches!(
+                    Trun::decode_body(&mut body.as_slice()),
+                    Err(Error::Unsupported(_))
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn fieldless_runs_cannot_be_encoded() {
+        let run = Trun {
+            entries: vec![Default::default(); 4],
+            ..Default::default()
         };
+        assert!(matches!(
+            run.encode(&mut Vec::new()),
+            Err(Error::Unsupported(_))
+        ));
+    }
 
+    #[test]
+    fn empty_run_roundtrip() {
+        let run = Trun::default();
         let mut buf = Vec::new();
-        trun.encode(&mut buf).expect("encode");
-
-        let decoded = Trun::decode(&mut &buf[..]).expect("decode");
-
-        assert_eq!(decoded.entries[0].duration, None);
-        assert_eq!(decoded.entries[0].size, None);
-        assert_eq!(decoded.entries[0].flags, None);
-        assert_eq!(decoded.entries[0].cts, None);
+        run.encode(&mut buf).unwrap();
+        assert_eq!(Trun::decode(&mut buf.as_slice()).unwrap(), run);
     }
 }
