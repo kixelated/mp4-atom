@@ -304,39 +304,40 @@ impl AtomExt for Stsd {
     }
 }
 
+#[cfg(test)]
 mod tests {
-    #![cfg(not(feature = "strict"))]
+    use super::*;
 
-    #[test]
-    fn unknown_codec_parses() {
-        use crate::{Codec, Decode, FourCC, Stsd};
+    #[cfg(not(feature = "strict"))]
+    mod not_strict {
+        use super::*;
 
-        let input = b"\0\0\0\x1cstsd\0\0\0\0\0\0\0\x01\0\0\0\x0cdvh9\x01\x02\x03\x04";
-        let mut buf = input.as_slice();
+        #[test]
+        fn unknown_codec_parses() {
+            let input = b"\0\0\0\x1cstsd\0\0\0\0\0\0\0\x01\0\0\0\x0cdvh9\x01\x02\x03\x04";
+            let mut buf = input.as_slice();
 
-        let stsd = Stsd::decode(&mut buf).unwrap();
-        assert_eq!(
-            stsd.codecs,
-            vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
-        );
-    }
+            let stsd = Stsd::decode(&mut buf).unwrap();
+            assert_eq!(
+                stsd.codecs,
+                vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
+            );
+        }
 
-    #[test]
-
-    fn unknown_codec_not_emitted() {
-        use crate::{Codec, Encode, FourCC, Stsd};
-
-        let stsd = Stsd {
-            codecs: vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])],
-        };
-        assert_eq!(
-            stsd.codecs,
-            vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
-        );
-        let mut output = Vec::new();
-        assert!(matches!(
-            stsd.encode(&mut output),
-            Err(crate::Error::UnknownCodec)
-        ));
+        #[test]
+        fn unknown_codec_not_emitted() {
+            let stsd = Stsd {
+                codecs: vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])],
+            };
+            assert_eq!(
+                stsd.codecs,
+                vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
+            );
+            let mut output = Vec::new();
+            assert!(matches!(
+                stsd.encode(&mut output),
+                Err(crate::Error::UnknownCodec)
+            ));
+        }
     }
 }
