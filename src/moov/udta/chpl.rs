@@ -41,14 +41,7 @@ impl Atom for Chpl {
         for _ in 0..count {
             let start = u64::decode(buf)?;
 
-            let title_len = u8::decode(buf)? as usize;
-            if title_len > buf.remaining() {
-                return Err(Error::OutOfBounds);
-            }
-            let title_bytes = buf.slice(title_len).to_vec();
-            buf.advance(title_len);
-            let title = String::from_utf8(title_bytes)
-                .map_err(|err| Error::InvalidString(err.to_string()))?;
+            let title = decode_length_prefixed_utf8_string::<u8>(buf)?;
 
             entries.push(ChplEntry { start, title });
         }
@@ -71,13 +64,7 @@ impl Atom for Chpl {
         for entry in &self.entries {
             entry.start.encode(buf)?;
 
-            let title_bytes = entry.title.as_bytes();
-            let title_len: u8 = title_bytes
-                .len()
-                .try_into()
-                .map_err(|_| Error::TooLarge(Self::KIND))?;
-            title_len.encode(buf)?;
-            buf.append_slice(title_bytes);
+            encode_length_prefixed_string::<u8>(buf, &entry.title, Self::KIND)?;
         }
 
         Ok(())
