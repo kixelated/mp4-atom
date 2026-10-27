@@ -16,7 +16,33 @@ pub struct Tx3g {
     pub style_record: [u8; 12],
     // Looks like this is supposed to be present, but we're relaxed about it.
     pub ftab: Option<Ftab>,
-    // TODO: possibly there is a default disparity box here too, but never seen.
+    pub disp: Option<Disp>,
+}
+
+/// `DisparityBox` ('disp'): the stereo disparity shift of timed text. In a
+/// sample entry it is the default, in a sample it overrides the default.
+///
+/// See 3GPP TS 26.245 Section 5.17.1.9.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Disp {
+    /// 16 times the shift applied to the left on the left view and to the
+    /// right on the right view.
+    pub disparity_shift_in_16th_pel: i16,
+}
+
+impl Atom for Disp {
+    const KIND: FourCC = FourCC::new(b"disp");
+
+    fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
+        Ok(Self {
+            disparity_shift_in_16th_pel: i16::decode(buf)?,
+        })
+    }
+
+    fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        self.disparity_shift_in_16th_pel.encode(buf)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -44,6 +70,7 @@ impl Default for Tx3g {
             box_record: [0, 0, 0, 0],
             style_record: [0, 0, 0, 0, 0, 1, 0, 16, 255, 255, 255, 255],
             ftab: None, // TODO: possibly a nice Serif?
+            disp: None,
         }
     }
 }
@@ -72,10 +99,12 @@ impl Atom for Tx3g {
             i16::decode(buf)?,
         ];
         let style_record = <[u8; 12]>::decode(buf)?;
-        let mut ftab = None; // TODO
+        let mut ftab = None;
+        let mut disp = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Ftab(atom) => ftab = atom.into(),
+                Any::Disp(atom) => disp = atom.into(),
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
@@ -90,6 +119,7 @@ impl Atom for Tx3g {
             box_record,
             style_record,
             ftab,
+            disp,
         })
     }
 
@@ -111,6 +141,7 @@ impl Atom for Tx3g {
             (self.style_record[n]).encode(buf)?;
         }
         self.ftab.encode(buf)?;
+        self.disp.encode(buf)?;
 
         Ok(())
     }
@@ -136,6 +167,7 @@ mod tests {
             box_record: [0, 0, 0, 0],
             style_record: [0, 0, 0, 0, 0, 1, 0, 16, 255, 255, 255, 255],
             ftab: None,
+            disp: None,
         };
         let mut buf = Vec::new();
         expected.encode(&mut buf).unwrap();
@@ -225,8 +257,24 @@ mod tests {
                     font: "Serif".into(),
                 }],
             }),
+            disp: None,
         }
     }
+
+    #[test]
+    fn test_tx3g_with_default_disparity() {
+        let expected = Tx3g {
+            disp: Some(Disp {
+                disparity_shift_in_16th_pel: 48,
+            }),
+            ..get_reference_mpeg_09_tx3g()
+        };
+        let mut buf = Vec::new();
+        expected.encode(&mut buf).unwrap();
+        let decoded = Tx3g::decode(&mut buf.as_slice()).expect("failed to decode tx3g");
+        assert_eq!(decoded, expected);
+    }
+
     #[test]
     fn test_mpeg_09_text_decode() {
         let buf: &mut std::io::Cursor<&&[u8]> = &mut std::io::Cursor::new(&ENCODED_TX3G_09);
