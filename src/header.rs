@@ -127,6 +127,14 @@ impl Header {
         Ok(value)
     }
 
+    /// Skip the body of this atom in `buf`.
+    pub(crate) fn skip_body<B: Buf>(&self, buf: &mut B) -> Result<()> {
+        self.decode_body(buf, |body| {
+            body.advance(body.remaining());
+            Ok(())
+        })
+    }
+
     /// Decode the body of this atom from `buf` as a UTF-8 string.
     pub(crate) fn decode_utf8_string<B: Buf>(&self, buf: &mut B) -> Result<String> {
         self.decode_body(buf, |body| decode_utf8_string(body))
