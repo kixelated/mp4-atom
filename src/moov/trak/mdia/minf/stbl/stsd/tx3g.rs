@@ -28,6 +28,26 @@ pub struct RgbaColor {
     pub alpha: u8,
 }
 
+impl Decode for RgbaColor {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        Ok(Self {
+            red: u8::decode(buf)?,
+            green: u8::decode(buf)?,
+            blue: u8::decode(buf)?,
+            alpha: u8::decode(buf)?,
+        })
+    }
+}
+
+impl Encode for RgbaColor {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        self.red.encode(buf)?;
+        self.green.encode(buf)?;
+        self.blue.encode(buf)?;
+        self.alpha.encode(buf)
+    }
+}
+
 impl Default for Tx3g {
     fn default() -> Self {
         Tx3g {
@@ -59,12 +79,7 @@ impl Atom for Tx3g {
         let display_flags = u32::decode(buf)?;
         let horizontal_justification = i8::decode(buf)?;
         let vertical_justification = i8::decode(buf)?;
-        let bg_color_rgba = RgbaColor {
-            red: u8::decode(buf)?,
-            green: u8::decode(buf)?,
-            blue: u8::decode(buf)?,
-            alpha: u8::decode(buf)?,
-        };
+        let bg_color_rgba = RgbaColor::decode(buf)?;
         let box_record: [i16; 4] = [
             i16::decode(buf)?,
             i16::decode(buf)?,
@@ -100,10 +115,7 @@ impl Atom for Tx3g {
         self.display_flags.encode(buf)?;
         self.horizontal_justification.encode(buf)?;
         self.vertical_justification.encode(buf)?;
-        self.bg_color_rgba.red.encode(buf)?;
-        self.bg_color_rgba.green.encode(buf)?;
-        self.bg_color_rgba.blue.encode(buf)?;
-        self.bg_color_rgba.alpha.encode(buf)?;
+        self.bg_color_rgba.encode(buf)?;
         for n in 0..4 {
             (self.box_record[n]).encode(buf)?;
         }
