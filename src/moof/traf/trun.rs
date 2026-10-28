@@ -52,6 +52,19 @@ impl TrunSamples {
         self.len() == 0
     }
 
+    /// The entry of the sample at `index`, or `None` if it is out of range.
+    pub fn get(&self, index: usize) -> Option<TrunEntry> {
+        match self {
+            Self::Inherited { count, first_flags } => {
+                (index < *count as usize).then(|| TrunEntry {
+                    flags: if index == 0 { *first_flags } else { None },
+                    ..Default::default()
+                })
+            }
+            Self::Explicit(entries) => entries.get(index).copied(),
+        }
+    }
+
     /// Each sample's entry in order, without allocating.
     pub fn iter(&self) -> TrunSamplesIter<'_> {
         match self {
@@ -115,6 +128,23 @@ impl Iterator for TrunSamplesIter<'_> {
             }
             Self::Explicit(entries) => entries.next().copied(),
         }
+    }
+
+    fn nth(&mut self, n: usize) -> Option<TrunEntry> {
+        match self {
+            Self::Inherited {
+                remaining,
+                first_flags,
+            } => {
+                // Every sample after the first is identical, so skip without stepping through them.
+                if n > 0 {
+                    *first_flags = None;
+                    *remaining = remaining.saturating_sub(n.try_into().unwrap_or(u32::MAX));
+                }
+            }
+            Self::Explicit(entries) => return entries.nth(n).copied(),
+        }
+        self.next()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -557,6 +587,18 @@ mod test {
             );
             assert_eq!(entries.next(), Some(TrunEntry::default()));
             assert_eq!(entries.len(), u32::MAX as usize - 2);
+
+            // Skipping into the run takes constant time.
+            assert_eq!(
+                entries.nth(u32::MAX as usize - 3),
+                Some(TrunEntry::default())
+            );
+            assert_eq!(entries.next(), None);
+
+            let last = u32::MAX as usize - 1;
+            assert_eq!(decoded.samples.get(0), decoded.samples.iter().next());
+            assert_eq!(decoded.samples.get(last), Some(TrunEntry::default()));
+            assert_eq!(decoded.samples.get(last + 1), None);
         }
     }
 
@@ -586,6 +628,33 @@ mod test {
             }
         );
         assert!(decoded.samples.iter().eq(trun.samples.iter()));
+    }
+
+    /// `get` and `nth` agree with stepping through the run in both forms.
+    #[test]
+    fn random_access() {
+        let inherited = TrunSamples::Inherited {
+            count: 3,
+            first_flags: Some(0x02000000),
+        };
+        let explicit = TrunSamples::Explicit(vec![
+            TrunEntry {
+                size: Some(1),
+                ..Default::default()
+            },
+            TrunEntry {
+                size: Some(2),
+                ..Default::default()
+            },
+        ]);
+
+        for samples in [inherited, explicit] {
+            let all: Vec<_> = samples.iter().collect();
+            for n in 0..=all.len() {
+                assert_eq!(samples.get(n), all.get(n).copied());
+                assert_eq!(samples.iter().nth(n), all.get(n).copied());
+            }
+        }
     }
 
     /// A sample_count larger than the per-sample data fails without reserving for it.
