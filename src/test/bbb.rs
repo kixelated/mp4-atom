@@ -238,10 +238,10 @@ fn bbb() {
                 }),
                 trun: vec![Trun {
                     data_offset: 116.into(),
-                    entries: vec![TrunEntry {
-                        flags: Some(33554432),
-                        ..Default::default()
-                    }],
+                    samples: TrunSamples::Inherited {
+                        count: 1,
+                        first_flags: Some(33554432),
+                    },
                 }],
                 sbgp: vec![],
                 sgpd: vec![],
@@ -300,7 +300,10 @@ fn bbb() {
                 }),
                 trun: vec![Trun {
                     data_offset: 112.into(),
-                    entries: vec![Default::default()],
+                    samples: TrunSamples::Inherited {
+                        count: 1,
+                        first_flags: None,
+                    },
                 }],
                 sbgp: vec![],
                 sgpd: vec![],
