@@ -7,6 +7,7 @@ license = "MIT OR Apache-2.0"
 
 version = "0.16.2"
 edition = "2021"
+rust-version = "1.88"
 
 keywords = ["mp4", "isobmff", "mp4box", "audio", "video"]
 categories = ["multimedia::encoding"]
