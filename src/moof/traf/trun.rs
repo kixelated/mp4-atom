@@ -181,7 +181,8 @@ pub struct TrunEntry {
     pub duration: Option<u32>,
     pub size: Option<u32>,
     pub flags: Option<u32>,
-    pub cts: Option<i32>,
+    /// The composition offset: unsigned in a version 0 box, signed in version 1.
+    pub cts: Option<i64>,
 }
 
 impl AtomExt for Trun {
@@ -243,9 +244,10 @@ impl AtomExt for Trun {
                     false => None,
                 },
             };
-            let cts = match ext.sample_cts {
-                true => i32::decode(buf)?.into(),
-                false => None,
+            let cts = match (ext.sample_cts, ext.version) {
+                (false, _) => None,
+                (true, TrunVersion::V0) => Some(u32::decode(buf)?.into()),
+                (true, TrunVersion::V1) => Some(i32::decode(buf)?.into()),
             };
 
             entries.push(TrunEntry {
@@ -290,8 +292,20 @@ impl AtomExt for Trun {
         // None entries are backfilled with 0 to avoid silently dropping flags.
         let sample_flags = any_flags && !first_only_flags;
 
+        // Keep version 1's signed offsets unless one only fits version 0's unsigned range.
+        let mut cts = entries.iter().filter_map(|s| s.cts);
+        let version = if cts.clone().all(|cts| i32::try_from(cts).is_ok()) {
+            TrunVersion::V1
+        } else if cts.all(|cts| u32::try_from(cts).is_ok()) {
+            TrunVersion::V0
+        } else {
+            return Err(Error::InvalidCombination(
+                "trun composition offsets fit neither i32 nor u32",
+            ));
+        };
+
         let ext = TrunExt {
-            version: TrunVersion::V1,
+            version,
             data_offset: self.data_offset.is_some(),
             first_sample_flags: first_only_flags,
 
@@ -323,7 +337,12 @@ impl AtomExt for Trun {
                 Some(Some(entry.flags.unwrap_or(0))).encode(buf)?;
             }
             if ext.sample_cts {
-                Some(Some(entry.cts.unwrap_or(0))).encode(buf)?;
+                // Range-checked against the version above.
+                let cts = entry.cts.unwrap_or(0);
+                match version {
+                    TrunVersion::V0 => (cts as u32).encode(buf)?,
+                    TrunVersion::V1 => (cts as i32).encode(buf)?,
+                }
             }
         }
 
@@ -654,6 +673,60 @@ mod test {
                 assert_eq!(samples.get(n), all.get(n).copied());
                 assert_eq!(samples.iter().nth(n), all.get(n).copied());
             }
+        }
+    }
+
+    fn cts_entries(cts: &[i64]) -> Trun {
+        Trun {
+            data_offset: None,
+            samples: cts
+                .iter()
+                .map(|&cts| TrunEntry {
+                    cts: Some(cts),
+                    ..Default::default()
+                })
+                .collect::<Vec<_>>()
+                .into(),
+        }
+    }
+
+    /// Composition offsets pick the version that represents them: signed (1) by default,
+    /// unsigned (0) only when an offset exceeds i32.
+    #[test]
+    fn cts_version_roundtrip() {
+        for (cts, version) in [
+            (vec![0, 1024, -512], 1),
+            (vec![0, 1 << 31, u32::MAX as i64], 0),
+        ] {
+            let trun = cts_entries(&cts);
+            let mut buf = Vec::new();
+            trun.encode(&mut buf).expect("encode");
+            assert_eq!(buf[8], version);
+
+            let decoded = Trun::decode(&mut &buf[..]).expect("decode");
+            assert!(decoded.samples.iter().map(|e| e.cts.unwrap()).eq(cts));
+        }
+    }
+
+    /// A version 0 offset above i32::MAX decodes as unsigned, not negative.
+    #[test]
+    fn cts_version_0_is_unsigned() {
+        let mut buf = Vec::new();
+        cts_entries(&[-1]).encode(&mut buf).expect("encode");
+        assert_eq!(buf[8], 1);
+        buf[8] = 0;
+
+        let decoded = Trun::decode(&mut &buf[..]).expect("decode");
+        assert_eq!(decoded.samples.get(0).unwrap().cts, Some(u32::MAX as i64));
+    }
+
+    #[test]
+    fn cts_out_of_range_is_refused() {
+        for cts in [vec![-1, 1 << 31], vec![1 << 32], vec![i32::MIN as i64 - 1]] {
+            assert!(matches!(
+                cts_entries(&cts).encode(&mut Vec::new()),
+                Err(Error::InvalidCombination(_))
+            ));
         }
     }
 
