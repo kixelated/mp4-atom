@@ -213,12 +213,10 @@ fn av1() {
                 }),
                 trun: vec![Trun {
                     data_offset: Some(116),
-                    entries: vec![TrunEntry {
-                        duration: None,
-                        size: None,
-                        flags: Some(33554432),
-                        cts: None
-                    }]
+                    samples: TrunSamples::Inherited {
+                        count: 1,
+                        first_flags: Some(33554432),
+                    }
                 }],
                 sbgp: vec![],
                 sgpd: vec![],
