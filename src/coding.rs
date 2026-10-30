@@ -1,4 +1,5 @@
 use std::ffi;
+use std::ops::Range;
 
 use crate::*;
 
@@ -122,6 +123,14 @@ impl<const N: usize> Decode for [u8; N] {
     }
 }
 
+impl<T: Decode> Decode for Range<T> {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
+        let start = T::decode(buf)?;
+        let end = T::decode(buf)?;
+        Ok(start..end)
+    }
+}
+
 impl<T: Decode> Decode for Vec<T> {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let mut vec = Vec::new();
@@ -231,6 +240,13 @@ impl Encode for &str {
         self.as_bytes().encode(buf)?;
         0u8.encode(buf)?;
         Ok(())
+    }
+}
+
+impl<T: Encode> Encode for Range<T> {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        self.start.encode(buf)?;
+        self.end.encode(buf)
     }
 }
 
