@@ -240,6 +240,10 @@ fn avcc_ext() {
                                     esds: Esds {
                                         es_desc: esds::EsDescriptor {
                                             es_id: 2,
+                                            depends_on_es_id: None,
+                                            url: None,
+                                            ocr_es_id: None,
+                                            stream_priority: 0,
                                             dec_config: esds::DecoderConfig {
                                                 object_type_indication: 64,
                                                 stream_type: 5,
