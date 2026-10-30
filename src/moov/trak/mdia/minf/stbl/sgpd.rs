@@ -71,7 +71,7 @@ impl AtomExt for Sgpd {
         if entry_count as u64 > buf.remaining() as u64 {
             return Err(Error::OutOfBounds);
         }
-        let mut entries = Vec::with_capacity(entry_count as usize);
+        let mut entries = Vec::with_capacity((entry_count as usize).min(1024));
         for _ in 0..entry_count {
             // Spec states: if version>=1 && default_length==0
             // But, default_length.is_some(), if and only if version>=1, so fine to just check for
