@@ -16,6 +16,10 @@ check:
 	cargo fmt -- --check
 	cargo shear # requires: cargo binstall cargo-shear
 
+little_check:
+	cargo check --all-targets --all-features
+	cargo clippy --all-targets --all-features -- -D warnings
+
 # Run any CI tests
 test:
 	cargo test --all-targets
