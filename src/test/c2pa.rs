@@ -28,7 +28,7 @@ fn read_c2pa_from_c2pa_mp4() -> Result<()> {
 
     let c2pa_data = match uuid {
         Uuid::C2pa(data) => data,
-        other => panic!("Expected Uuid::C2pa, got {:?}", other),
+        other => panic!("Expected Uuid::C2pa, got {other:?}"),
     };
 
     assert_eq!(c2pa_data.box_purpose, "manifest");
