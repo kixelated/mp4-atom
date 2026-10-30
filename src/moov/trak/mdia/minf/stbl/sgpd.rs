@@ -64,6 +64,13 @@ impl AtomExt for Sgpd {
             None
         };
         let entry_count = u32::decode(buf)?;
+        // Every entry takes at least a byte, so reject counts that cannot fit before
+        // looping: a version 0 entry of an unknown grouping type reads to the end of the
+        // box, leaving every later entry empty and free to decode, so a 20-byte box could
+        // otherwise push billions of them.
+        if entry_count as u64 > buf.remaining() as u64 {
+            return Err(Error::OutOfBounds);
+        }
         let mut entries = Vec::with_capacity((entry_count as usize).min(1024));
         for _ in 0..entry_count {
             // Spec states: if version>=1 && default_length==0
@@ -283,6 +290,39 @@ mod tests {
                     ),
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn sgpd_rejects_entry_count_past_the_box() {
+        // Version 0 of an unknown grouping type, declaring 0xffff0000 entries in a
+        // 20-byte box: the first reads nothing, and every later one would be empty.
+        const HUGE_COUNT: &[u8] = &[
+            0x00, 0x00, 0x00, 0x14, 0x73, 0x67, 0x70, 0x64, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00,
+            0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00,
+        ];
+
+        let err = Sgpd::decode(&mut Cursor::new(HUGE_COUNT)).unwrap_err();
+        assert!(matches!(err, Error::OverDecode(_)), "{err:?}");
+    }
+
+    #[test]
+    fn sgpd_version_0_unknown_entries_still_decode() {
+        // Two version 0 entries of an unknown type: the first reads the rest of the
+        // box, as before, and the count still fits the bytes left.
+        const VERSION_0: &[u8] = &[
+            0x00, 0x00, 0x00, 0x18, 0x73, 0x67, 0x70, 0x64, 0x00, 0x00, 0x00, 0x00, 0x72, 0x6F,
+            0x6C, 0x6C, 0x00, 0x00, 0x00, 0x02, 0xFF, 0xFF, 0xFF, 0xFE,
+        ];
+
+        let sgpd = Sgpd::decode(&mut Cursor::new(VERSION_0)).expect("sgpd should decode");
+        assert_eq!(sgpd.entries.len(), 2);
+        assert_eq!(
+            sgpd.entries[0].entry,
+            AnySampleGroupEntry::UnknownGroupingType(
+                FourCC::from(b"roll"),
+                vec![0xFF, 0xFF, 0xFF, 0xFE]
+            )
         );
     }
 
