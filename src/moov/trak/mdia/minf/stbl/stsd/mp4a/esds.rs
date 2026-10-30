@@ -100,12 +100,16 @@ macro_rules! descriptors {
             fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
                 let tag = u8::decode(buf)?;
 
+                // At most four 7-bit groups; a fourth with its continuation bit set is malformed.
                 let mut size: u32 = 0;
-                for _ in 0..4 {
+                for i in 0..4 {
                     let b = u8::decode(buf)?;
                     size = (size << 7) | (b & 0x7F) as u32;
                     if b & 0x80 == 0 {
                         break;
+                    }
+                    if i == 3 {
+                        return Err(Error::InvalidSize);
                     }
                 }
 
@@ -170,6 +174,14 @@ descriptors! {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EsDescriptor {
     pub es_id: u16,
+    /// The ES this one depends on (`streamDependenceFlag`).
+    pub depends_on_es_id: Option<u16>,
+    /// Where the stream is stored instead (`URL_Flag`), as UTF-8 bytes.
+    pub url: Option<Vec<u8>>,
+    /// The ES carrying this one's object clock reference (`OCRstreamFlag`).
+    pub ocr_es_id: Option<u16>,
+    /// The 5-bit `streamPriority`.
+    pub stream_priority: u8,
 
     pub dec_config: DecoderConfig,
     pub sl_config: SLConfig,
@@ -182,7 +194,24 @@ impl EsDescriptor {
 impl Decode for EsDescriptor {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let es_id = u16::decode(buf)?;
-        u8::decode(buf)?; // XXX flags must be 0
+
+        // The flags announce optional fields that precede the child descriptors.
+        let flags = u8::decode(buf)?;
+        let depends_on_es_id = match flags & 0x80 {
+            0 => None,
+            _ => Some(u16::decode(buf)?),
+        };
+        let url = match flags & 0x40 {
+            0 => None,
+            _ => {
+                let len = u8::decode(buf)?;
+                Some(Vec::decode_exact(buf, len as usize)?)
+            }
+        };
+        let ocr_es_id = match flags & 0x20 {
+            0 => None,
+            _ => Some(u16::decode(buf)?),
+        };
 
         let mut dec_config = None;
         let mut sl_config = None;
@@ -198,6 +227,10 @@ impl Decode for EsDescriptor {
 
         Ok(EsDescriptor {
             es_id,
+            depends_on_es_id,
+            url,
+            ocr_es_id,
+            stream_priority: flags & 0x1F,
             dec_config: dec_config.ok_or(Error::MissingDescriptor(DecoderConfig::TAG))?,
             sl_config: sl_config.ok_or(Error::MissingDescriptor(SLConfig::TAG))?,
         })
@@ -206,8 +239,39 @@ impl Decode for EsDescriptor {
 
 impl Encode for EsDescriptor {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        if self.stream_priority > 0x1F {
+            return Err(Error::InvalidCombination(
+                "ES descriptor stream priority exceeds 5 bits",
+            ));
+        }
+        let url_len =
+            match &self.url {
+                Some(url) => Some(u8::try_from(url.len()).map_err(|_| {
+                    Error::InvalidCombination("ES descriptor URL exceeds 255 bytes")
+                })?),
+                None => None,
+            };
+
         self.es_id.encode(buf)?;
-        0u8.encode(buf)?;
+
+        let mut flags = self.stream_priority;
+        if self.depends_on_es_id.is_some() {
+            flags |= 0x80;
+        }
+        if self.url.is_some() {
+            flags |= 0x40;
+        }
+        if self.ocr_es_id.is_some() {
+            flags |= 0x20;
+        }
+        flags.encode(buf)?;
+
+        self.depends_on_es_id.encode(buf)?;
+        if let (Some(len), Some(url)) = (url_len, &self.url) {
+            len.encode(buf)?;
+            url.encode(buf)?;
+        }
+        self.ocr_es_id.encode(buf)?;
 
         encode_descriptor(DecoderConfig::TAG, &self.dec_config, buf)?;
         encode_descriptor(SLConfig::TAG, &self.sl_config, buf)?;
@@ -410,6 +474,58 @@ impl Encode for SLConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn es_descriptor() -> EsDescriptor {
+        EsDescriptor {
+            es_id: 0x1234,
+            depends_on_es_id: Some(0x5678),
+            url: Some(b"https://example.com/audio".to_vec()),
+            ocr_es_id: Some(0x9ABC),
+            stream_priority: 17,
+            dec_config: DecoderConfig::default(),
+            sl_config: SLConfig::default(),
+        }
+    }
+
+    // The optional fields sit between the flags and the child descriptors, so
+    // ignoring them used to misread their bytes as a descriptor.
+    #[test]
+    fn test_es_descriptor_optional_fields_roundtrip() {
+        let mut flagged = es_descriptor();
+        for _ in 0..2 {
+            let mut buf = Vec::new();
+            Descriptor::from(flagged.clone()).encode(&mut buf).unwrap();
+            assert_eq!(
+                Descriptor::decode(&mut buf.as_slice()).unwrap(),
+                Descriptor::from(flagged.clone())
+            );
+
+            // Then without any optional field: a flags byte of just the priority.
+            flagged.depends_on_es_id = None;
+            flagged.url = None;
+            flagged.ocr_es_id = None;
+        }
+    }
+
+    #[test]
+    fn test_es_descriptor_rejects_unencodable_fields() {
+        let mut desc = es_descriptor();
+        desc.stream_priority = 0x20;
+        assert!(desc.encode(&mut Vec::new()).is_err());
+
+        let mut desc = es_descriptor();
+        desc.url = Some(vec![b'a'; 256]);
+        assert!(desc.encode(&mut Vec::new()).is_err());
+    }
+
+    #[test]
+    fn test_descriptor_size_rejects_fifth_byte() {
+        let buf = [0x7F, 0x80, 0x80, 0x80, 0x80, 0x00];
+        assert!(matches!(
+            Descriptor::decode(&mut buf.as_slice()),
+            Err(Error::InvalidSize)
+        ));
+    }
 
     // An `esds` whose `SLConfigDescriptor` (tag 0x06) declares 2 bytes — a
     // `predefined` value plus a trailing byte — instead of the usual 1.
