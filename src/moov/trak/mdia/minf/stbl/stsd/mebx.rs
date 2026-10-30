@@ -74,15 +74,7 @@ impl Atom for Dtyp {
             0 => DataType::WellKnown(u32::decode(buf)?),
             // A case-sensitive UTF-8 string without a null terminator,
             // filling the rest of the atom.
-            1 => {
-                let remaining = buf.remaining();
-                let bytes = buf.slice(remaining).to_vec();
-                buf.advance(remaining);
-                DataType::Custom(
-                    String::from_utf8(bytes)
-                        .map_err(|err| Error::InvalidString(err.to_string()))?,
-                )
-            }
+            1 => DataType::Custom(decode_utf8_string(buf)?),
             _ => {
                 let remaining = buf.remaining();
                 let raw = buf.slice(remaining).to_vec();

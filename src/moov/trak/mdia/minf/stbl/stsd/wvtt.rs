@@ -12,7 +12,7 @@ impl Atom for VttC {
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self {
-            config: decode_boxstring(buf)?,
+            config: decode_utf8_string(buf)?,
         })
     }
 
@@ -33,7 +33,7 @@ impl Atom for Vlab {
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
         Ok(Self {
-            source_label: decode_boxstring(buf)?,
+            source_label: decode_utf8_string(buf)?,
         })
     }
 
@@ -87,14 +87,6 @@ impl Atom for Wvtt {
         self.btrt.encode(buf)?;
         Ok(())
     }
-}
-
-fn decode_boxstring<B: Buf>(buf: &mut B) -> Result<String> {
-    let remaining_bytes = buf.remaining();
-    let body = &mut buf.slice(remaining_bytes);
-    let text = String::from_utf8(body.to_vec()).map_err(|_| Error::InvalidSize)?;
-    buf.advance(remaining_bytes);
-    Ok(text)
 }
 
 #[cfg(test)]

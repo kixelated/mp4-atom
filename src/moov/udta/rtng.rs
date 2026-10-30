@@ -19,14 +19,10 @@ impl AtomExt for Rtng {
         let criteria = FourCC::decode(buf)?;
         let language_code = u16::decode(buf)?;
         let language = language_string(language_code);
-        let num_remaining_bytes = buf.remaining();
-        let remaining_bytes = &mut buf.slice(num_remaining_bytes);
-        let mut rating_info =
-            String::from_utf8(remaining_bytes.to_vec()).map_err(|_| Error::InvalidSize)?;
+        let mut rating_info = decode_utf8_string(buf)?;
         if rating_info.ends_with('\0') {
             rating_info.truncate(rating_info.len() - 1);
         }
-        buf.advance(num_remaining_bytes);
         Ok(Rtng {
             entity,
             criteria,
