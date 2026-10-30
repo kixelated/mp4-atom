@@ -182,6 +182,63 @@ pub enum Codec {
     Unknown(FourCC, Vec<u8>),
 }
 
+impl Codec {
+    /// A video track's sample entry fields (frame size, ...);
+    /// `None` for any other codec.
+    pub fn visual(&self) -> Option<&Visual> {
+        Some(match self {
+            Self::Avc1(avc1) => &avc1.visual,
+            Self::Avc3(avc3) => &avc3.visual,
+            Self::Jpeg(jpeg) => &jpeg.visual,
+            Self::Hev1(hev1) => &hev1.visual,
+            Self::Hvc1(hvc1) => &hvc1.visual,
+            Self::Vp08(vp08) => &vp08.visual,
+            Self::Vp09(vp09) => &vp09.visual,
+            Self::Av01(av01) => &av01.visual,
+            Self::Uncv(uncv) => &uncv.visual,
+            _ => return None,
+        })
+    }
+
+    /// An audio track's sample entry fields (sample rate, channel count, ...);
+    /// `None` for any other codec.
+    pub fn audio(&self) -> Option<&Audio> {
+        Some(match self {
+            Self::Mp4a(mp4a) => &mp4a.audio,
+            Self::Mp3(mp3) => &mp3.audio,
+            Self::Opus(opus) => &opus.audio,
+            Self::Flac(flac) => &flac.audio,
+            Self::Ac3(ac3) => &ac3.audio,
+            Self::Eac3(eac3) => &eac3.audio,
+            Self::Ipcm(pcm) => &pcm.audio,
+            Self::Fpcm(pcm) => &pcm.audio,
+            Self::Sowt(pcm) => &pcm.audio,
+            Self::Twos(pcm) => &pcm.audio,
+            Self::Lpcm(pcm) => &pcm.audio,
+            Self::In24(pcm) => &pcm.audio,
+            Self::In32(pcm) => &pcm.audio,
+            Self::Fl32(pcm) => &pcm.audio,
+            Self::Fl64(pcm) => &pcm.audio,
+            Self::S16l(pcm) => &pcm.audio,
+            _ => return None,
+        })
+    }
+
+    /// A timed metadata track's sample entry fields (data reference index);
+    /// `None` for any other codec.
+    pub fn metadata(&self) -> Option<&MetaData> {
+        Some(match self {
+            Self::Mett(mett) => &mett.metadata,
+            Self::Metx(metx) => &metx.metadata,
+            Self::Urim(urim) => &urim.metadata,
+            Self::Camm(camm) => &camm.metadata,
+            Self::Evte(evte) => &evte.metadata,
+            Self::Mebx(mebx) => &mebx.metadata,
+            _ => return None,
+        })
+    }
+}
+
 impl Decode for Codec {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self> {
         let atom = Any::decode(buf)?;
@@ -304,39 +361,96 @@ impl AtomExt for Stsd {
     }
 }
 
+#[cfg(test)]
 mod tests {
-    #![cfg(not(feature = "strict"))]
+    use super::*;
 
     #[test]
-    fn unknown_codec_parses() {
-        use crate::{Codec, Decode, FourCC, Stsd};
-
-        let input = b"\0\0\0\x1cstsd\0\0\0\0\0\0\0\x01\0\0\0\x0cdvh9\x01\x02\x03\x04";
-        let mut buf = input.as_slice();
-
-        let stsd = Stsd::decode(&mut buf).unwrap();
-        assert_eq!(
-            stsd.codecs,
-            vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
-        );
+    fn test_codec_visual() {
+        let visual = Visual {
+            width: 640,
+            height: 480,
+            ..Default::default()
+        };
+        let codec = Codec::from(Jpeg {
+            visual: visual.clone(),
+            ..Default::default()
+        });
+        assert_eq!(codec.visual(), Some(&visual));
+        assert_eq!(codec.audio(), None);
+        assert_eq!(codec.metadata(), None);
     }
 
     #[test]
-
-    fn unknown_codec_not_emitted() {
-        use crate::{Codec, Encode, FourCC, Stsd};
-
-        let stsd = Stsd {
-            codecs: vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])],
+    fn test_codec_audio() {
+        let audio = Audio {
+            data_reference_index: 1,
+            channel_count: 2,
+            sample_size: 16,
+            sample_rate: 44100.into(),
         };
-        assert_eq!(
-            stsd.codecs,
-            vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
-        );
-        let mut output = Vec::new();
-        assert!(matches!(
-            stsd.encode(&mut output),
-            Err(crate::Error::UnknownCodec)
-        ));
+        let codec = Codec::from(Mp3 {
+            audio: audio.clone(),
+        });
+        assert_eq!(codec.audio(), Some(&audio));
+        assert_eq!(codec.visual(), None);
+    }
+
+    #[test]
+    fn test_codec_metadata() {
+        let metadata = MetaData {
+            data_reference_index: 3,
+        };
+        let codec = Codec::from(Camm {
+            metadata: metadata.clone(),
+        });
+        assert_eq!(codec.metadata(), Some(&metadata));
+        assert_eq!(codec.visual(), None);
+        assert_eq!(codec.audio(), None);
+    }
+
+    #[test]
+    fn test_codec_neither() {
+        for codec in [
+            Codec::from(Tx3g::default()),
+            Codec::Unknown(FourCC::new(b"dvh9"), vec![]),
+        ] {
+            assert_eq!(codec.visual(), None);
+            assert_eq!(codec.audio(), None);
+            assert_eq!(codec.metadata(), None);
+        }
+    }
+
+    #[cfg(not(feature = "strict"))]
+    mod not_strict {
+        use super::*;
+
+        #[test]
+        fn unknown_codec_parses() {
+            let input = b"\0\0\0\x1cstsd\0\0\0\0\0\0\0\x01\0\0\0\x0cdvh9\x01\x02\x03\x04";
+            let mut buf = input.as_slice();
+
+            let stsd = Stsd::decode(&mut buf).unwrap();
+            assert_eq!(
+                stsd.codecs,
+                vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
+            );
+        }
+
+        #[test]
+        fn unknown_codec_not_emitted() {
+            let stsd = Stsd {
+                codecs: vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])],
+            };
+            assert_eq!(
+                stsd.codecs,
+                vec![Codec::Unknown(FourCC::new(b"dvh9"), vec![1, 2, 3, 4])]
+            );
+            let mut output = Vec::new();
+            assert!(matches!(
+                stsd.encode(&mut output),
+                Err(crate::Error::UnknownCodec)
+            ));
+        }
     }
 }
