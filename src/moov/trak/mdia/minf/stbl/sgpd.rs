@@ -153,12 +153,7 @@ impl AnySampleGroupEntry {
         match grouping_type {
             REFS_4CC => {
                 let sample_id = u32::decode(buf)?;
-                let num_direct_reference_samples = u8::decode(buf)? as usize;
-                let mut direct_reference_samples =
-                    Vec::with_capacity(std::cmp::min(num_direct_reference_samples, 16));
-                for _ in 0..num_direct_reference_samples {
-                    direct_reference_samples.push(u32::decode(buf)?);
-                }
+                let direct_reference_samples = buf.decode_list(16u8, u32::decode)?;
                 Ok(Self::DirectReferenceSampleList(
                     sample_id,
                     direct_reference_samples,
@@ -180,15 +175,9 @@ impl AnySampleGroupEntry {
         match self {
             Self::DirectReferenceSampleList(sample_id, direct_reference_samples) => {
                 sample_id.encode(buf)?;
-                let num_direct_reference_samples: u8 = direct_reference_samples
-                    .len()
-                    .try_into()
-                    .map_err(|_| Error::TooLarge(REFS_4CC))?;
-                num_direct_reference_samples.encode(buf)?;
-                for direct_reference_sample in direct_reference_samples {
-                    direct_reference_sample.encode(buf)?;
-                }
-                Ok(())
+                buf.encode_list::<u8, _>(direct_reference_samples, REFS_4CC, |buf, sample| {
+                    sample.encode(buf)
+                })
             }
             Self::UnknownGroupingType(_, bytes) => bytes.encode(buf),
         }

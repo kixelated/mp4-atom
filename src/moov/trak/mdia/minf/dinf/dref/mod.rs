@@ -86,26 +86,13 @@ impl AtomExt for Dref {
     const KIND_EXT: FourCC = FourCC::new(b"dref");
 
     fn decode_body_ext<B: Buf>(buf: &mut B, _ext: ()) -> Result<Self> {
-        let entry_count = u32::decode(buf)?;
-        let mut entries = Vec::new();
-
-        for _ in 0..entry_count {
-            entries.push(DrefEntry::decode(buf)?);
-        }
+        let entries = buf.decode_list(16u32, |buf| DrefEntry::decode(buf))?;
 
         Ok(Dref { entries })
     }
 
     fn encode_body_ext<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        let entry_count =
-            u32::try_from(self.entries.len()).map_err(|_| Error::TooLarge(Self::KIND))?;
-        entry_count.encode(buf)?;
-
-        for entry in &self.entries {
-            entry.encode(buf)?;
-        }
-
-        Ok(())
+        buf.encode_list::<u32, _>(&self.entries, Self::KIND, |buf, entry| entry.encode(buf))
     }
 }
 
