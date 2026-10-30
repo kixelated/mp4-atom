@@ -180,9 +180,10 @@ mod tests {
         expected.push(Pitm { item_id: 3 });
         expected.push(Dinf {
             dref: Dref {
-                urls: vec![Url {
+                entries: vec![Url {
                     location: "".into(),
-                }],
+                }
+                .into()],
             },
         });
         expected.push(Iloc {

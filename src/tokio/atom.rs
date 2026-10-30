@@ -28,6 +28,10 @@ impl<T: Atom> AsyncReadFrom for Option<T> {
             None => return Ok(None),
         };
 
+        if header.kind != T::KIND {
+            return Err(Error::UnexpectedBox(header.kind));
+        }
+
         let mut buf = header.read_body_tokio(r).await?;
 
         let atom = match T::decode_body(&mut buf) {

@@ -69,9 +69,9 @@ fn esds() {
                         .into(),
                         dinf: Dinf {
                             dref: Dref {
-                                urls: vec![Url {
+                                entries: vec![Url {
                                     location: "".into(),
-                                }],
+                                }.into()],
                             },
                         },
                         stbl: Stbl {
@@ -151,9 +151,9 @@ fn esds() {
                         }),
                         dinf: Dinf {
                             dref: Dref {
-                                urls: vec![Url {
+                                entries: vec![Url {
                                     location: "".into(),
-                                }],
+                                }.into()],
                             },
                         },
                         stbl: Stbl {
