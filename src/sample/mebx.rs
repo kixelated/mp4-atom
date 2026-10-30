@@ -33,22 +33,20 @@ impl MebxSample {
         let mut found_null = false;
 
         while let Some(header) = Header::decode_maybe(buf)? {
-            let size = header.size.unwrap_or(buf.remaining());
-            if size > buf.remaining() {
-                return Err(Error::OutOfBounds);
-            }
-            let body = buf.slice(size);
+            let data = header.decode_body(buf, |body| {
+                let data = body.to_vec();
+                body.advance(data.len());
+                Ok(data)
+            })?;
 
             if u32::from(header.kind) == 0 {
                 found_null = true;
             } else {
                 items.push(MebxItem {
                     local_key_id: header.kind,
-                    data: body.to_vec(),
+                    data,
                 });
             }
-
-            buf.advance(size);
         }
 
         if buf.has_remaining() {
@@ -124,8 +122,8 @@ mod tests {
         // `local_key_id` 0 signals "no metadata of this kind at this time"
         // and may be used as padding; its content is ignored, not rejected.
         let mut buf = Vec::new();
-        buf.encode_atom(0u32, |buf| [1, 2].encode(buf)).unwrap();
-        buf.encode_atom(b"test", |buf| [3, 4].encode(buf)).unwrap();
+        buf.encode_atom_value(0u32, &[1, 2]).unwrap();
+        buf.encode_atom_value(b"test", &[3, 4]).unwrap();
         buf.encode_atom(0u32, |_| Ok(())).unwrap();
 
         let decoded = MebxSample::decode(&mut buf.as_slice()).expect("failed to decode sample");

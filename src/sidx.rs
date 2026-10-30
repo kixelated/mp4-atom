@@ -44,9 +44,7 @@ impl AtomExt for Sidx {
             (u64::decode(buf)?, u64::decode(buf)?)
         };
         let _reserved = u16::decode(buf)?;
-        let reference_count = u16::decode(buf)?;
-        let mut references = Vec::with_capacity(std::cmp::min(reference_count as usize, 128));
-        for _ in 0..reference_count {
+        let references = buf.decode_list(128u16, |buf| {
             let referenced_type_and_size = u32::decode(buf)?;
             let reference_type = (referenced_type_and_size & 0x8000_0000) == 0x8000_0000;
             let referenced_size = referenced_type_and_size & 0x7FFF_FFFF;
@@ -55,16 +53,15 @@ impl AtomExt for Sidx {
             let starts_with_sap = (sap_flag_and_type_and_delta_time & 0x8000_0000) == 0x8000_0000;
             let sap_type = ((sap_flag_and_type_and_delta_time >> 28) & 0b111) as u8;
             let sap_delta_time = sap_flag_and_type_and_delta_time & 0x0FFF_FFFF;
-            let reference = SegmentReference {
+            Ok(SegmentReference {
                 reference_type,
                 referenced_size,
                 subsegment_duration,
                 starts_with_sap,
                 sap_type,
                 sap_delta_time,
-            };
-            references.push(reference);
-        }
+            })
+        })?;
 
         Ok(Sidx {
             reference_id,
@@ -94,13 +91,7 @@ impl AtomExt for Sidx {
             }
         };
         0u16.encode(buf)?; // reserved
-        let reference_count: u16 = self
-            .references
-            .len()
-            .try_into()
-            .map_err(|_| Error::TooLarge(Self::KIND))?;
-        reference_count.encode(buf)?;
-        for reference in &self.references {
+        buf.encode_list::<u16, _>(&self.references, Self::KIND, |buf, reference| {
             if reference.referenced_size > 0x7FFF_FFFF
                 || reference.sap_type > 0b111
                 || reference.sap_delta_time > 0x0FFF_FFFF
@@ -120,8 +111,8 @@ impl AtomExt for Sidx {
                 }
                 false => ((reference.sap_type as u32) << 28) | reference.sap_delta_time,
             };
-            sap_flag_and_type_and_delta_time.encode(buf)?;
-        }
+            sap_flag_and_type_and_delta_time.encode(buf)
+        })?;
         Ok(SidxExt { version })
     }
 }
