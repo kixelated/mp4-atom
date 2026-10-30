@@ -205,7 +205,7 @@ impl VexuProjKind {
 
 impl Encode for VexuProjKind {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        buf.encode_atom(self.kind(), |buf| 0u32.encode(buf))
+        buf.encode_atom_value(self.kind(), &0u32)
     }
 }
 

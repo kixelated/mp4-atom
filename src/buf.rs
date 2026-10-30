@@ -127,6 +127,15 @@ pub trait BufMut {
         Ok(())
     }
 
+    /// Write an atom of `kind` whose body is the encoding of `value`, see
+    /// [`BufMut::encode_atom`].
+    fn encode_atom_value(&mut self, kind: impl Into<FourCC>, value: &impl Encode) -> Result<()>
+    where
+        Self: Sized,
+    {
+        self.encode_atom(kind, |buf| value.encode(buf))
+    }
+
     /// Write an atom of `kind` whose body is `text` as raw UTF-8, see
     /// [`BufMut::encode_atom`].
     fn encode_atom_string(&mut self, kind: impl Into<FourCC>, text: &str) -> Result<()>

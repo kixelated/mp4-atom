@@ -122,8 +122,8 @@ mod tests {
         // `local_key_id` 0 signals "no metadata of this kind at this time"
         // and may be used as padding; its content is ignored, not rejected.
         let mut buf = Vec::new();
-        buf.encode_atom(0u32, |buf| [1, 2].encode(buf)).unwrap();
-        buf.encode_atom(b"test", |buf| [3, 4].encode(buf)).unwrap();
+        buf.encode_atom_value(0u32, &[1, 2]).unwrap();
+        buf.encode_atom_value(b"test", &[3, 4]).unwrap();
         buf.encode_atom(0u32, |_| Ok(())).unwrap();
 
         let decoded = MebxSample::decode(&mut buf.as_slice()).expect("failed to decode sample");
