@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0](https://github.com/kixelated/mp4-atom/compare/v0.16.2...v0.17.0) - 2026-10-30
+
+### Added
+
+- [**breaking**] store field-less trun runs as a count ([#254](https://github.com/kixelated/mp4-atom/pull/254))
+
+### Fixed
+
+- [**breaking**] decode the ES descriptor's optional fields ([#257](https://github.com/kixelated/mp4-atom/pull/257))
+- [**breaking**] read version 0 trun composition offsets as unsigned ([#258](https://github.com/kixelated/mp4-atom/pull/258))
+- print correct values for `FixedPoint` ([#249](https://github.com/kixelated/mp4-atom/pull/249))
+
+### Other
+
+- Validate typed atom kinds and preserve dref entries ([#208](https://github.com/kixelated/mp4-atom/pull/208))
+- reduce code duplication in string decoding and encoding ([#253](https://github.com/kixelated/mp4-atom/pull/253))
+- add accessors for the base sample entries of Codec ([#250](https://github.com/kixelated/mp4-atom/pull/250))
+- Validate nested `iref` reference sizes ([#219](https://github.com/kixelated/mp4-atom/pull/219))
+- Fix sgpd entry boundaries ([#202](https://github.com/kixelated/mp4-atom/pull/202))
+- decode and encode any channel mapping family ([#246](https://github.com/kixelated/mp4-atom/pull/246))
+- Set Minimum Supported Rust Version (MSRV) to 1.88 ([#255](https://github.com/kixelated/mp4-atom/pull/255))
+- implement `Decode` and `Encode` for `RgbaColor` ([#251](https://github.com/kixelated/mp4-atom/pull/251))
+- add support for `disp` to `tx3g` sample entry ([#252](https://github.com/kixelated/mp4-atom/pull/252))
+- Add spherical and stereo video metadata (sv3d, st3d, vexu, hfov) ([#244](https://github.com/kixelated/mp4-atom/pull/244))
+- Return errors for missing infe content types ([#245](https://github.com/kixelated/mp4-atom/pull/245))
+
 ## [0.16.2](https://github.com/kixelated/mp4-atom/compare/v0.16.1...v0.16.2) - 2026-10-06
 
 ### Other
