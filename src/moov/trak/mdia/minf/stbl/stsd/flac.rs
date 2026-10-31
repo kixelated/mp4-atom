@@ -16,7 +16,7 @@ impl Atom for Flac {
         let mut dfla = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Dfla(atom) => dfla = atom.into(),
+                Any::Dfla(atom) => dfla.insert_if_none(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }

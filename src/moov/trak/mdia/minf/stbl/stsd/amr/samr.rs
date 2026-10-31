@@ -16,7 +16,7 @@ impl Atom for Samr {
         let mut damr = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Damr(atom) => damr = atom.into(),
+                Any::Damr(atom) => damr.insert_if_none(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }

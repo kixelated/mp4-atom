@@ -51,8 +51,8 @@ impl Atom for Mett {
         let mut txtc = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Btrt(atom) => btrt = atom.into(),
-                Any::TxtC(atom) => txtc = atom.into(),
+                Any::Btrt(atom) => btrt.insert_if_none(atom)?,
+                Any::TxtC(atom) => txtc.insert_if_none(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }

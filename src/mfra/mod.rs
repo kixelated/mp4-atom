@@ -26,12 +26,7 @@ impl Atom for Mfra {
 
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Mfro(atom) => {
-                    if mfro.is_some() {
-                        return Err(Error::DuplicateBox(Mfro::KIND));
-                    }
-                    mfro = Some(atom);
-                }
+                Any::Mfro(atom) => mfro.insert_if_none(atom)?,
                 Any::Tfra(atom) => {
                     tfra.push(atom);
                 }
