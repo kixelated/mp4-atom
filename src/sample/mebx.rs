@@ -33,22 +33,20 @@ impl MebxSample {
         let mut found_null = false;
 
         while let Some(header) = Header::decode_maybe(buf)? {
-            let size = header.size.unwrap_or(buf.remaining());
-            if size > buf.remaining() {
-                return Err(Error::OutOfBounds);
-            }
-            let body = buf.slice(size);
+            let data = header.decode_body(buf, |body| {
+                let data = body.to_vec();
+                body.advance(data.len());
+                Ok(data)
+            })?;
 
             if u32::from(header.kind) == 0 {
                 found_null = true;
             } else {
                 items.push(MebxItem {
                     local_key_id: header.kind,
-                    data: body.to_vec(),
+                    data,
                 });
             }
-
-            buf.advance(size);
         }
 
         if buf.has_remaining() {
