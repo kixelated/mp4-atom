@@ -252,6 +252,32 @@ pub(crate) fn decode_length_prefixed_utf8_string<T: Decode + Into<usize>>(
     decode_utf8_string_with_length(buf, len.into())
 }
 
+/// Filling an `Option` that may be set only once, for the child boxes of a box.
+pub(crate) trait OptionExt<T> {
+    /// Store the atom `value` if the option is `None`, and fail with
+    /// [`Error::DuplicateBox`] if the box was already seen.
+    fn insert_if_none(&mut self, value: T) -> Result<()>
+    where
+        T: Atom,
+    {
+        self.insert_if_none_kind(T::KIND, value)
+    }
+
+    /// Store `value` if the option is `None`, and fail with
+    /// [`Error::DuplicateBox`] for `kind` if the box was already seen.
+    fn insert_if_none_kind(&mut self, kind: FourCC, value: T) -> Result<()>;
+}
+
+impl<T> OptionExt<T> for Option<T> {
+    fn insert_if_none_kind(&mut self, kind: FourCC, value: T) -> Result<()> {
+        if self.is_some() {
+            return Err(Error::DuplicateBox(kind));
+        }
+        *self = Some(value);
+        Ok(())
+    }
+}
+
 /// Decode a UTF-8 string filling the rest of the buffer.
 pub(crate) fn decode_utf8_string(buf: &mut impl Buf) -> Result<String> {
     decode_utf8_string_with_length(buf, buf.remaining())

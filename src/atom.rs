@@ -181,18 +181,8 @@ macro_rules! nested {
 
                 while let Some(atom) = Any::decode_maybe(buf)? {
                     match atom {
-                        $(Any::$required(atom) => {
-                            if [<$required:lower>].is_some() {
-                                return Err(Error::DuplicateBox($required::KIND));
-                            }
-                            [<$required:lower>] = Some(atom);
-                        },)*
-                        $(Any::$optional(atom) => {
-                            if [<$optional:lower>].is_some() {
-                                return Err(Error::DuplicateBox($optional::KIND));
-                            }
-                            [<$optional:lower>] = Some(atom);
-                        },)*
+                        $(Any::$required(atom) => [<$required:lower>].insert_if_none(atom)?,)*
+                        $(Any::$optional(atom) => [<$optional:lower>].insert_if_none(atom)?,)*
                         $(Any::$multiple(atom) => {
                             [<$multiple:lower>].push(atom.into());
                         },)*

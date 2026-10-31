@@ -61,12 +61,12 @@ impl Atom for Ilst {
                 break;
             }
             match header.kind {
-                Name::KIND => name = Some(Name::decode_atom(&header, buf)?),
-                Year::KIND => year = Some(Year::decode_atom(&header, buf)?),
-                Covr::KIND => covr = Some(Covr::decode_atom(&header, buf)?),
-                Desc::KIND => desc = Some(Desc::decode_atom(&header, buf)?),
-                Tool::KIND => ctoo = Some(Tool::decode_atom(&header, buf)?),
-                Copyright::KIND => cprt = Some(Copyright::decode_atom(&header, buf)?),
+                Name::KIND => name.insert_if_none(Name::decode_atom(&header, buf)?)?,
+                Year::KIND => year.insert_if_none(Year::decode_atom(&header, buf)?)?,
+                Covr::KIND => covr.insert_if_none(Covr::decode_atom(&header, buf)?)?,
+                Desc::KIND => desc.insert_if_none(Desc::decode_atom(&header, buf)?)?,
+                Tool::KIND => ctoo.insert_if_none(Tool::decode_atom(&header, buf)?)?,
+                Copyright::KIND => cprt.insert_if_none(Copyright::decode_atom(&header, buf)?)?,
                 kind => {
                     let index = u32::from(kind);
 

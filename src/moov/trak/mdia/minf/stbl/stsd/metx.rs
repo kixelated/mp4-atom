@@ -26,7 +26,7 @@ impl Atom for Metx {
         let mut btrt = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Btrt(atom) => btrt = atom.into(),
+                Any::Btrt(atom) => btrt.insert_if_none(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }

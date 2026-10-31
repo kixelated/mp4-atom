@@ -1,4 +1,4 @@
-use crate::coding::{Decode, Encode};
+use crate::coding::{Decode, Encode, OptionExt};
 use crate::{
     skip_trailing_padding, Any, Atom, Buf, BufMut, Ccst, DecodeMaybe, Error, FourCC, Result,
 };
@@ -33,12 +33,12 @@ impl Atom for Av01 {
         let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Av1c(atom) => av1c = atom.into(),
-                Any::Btrt(atom) => btrt = atom.into(),
-                Any::Ccst(atom) => ccst = atom.into(),
-                Any::Colr(atom) => colr = atom.into(),
-                Any::Pasp(atom) => pasp = atom.into(),
-                Any::Taic(atom) => taic = atom.into(),
+                Any::Av1c(atom) => av1c.insert_if_none(atom)?,
+                Any::Btrt(atom) => btrt.insert_if_none(atom)?,
+                Any::Ccst(atom) => ccst.insert_if_none(atom)?,
+                Any::Colr(atom) => colr.insert_if_none(atom)?,
+                Any::Pasp(atom) => pasp.insert_if_none(atom)?,
+                Any::Taic(atom) => taic.insert_if_none(atom)?,
                 atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }

@@ -64,9 +64,9 @@ impl Atom for Wvtt {
 
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::VttC(atom) => vtcc = atom.into(),
-                Any::Vlab(atom) => vlab = atom.into(),
-                Any::Btrt(atom) => btrt = atom.into(),
+                Any::VttC(atom) => vtcc.insert_if_none(atom)?,
+                Any::Vlab(atom) => vlab.insert_if_none(atom)?,
+                Any::Btrt(atom) => btrt.insert_if_none(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }

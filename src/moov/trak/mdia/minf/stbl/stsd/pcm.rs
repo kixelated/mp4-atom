@@ -128,8 +128,8 @@ impl Pcm {
                 )?);
             } else {
                 match Any::decode_atom(&header, &mut limited)? {
-                    Any::PcmC(atom) => pcmc = Some(atom),
-                    Any::Btrt(atom) => btrt = Some(atom),
+                    Any::PcmC(atom) => pcmc.insert_if_none(atom)?,
+                    Any::Btrt(atom) => btrt.insert_if_none(atom)?,
                     atom => crate::decode_unknown(&atom, fourcc)?,
                 }
             }

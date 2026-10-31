@@ -30,12 +30,12 @@ impl Atom for Uncv {
         let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Cmpd(atom) => cmpd = atom.into(),
-                Any::UncC(atom) => uncc = atom.into(),
-                Any::Btrt(atom) => btrt = atom.into(),
-                Any::Ccst(atom) => ccst = atom.into(),
-                Any::Pasp(atom) => pasp = atom.into(),
-                Any::Taic(atom) => taic = atom.into(),
+                Any::Cmpd(atom) => cmpd.insert_if_none(atom)?,
+                Any::UncC(atom) => uncc.insert_if_none(atom)?,
+                Any::Btrt(atom) => btrt.insert_if_none(atom)?,
+                Any::Ccst(atom) => ccst.insert_if_none(atom)?,
+                Any::Pasp(atom) => pasp.insert_if_none(atom)?,
+                Any::Taic(atom) => taic.insert_if_none(atom)?,
                 atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }

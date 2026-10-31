@@ -28,12 +28,12 @@ impl Atom for Avc1 {
         let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Avcc(atom) => avcc = atom.into(),
-                Any::Btrt(atom) => btrt = atom.into(),
-                Any::Colr(atom) => colr = atom.into(),
-                Any::Pasp(atom) => pasp = atom.into(),
-                Any::Taic(atom) => taic = atom.into(),
-                Any::Fiel(atom) => fiel = atom.into(),
+                Any::Avcc(atom) => avcc.insert_if_none(atom)?,
+                Any::Btrt(atom) => btrt.insert_if_none(atom)?,
+                Any::Colr(atom) => colr.insert_if_none(atom)?,
+                Any::Pasp(atom) => pasp.insert_if_none(atom)?,
+                Any::Taic(atom) => taic.insert_if_none(atom)?,
+                Any::Fiel(atom) => fiel.insert_if_none(atom)?,
                 atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }
