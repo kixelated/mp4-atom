@@ -30,13 +30,13 @@ impl Atom for Hev1 {
         let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Hvcc(atom) => hvcc = atom.into(),
-                Any::Lhvc(atom) => lhvc = atom.into(),
-                Any::Btrt(atom) => btrt = atom.into(),
+                Any::Hvcc(atom) => hvcc.insert_once(atom)?,
+                Any::Lhvc(atom) => lhvc.insert_once(atom)?,
+                Any::Btrt(atom) => btrt.insert_once(atom)?,
                 Any::Colr(atom) => colr.push(atom),
-                Any::Pasp(atom) => pasp = atom.into(),
-                Any::Taic(atom) => taic = atom.into(),
-                Any::Fiel(atom) => fiel = atom.into(),
+                Any::Pasp(atom) => pasp.insert_once(atom)?,
+                Any::Taic(atom) => taic.insert_once(atom)?,
+                Any::Fiel(atom) => fiel.insert_once(atom)?,
                 atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }

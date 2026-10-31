@@ -122,14 +122,14 @@ impl Pcm {
                 // Decode channel layout by using the channel count
                 // information. We cannot rely on the decode_body
                 // implementation of Atom for channel layout box.
-                chnl = Some(Chnl::decode_body_with_channel_count(
+                chnl.insert_once(Chnl::decode_body_with_channel_count(
                     &mut limited,
                     audio.channel_count,
-                )?);
+                )?)?;
             } else {
                 match Any::decode_atom(&header, &mut limited)? {
-                    Any::PcmC(atom) => pcmc = Some(atom),
-                    Any::Btrt(atom) => btrt = Some(atom),
+                    Any::PcmC(atom) => pcmc.insert_once(atom)?,
+                    Any::Btrt(atom) => btrt.insert_once(atom)?,
                     atom => crate::decode_unknown(&atom, fourcc)?,
                 }
             }
