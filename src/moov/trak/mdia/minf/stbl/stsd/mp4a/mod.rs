@@ -28,9 +28,9 @@ impl Atom for Mp4a {
         // camera muxers emit the latter for AAC-in-MOV.
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Btrt(atom) => btrt = atom.into(),
-                Any::Esds(atom) => esds = atom.into(),
-                Any::Taic(atom) => taic = atom.into(),
+                Any::Btrt(atom) => btrt.insert_if_none(atom)?,
+                Any::Esds(atom) => esds.insert_if_none(atom)?,
+                Any::Taic(atom) => taic.insert_if_none(atom)?,
                 Any::Unknown(kind, body) if kind == WAVE => {
                     decode_wave(&body, &mut esds, &mut btrt)?;
                 }

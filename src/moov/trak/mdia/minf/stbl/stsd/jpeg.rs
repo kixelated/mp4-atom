@@ -39,10 +39,10 @@ impl Atom for Jpeg {
         let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Btrt(atom) => btrt = atom.into(),
-                Any::Colr(atom) => colr = atom.into(),
-                Any::Pasp(atom) => pasp = atom.into(),
-                Any::Fiel(atom) => fiel = atom.into(),
+                Any::Btrt(atom) => btrt.insert_if_none(atom)?,
+                Any::Colr(atom) => colr.insert_if_none(atom)?,
+                Any::Pasp(atom) => pasp.insert_if_none(atom)?,
+                Any::Fiel(atom) => fiel.insert_if_none(atom)?,
                 atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }

@@ -127,27 +127,11 @@ impl<T: Atom> DecodeAtom for T {
             return Err(Error::UnexpectedBox(header.kind));
         }
 
-        let size = header.size.unwrap_or(buf.remaining());
-        if size > buf.remaining() {
-            return Err(Error::OutOfBounds);
-        }
-
-        let body = &mut buf.slice(size);
-
-        let atom = match T::decode_body(body) {
-            Ok(atom) => atom,
-            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
-            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
-            Err(err) => return Err(err),
-        };
-
-        if body.has_remaining() {
-            return Err(Error::UnderDecode(T::KIND));
-        }
-
-        buf.advance(size);
-
-        Ok(atom)
+        header.decode_body(buf, |body| match T::decode_body(body) {
+            Err(Error::OutOfBounds) => Err(Error::OverDecode(T::KIND)),
+            Err(Error::ShortRead) => Err(Error::UnderDecode(T::KIND)),
+            result => result,
+        })
     }
 }
 
@@ -181,18 +165,8 @@ macro_rules! nested {
 
                 while let Some(atom) = Any::decode_maybe(buf)? {
                     match atom {
-                        $(Any::$required(atom) => {
-                            if [<$required:lower>].is_some() {
-                                return Err(Error::DuplicateBox($required::KIND));
-                            }
-                            [<$required:lower>] = Some(atom);
-                        },)*
-                        $(Any::$optional(atom) => {
-                            if [<$optional:lower>].is_some() {
-                                return Err(Error::DuplicateBox($optional::KIND));
-                            }
-                            [<$optional:lower>] = Some(atom);
-                        },)*
+                        $(Any::$required(atom) => [<$required:lower>].insert_if_none(atom)?,)*
+                        $(Any::$optional(atom) => [<$optional:lower>].insert_if_none(atom)?,)*
                         $(Any::$multiple(atom) => {
                             [<$multiple:lower>].push(atom.into());
                         },)*

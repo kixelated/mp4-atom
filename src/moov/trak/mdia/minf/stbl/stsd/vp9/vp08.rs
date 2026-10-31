@@ -25,10 +25,10 @@ impl Atom for Vp08 {
         let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::VpcC(atom) => vpcc = atom.into(),
-                Any::Btrt(atom) => btrt = atom.into(),
-                Any::Colr(atom) => colr = atom.into(),
-                Any::Pasp(atom) => pasp = atom.into(),
+                Any::VpcC(atom) => vpcc.insert_if_none(atom)?,
+                Any::Btrt(atom) => btrt.insert_if_none(atom)?,
+                Any::Colr(atom) => colr.insert_if_none(atom)?,
+                Any::Pasp(atom) => pasp.insert_if_none(atom)?,
                 atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }

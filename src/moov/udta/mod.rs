@@ -57,20 +57,10 @@ impl Atom for Udta {
             // container (ISO/IEC 14496-12 §8.11.1), so a second one is
             // malformed.
             match header.kind {
-                Chpl::KIND => {
-                    if chpl.is_some() {
-                        return Err(Error::DuplicateBox(Chpl::KIND));
-                    }
-                    chpl = Some(Chpl::decode_atom(&header, buf)?);
-                }
+                Chpl::KIND => chpl.insert_if_none(Chpl::decode_atom(&header, buf)?)?,
                 Cprt::KIND => cprt.push(Cprt::decode_atom(&header, buf)?),
                 Kind::KIND => kind.push(Kind::decode_atom(&header, buf)?),
-                Meta::KIND => {
-                    if meta.is_some() {
-                        return Err(Error::DuplicateBox(Meta::KIND));
-                    }
-                    meta = Some(Meta::decode_atom(&header, buf)?);
-                }
+                Meta::KIND => meta.insert_if_none(Meta::decode_atom(&header, buf)?)?,
                 Rtng::KIND => rtng.push(Rtng::decode_atom(&header, buf)?),
                 // `free`/`skip` are padding boxes; drop them.
                 Free::KIND | Skip::KIND => {

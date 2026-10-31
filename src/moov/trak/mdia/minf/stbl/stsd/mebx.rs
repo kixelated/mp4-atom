@@ -203,10 +203,10 @@ impl MebxKey {
         let mut setu = None;
         while let Some(atom) = Any::decode_maybe(&mut body)? {
             match atom {
-                Any::Keyd(atom) => keyd = atom.into(),
-                Any::Dtyp(atom) => dtyp = atom.into(),
-                Any::Loca(atom) => loca = atom.into(),
-                Any::Setu(atom) => setu = atom.into(),
+                Any::Keyd(atom) => keyd.insert_if_none(atom)?,
+                Any::Dtyp(atom) => dtyp.insert_if_none(atom)?,
+                Any::Loca(atom) => loca.insert_if_none(atom)?,
+                Any::Setu(atom) => setu.insert_if_none(atom)?,
                 unknown => crate::decode_unknown(&unknown, header.kind)?,
             }
         }
@@ -296,7 +296,7 @@ impl Atom for Mebx {
                 continue;
             }
             match Any::decode_atom(&header, buf)? {
-                Any::Btrt(atom) => btrt = Some(atom),
+                Any::Btrt(atom) => btrt.insert_if_none(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }

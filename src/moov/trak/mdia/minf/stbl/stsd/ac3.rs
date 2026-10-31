@@ -19,7 +19,7 @@ impl Atom for Ac3 {
 
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Ac3SpecificBox(atom) => dac3 = atom.into(),
+                Any::Ac3SpecificBox(atom) => dac3.insert_if_none(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
