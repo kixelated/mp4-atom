@@ -125,6 +125,12 @@ mod tests {
         assert_eq!(buf[8], 1, "re-encoded as version 1");
         assert_eq!(buf[32..40], [0xFF; 8], "duration is still unknown");
         assert_eq!(decoded.duration, u64::MAX);
+
+        // One below all 1s is still a finite duration.
+        let mut finite = raw.to_vec();
+        finite[27] = 0xFE;
+        let decoded = Mdhd::decode(&mut finite.as_slice()).unwrap();
+        assert_eq!(decoded.duration, u32::MAX as u64 - 1);
     }
 
     #[test]
