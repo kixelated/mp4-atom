@@ -7,7 +7,7 @@ pub struct Hev1 {
     pub hvcc: Hvcc,
     pub lhvc: Option<Lhvc>,
     pub btrt: Option<Btrt>,
-    pub colr: Option<Colr>,
+    pub colr: Vec<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
     pub fiel: Option<Fiel>,
@@ -23,7 +23,7 @@ impl Atom for Hev1 {
         let mut hvcc = None;
         let mut lhvc = None;
         let mut btrt = None;
-        let mut colr = None;
+        let mut colr = Vec::new();
         let mut pasp = None;
         let mut taic = None;
         let mut fiel = None;
@@ -33,7 +33,7 @@ impl Atom for Hev1 {
                 Any::Hvcc(atom) => hvcc = atom.into(),
                 Any::Lhvc(atom) => lhvc = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
-                Any::Colr(atom) => colr = atom.into(),
+                Any::Colr(atom) => colr.push(atom),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
                 Any::Fiel(atom) => fiel = atom.into(),

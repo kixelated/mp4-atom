@@ -155,7 +155,7 @@ fn vp9() {
                                         codec_initialization_data: vec![]
                                     },
                                     btrt: None,
-                                    colr: None,
+                                    colr: Vec::new(),
                                     pasp: None,
                                     spatial: Default::default(),
                                 }

@@ -20,7 +20,7 @@ use crate::*;
 pub struct Jpeg {
     pub visual: Visual,
     pub btrt: Option<Btrt>,
-    pub colr: Option<Colr>,
+    pub colr: Vec<Colr>,
     pub pasp: Option<Pasp>,
     pub fiel: Option<Fiel>,
     pub spatial: Option<Box<Spatial>>,
@@ -33,14 +33,14 @@ impl Atom for Jpeg {
         let visual = Visual::decode(buf)?;
 
         let mut btrt = None;
-        let mut colr = None;
+        let mut colr = Vec::new();
         let mut pasp = None;
         let mut fiel = None;
         let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::Btrt(atom) => btrt = atom.into(),
-                Any::Colr(atom) => colr = atom.into(),
+                Any::Colr(atom) => colr.push(atom),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Fiel(atom) => fiel = atom.into(),
                 atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
@@ -91,7 +91,7 @@ mod tests {
                 max_bitrate: 5_000_000,
                 avg_bitrate: 2_000_000,
             }),
-            colr: None,
+            colr: Vec::new(),
             pasp: Some(Pasp {
                 h_spacing: 1,
                 v_spacing: 1,

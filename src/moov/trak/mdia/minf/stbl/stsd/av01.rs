@@ -12,7 +12,7 @@ pub struct Av01 {
     pub av1c: Av1c,
     pub btrt: Option<Btrt>,
     pub ccst: Option<Ccst>,
-    pub colr: Option<Colr>,
+    pub colr: Vec<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
     pub spatial: Option<Box<Spatial>>,
@@ -27,7 +27,7 @@ impl Atom for Av01 {
         let mut av1c = None;
         let mut btrt = None;
         let mut ccst = None;
-        let mut colr = None;
+        let mut colr = Vec::new();
         let mut pasp = None;
         let mut taic = None;
         let mut spatial = None;
@@ -36,7 +36,7 @@ impl Atom for Av01 {
                 Any::Av1c(atom) => av1c = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
                 Any::Ccst(atom) => ccst = atom.into(),
-                Any::Colr(atom) => colr = atom.into(),
+                Any::Colr(atom) => colr.push(atom),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
                 atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,

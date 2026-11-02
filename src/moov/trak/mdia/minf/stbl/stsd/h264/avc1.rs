@@ -6,7 +6,7 @@ pub struct Avc1 {
     pub visual: Visual,
     pub avcc: Avcc,
     pub btrt: Option<Btrt>,
-    pub colr: Option<Colr>,
+    pub colr: Vec<Colr>,
     pub pasp: Option<Pasp>,
     pub taic: Option<Taic>,
     pub fiel: Option<Fiel>,
@@ -21,7 +21,7 @@ impl Atom for Avc1 {
 
         let mut avcc = None;
         let mut btrt = None;
-        let mut colr = None;
+        let mut colr = Vec::new();
         let mut pasp = None;
         let mut taic = None;
         let mut fiel = None;
@@ -30,7 +30,7 @@ impl Atom for Avc1 {
             match atom {
                 Any::Avcc(atom) => avcc = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
-                Any::Colr(atom) => colr = atom.into(),
+                Any::Colr(atom) => colr.push(atom),
                 Any::Pasp(atom) => pasp = atom.into(),
                 Any::Taic(atom) => taic = atom.into(),
                 Any::Fiel(atom) => fiel = atom.into(),
@@ -97,7 +97,7 @@ mod tests {
                 ..Default::default()
             },
             btrt: None,
-            colr: None,
+            colr: Vec::new(),
             pasp: None,
             taic: None,
             fiel: None,
@@ -136,7 +136,7 @@ mod tests {
                 picture_parameter_sets: vec![vec![0x68, 0xEB, 0xE3, 0xCB]],
                 ..Default::default()
             },
-            colr: Some(Colr::default()),
+            colr: vec![Colr::default()],
             ..Default::default()
         };
 
@@ -204,7 +204,7 @@ mod tests {
                 max_bitrate: 374288,
                 avg_bitrate: 240976,
             }),
-            colr: Some(Colr::default()),
+            colr: vec![Colr::default()],
             pasp: Some(Pasp {
                 h_spacing: 4,
                 v_spacing: 3,

@@ -7,7 +7,7 @@ pub struct Vp08 {
     pub visual: Visual,
     pub vpcc: VpcC,
     pub btrt: Option<Btrt>,
-    pub colr: Option<Colr>,
+    pub colr: Vec<Colr>,
     pub pasp: Option<Pasp>,
     pub spatial: Option<Box<Spatial>>,
 }
@@ -20,14 +20,14 @@ impl Atom for Vp08 {
 
         let mut vpcc = None;
         let mut btrt = None;
-        let mut colr = None;
+        let mut colr = Vec::new();
         let mut pasp = None;
         let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
                 Any::VpcC(atom) => vpcc = atom.into(),
                 Any::Btrt(atom) => btrt = atom.into(),
-                Any::Colr(atom) => colr = atom.into(),
+                Any::Colr(atom) => colr.push(atom),
                 Any::Pasp(atom) => pasp = atom.into(),
                 atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }

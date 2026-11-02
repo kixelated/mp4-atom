@@ -98,7 +98,7 @@ fn esds() {
                                         ext: None,
                                     },
                                     btrt: None,
-                                    colr: None,
+                                    colr: Vec::new(),
                                     pasp: Some(Pasp {
                                         h_spacing: 1,
                                         v_spacing: 1
