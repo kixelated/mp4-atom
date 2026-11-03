@@ -50,6 +50,8 @@ impl AtomExt for Iloc {
             0
         };
 
+        let zero_size_extents = offset_size == 0 && length_size == 0 && index_size == 0;
+
         let item_count = if ext.version == IlocVersion::V0 || ext.version == IlocVersion::V1 {
             u16::decode(buf)? as usize
         } else {
@@ -77,6 +79,12 @@ impl AtomExt for Iloc {
                 _ => return Err(Error::Reserved),
             };
             let extent_count = u16::decode(buf)?;
+            // A zero-size extent reads no bytes, so a few bytes could otherwise declare
+            // 65,535 of them per item. Only the first may be zero-size: a lone extent with
+            // no offset or length still names the whole data reference.
+            if zero_size_extents && extent_count > 1 {
+                return Err(Error::OutOfBounds);
+            }
             let mut extents = vec![];
             for _j in 0..extent_count {
                 let item_reference_index: u64 =
@@ -351,6 +359,73 @@ mod tests {
             Iloc::decode_body_ext(&mut std::io::Cursor::new(body), ext),
             Err(Error::Reserved)
         ));
+    }
+
+    #[test]
+    fn test_iloc_rejects_repeated_zero_size_extents() {
+        // Found by moq's media fuzz targets: every size is 0, so each extent reads no
+        // bytes, and a 28-byte box decoded two items of 65,280 extents each (about 6 MB).
+        const ZERO_SIZE_EXTENTS: &[u8] = &[
+            0x00, 0x00, 0x00, 0x1c, 0x69, 0x6c, 0x6f, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x02, 0xc8, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x00,
+        ];
+
+        let err = Iloc::decode(&mut std::io::Cursor::new(ZERO_SIZE_EXTENTS)).unwrap_err();
+        assert!(
+            matches!(err, Error::OverDecode(kind) if kind == Iloc::KIND),
+            "{err:?}"
+        );
+    }
+
+    #[test]
+    fn test_iloc_v1_rejects_repeated_zero_size_extents() {
+        // V1 adds index_size, which is 0 here too.
+        let body: &[u8] = &[
+            0x00, 0x00, // sizes0=0, sizes1=0
+            0x00, 0x01, // item_count=1
+            0x00, 0x01, // item_id
+            0x00, 0x00, // construction_method
+            0x00, 0x00, // data_reference_index
+            0x00, 0x02, // extent_count=2
+        ];
+        let ext = IlocExt {
+            version: IlocVersion::V1,
+        };
+        assert!(matches!(
+            Iloc::decode_body_ext(&mut std::io::Cursor::new(body), ext),
+            Err(Error::OutOfBounds)
+        ));
+    }
+
+    #[test]
+    fn test_iloc_single_zero_size_extent_decodes() {
+        // One extent per item with every size 0 still decodes, even at the end of the box.
+        let body: &[u8] = &[
+            0x00, 0x00, // sizes0=0, sizes1=0
+            0x00, 0x02, // item_count=2
+            0x00, 0x01, // item_id
+            0x00, 0x00, // data_reference_index
+            0x00, 0x01, // extent_count=1
+            0x00, 0x02, // item_id
+            0x00, 0x00, // data_reference_index
+            0x00, 0x01, // extent_count=1
+        ];
+        let ext = IlocExt {
+            version: IlocVersion::V0,
+        };
+        let iloc = Iloc::decode_body_ext(&mut std::io::Cursor::new(body), ext).unwrap();
+        let extent = ItemLocationExtent {
+            item_reference_index: 0,
+            offset: 0,
+            length: 0,
+        };
+        assert_eq!(
+            iloc.item_locations
+                .iter()
+                .map(|item| (item.item_id, item.extents.clone()))
+                .collect::<Vec<_>>(),
+            vec![(1, vec![extent.clone()]), (2, vec![extent])]
+        );
     }
 
     #[test]
