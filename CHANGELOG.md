@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.1](https://github.com/kixelated/mp4-atom/compare/v0.17.0...v0.17.1) - 2026-11-04
+
+### Added
+
+- add handling for duplicate boxes via Option::insert_once ([#265](https://github.com/kixelated/mp4-atom/pull/265))
+
+### Fixed
+
+- reject repeated zero-size iloc extents ([#267](https://github.com/kixelated/mp4-atom/pull/267))
+- reject sgpd entry counts past the box ([#264](https://github.com/kixelated/mp4-atom/pull/264))
+
+### Other
+
+- add a CI check for the MSRV ([#261](https://github.com/kixelated/mp4-atom/pull/261))
+- bump toolchain action to v2 ([#259](https://github.com/kixelated/mp4-atom/pull/259))
+
 ## [0.17.0](https://github.com/kixelated/mp4-atom/compare/v0.16.2...v0.17.0) - 2026-10-30
 
 ### Added
