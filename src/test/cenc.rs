@@ -78,6 +78,92 @@ fn cenc_init() {
     assert_eq!(again, encoded);
 }
 
+/// The init segments Shaka Packager v3.9.3 writes for `cbcs` with a ClearKey `pssh`
+/// (`--protection_scheme cbcs --protection_systems CommonSystem`), one per stream:
+/// H.264 with a 1:9 pattern, and AAC fully encrypted (pattern 0:0). Both use a constant IV.
+#[test]
+fn cbcs_shaka_inits() {
+    // (init, pattern, constant IV)
+    type Case = (&'static [u8], Option<(u8, u8)>, [u8; 16]);
+    let cases: [Case; 2] = [
+        (
+            include_bytes!("cbcs_video_init.mp4"),
+            Some((1, 9)),
+            [
+                0x0d, 0xbc, 0x16, 0x34, 0xbc, 0xa7, 0x3f, 0xfb, 0x4c, 0x95, 0x94, 0x9a, 0x4f, 0x2b,
+                0x01, 0xcb,
+            ],
+        ),
+        (
+            include_bytes!("cbcs_audio_init.mp4"),
+            Some((0, 0)),
+            [
+                0xc9, 0x9e, 0x41, 0x28, 0x97, 0xf5, 0x2f, 0x5b, 0xea, 0x26, 0xee, 0x35, 0xf2, 0xa0,
+                0x61, 0xc6,
+            ],
+        ),
+    ];
+
+    for (encoded, pattern, iv) in cases {
+        let buf = &mut std::io::Cursor::new(encoded);
+        Ftyp::decode(buf).expect("failed to decode ftyp");
+        let moov = Moov::decode(buf).expect("failed to decode moov");
+
+        let codec = &moov.trak[0].mdia.minf.stbl.stsd.codecs[0];
+        let sinf = match codec {
+            Codec::Encv(encv) => {
+                assert!(matches!(*encv.codec, Codec::Avc1(_)));
+                assert_eq!(
+                    codec.visual().map(|v| (v.width, v.height)),
+                    Some((320, 180))
+                );
+                &encv.sinf
+            }
+            Codec::Enca(enca) => {
+                assert!(matches!(*enca.codec, Codec::Mp4a(_)));
+                assert_eq!(codec.audio().map(|a| a.channel_count), Some(2));
+                &enca.sinf
+            }
+            other => panic!("expected a protected entry, got {other:?}"),
+        };
+
+        assert_eq!(
+            sinf.schm,
+            Some(Schm {
+                scheme_type: b"cbcs".into(),
+                scheme_version: 0x0001_0000,
+                scheme_uri: None,
+            })
+        );
+        assert_eq!(
+            sinf.schi.as_ref().and_then(|schi| schi.tenc.clone()),
+            Some(Tenc {
+                default_pattern: pattern,
+                default_is_protected: true,
+                default_per_sample_iv_size: 0,
+                default_kid: KID,
+                default_constant_iv: Some(iv.to_vec()),
+            })
+        );
+        assert_eq!(
+            moov.pssh,
+            vec![Pssh {
+                system_id: CLEARKEY,
+                kid: Some(vec![KID]),
+                data: vec![],
+            }]
+        );
+
+        let mut reencoded = Vec::new();
+        moov.encode(&mut reencoded).unwrap();
+        let decoded = Moov::decode(&mut reencoded.as_slice()).unwrap();
+        assert_eq!(decoded, moov);
+        let mut again = Vec::new();
+        decoded.encode(&mut again).unwrap();
+        assert_eq!(again, reencoded);
+    }
+}
+
 /// A `cbcs` entry: `tenc` version 1 with a 1:9 pattern and a constant IV, no per-sample IV.
 #[test]
 fn cbcs_tenc_round_trips() {
