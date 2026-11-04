@@ -16,7 +16,8 @@ pub struct Tenc {
     /// Each value is 4 bits.
     pub default_pattern: Option<(u8, u8)>,
     pub default_is_protected: bool,
-    /// 0, 8 or 16 bytes. Zero for a protected track means it uses `default_constant_iv`.
+    /// 0, 8 or 16 bytes; 0 when the track is not protected. Zero for a protected track
+    /// means it uses `default_constant_iv`.
     pub default_per_sample_iv_size: u8,
     pub default_kid: [u8; 16],
     /// 8 or 16 bytes, present exactly when the track is protected with no per-sample IV,
@@ -43,6 +44,7 @@ impl AtomExt for Tenc {
         };
         let default_per_sample_iv_size = u8::decode(buf)?;
         check_iv_size(default_per_sample_iv_size, PER_SAMPLE_IV_SIZES)?;
+        check_clear_iv_size(default_is_protected, default_per_sample_iv_size)?;
         let default_kid = <[u8; 16]>::decode(buf)?;
 
         let default_constant_iv = match default_is_protected && default_per_sample_iv_size == 0 {
@@ -79,6 +81,7 @@ impl AtomExt for Tenc {
         }
 
         check_iv_size(self.default_per_sample_iv_size, PER_SAMPLE_IV_SIZES)?;
+        check_clear_iv_size(self.default_is_protected, self.default_per_sample_iv_size)?;
 
         0u8.encode(buf)?; // reserved
         let version = match self.default_pattern {
@@ -123,5 +126,15 @@ fn check_iv_size(size: u8, (allowed, error): IvSizes) -> Result<()> {
     match allowed.contains(&size) {
         true => Ok(()),
         false => Err(Error::InvalidCombination(error)),
+    }
+}
+
+/// A track that is not protected has no per-sample IV.
+fn check_clear_iv_size(is_protected: bool, iv_size: u8) -> Result<()> {
+    match is_protected || iv_size == 0 {
+        true => Ok(()),
+        false => Err(Error::InvalidCombination(
+            "tenc per-sample IV size must be 0 when the track is not protected",
+        )),
     }
 }

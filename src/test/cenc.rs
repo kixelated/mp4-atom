@@ -35,6 +35,7 @@ fn cenc_init() {
                 default_kid: KID,
                 default_constant_iv: None,
             }),
+            unknown: vec![],
         }),
     };
 
@@ -313,6 +314,7 @@ fn cenc_sinf(format: &[u8; 4]) -> Sinf {
                 default_kid: KID,
                 ..Default::default()
             }),
+            unknown: vec![],
         }),
     }
 }
@@ -582,4 +584,128 @@ fn encv_refuses_to_decode_an_audio_entry() {
     encoded[4..8].copy_from_slice(b"enca");
     let enca = Enca::decode(&mut encoded.as_slice()).unwrap();
     assert!(matches!(*enca.codec, Codec::Opus(_)));
+}
+
+fn sinf(scheme: &[u8; 4], tenc: Option<Tenc>) -> Sinf {
+    Sinf {
+        frma: Frma {
+            data_format: b"avc1".into(),
+        },
+        schm: Some(Schm {
+            scheme_type: scheme.into(),
+            scheme_version: 0x0001_0000,
+            scheme_uri: None,
+        }),
+        schi: Some(Schi {
+            tenc,
+            unknown: vec![],
+        }),
+    }
+}
+
+/// Encode `sinf` with its checks bypassed, the way another writer might.
+fn encode_unchecked(sinf: &Sinf) -> Vec<u8> {
+    let mut encoded = Vec::new();
+    encoded
+        .encode_atom(Sinf::KIND, |buf| {
+            sinf.frma.encode(buf)?;
+            sinf.schm.encode(buf)?;
+            sinf.schi.encode(buf)
+        })
+        .unwrap();
+    encoded
+}
+
+/// The `tenc` carries the key ID, so a Common Encryption scheme needs one.
+#[test]
+fn sinf_refuses_common_encryption_without_tenc() {
+    for scheme in [b"cenc", b"cbc1", b"cens", b"cbcs"] {
+        let sinf = sinf(scheme, None);
+        assert!(
+            matches!(
+                sinf.encode(&mut Vec::new()),
+                Err(Error::InvalidCombination(_))
+            ),
+            "{scheme:?} encode"
+        );
+        let encoded = encode_unchecked(&sinf);
+        assert!(
+            Sinf::decode(&mut encoded.as_slice()).is_err(),
+            "{scheme:?} decode"
+        );
+    }
+
+    // Another scheme needs no tenc.
+    let other = sinf(b"odkm", None);
+    let mut encoded = Vec::new();
+    other.encode(&mut encoded).unwrap();
+    assert_eq!(Sinf::decode(&mut encoded.as_slice()).unwrap(), other);
+}
+
+/// `cens` and `cbcs` need the pattern only a version 1 `tenc` has.
+#[test]
+fn sinf_refuses_a_pattern_scheme_with_tenc_version_0() {
+    let tenc = Tenc {
+        default_is_protected: true,
+        default_per_sample_iv_size: 16,
+        default_kid: KID,
+        ..Default::default()
+    };
+    for scheme in [b"cens", b"cbcs"] {
+        let sinf = sinf(scheme, Some(tenc.clone()));
+        assert!(
+            matches!(
+                sinf.encode(&mut Vec::new()),
+                Err(Error::InvalidCombination(_))
+            ),
+            "{scheme:?} encode"
+        );
+        let encoded = encode_unchecked(&sinf);
+        assert!(
+            Sinf::decode(&mut encoded.as_slice()).is_err(),
+            "{scheme:?} decode"
+        );
+    }
+
+    // `cenc` uses version 0.
+    let cenc = sinf(b"cenc", Some(tenc));
+    let mut encoded = Vec::new();
+    cenc.encode(&mut encoded).unwrap();
+    assert_eq!(Sinf::decode(&mut encoded.as_slice()).unwrap(), cenc);
+}
+
+/// Boxes another scheme puts in `schi` survive a round trip.
+#[test]
+fn schi_keeps_unknown_children() {
+    let schi = Schi {
+        tenc: None,
+        unknown: vec![Any::Unknown(b"odkm".into(), vec![0, 0, 0, 0, 1, 2, 3])],
+    };
+    let mut encoded = Vec::new();
+    schi.encode(&mut encoded).unwrap();
+    assert_eq!(Schi::decode(&mut encoded.as_slice()).unwrap(), schi);
+}
+
+/// A track that is not protected has no per-sample IV.
+#[test]
+fn tenc_refuses_an_iv_size_on_a_clear_track() {
+    let clear = Tenc {
+        default_is_protected: false,
+        default_per_sample_iv_size: 8,
+        default_kid: KID,
+        ..Default::default()
+    };
+    assert!(matches!(
+        clear.encode(&mut Vec::new()),
+        Err(Error::InvalidCombination(_))
+    ));
+
+    let ok = Tenc {
+        default_per_sample_iv_size: 0,
+        ..clear
+    };
+    let mut encoded = Vec::new();
+    ok.encode(&mut encoded).unwrap();
+    encoded[15] = 8; // default_Per_Sample_IV_Size
+    assert!(Tenc::decode(&mut encoded.as_slice()).is_err());
 }
