@@ -25,6 +25,7 @@ mod opus;
 mod pasp;
 mod pcm;
 mod plaintext;
+mod protection;
 mod spatial;
 mod st3d;
 mod sv3d;
@@ -64,6 +65,7 @@ pub use opus::*;
 pub use pasp::*;
 pub use pcm::*;
 pub use plaintext::*;
+pub use protection::*;
 pub use spatial::*;
 pub use st3d::*;
 pub use sv3d::*;
@@ -178,6 +180,10 @@ pub enum Codec {
     // Structured/"boxed" timed metadata, QuickTime "Metadata Media"
     Mebx(Mebx),
 
+    // A protected video or audio entry (ISO/IEC 14496-12 Sect 8.12), wrapping the original
+    Encv(Encv),
+    Enca(Enca),
+
     // Unknown
     Unknown(FourCC, Vec<u8>),
 }
@@ -196,6 +202,7 @@ impl Codec {
             Self::Vp09(vp09) => &vp09.visual,
             Self::Av01(av01) => &av01.visual,
             Self::Uncv(uncv) => &uncv.visual,
+            Self::Encv(encv) => return encv.codec.visual(),
             _ => return None,
         })
     }
@@ -220,6 +227,7 @@ impl Codec {
             Self::Fl32(pcm) => &pcm.audio,
             Self::Fl64(pcm) => &pcm.audio,
             Self::S16l(pcm) => &pcm.audio,
+            Self::Enca(enca) => return enca.codec.audio(),
             _ => return None,
         })
     }
@@ -277,6 +285,8 @@ impl Decode for Codec {
             Any::Camm(atom) => atom.into(),
             Any::Evte(atom) => atom.into(),
             Any::Mebx(atom) => atom.into(),
+            Any::Encv(atom) => atom.into(),
+            Any::Enca(atom) => atom.into(),
             Any::Unknown(four_cc, body) => Self::Unknown(four_cc, body),
             unknown => {
                 crate::decode_unknown(&unknown, Stsd::KIND)?;
@@ -330,6 +340,8 @@ impl Encode for Codec {
             Self::Camm(atom) => atom.encode(buf),
             Self::Evte(atom) => atom.encode(buf),
             Self::Mebx(atom) => atom.encode(buf),
+            Self::Encv(atom) => atom.encode(buf),
+            Self::Enca(atom) => atom.encode(buf),
         }
     }
 }

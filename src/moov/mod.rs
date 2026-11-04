@@ -21,6 +21,7 @@ pub struct Moov {
     pub trak: Vec<Trak>,
     pub udta: Option<Udta>,
     pub ainf: Option<Ainf>,
+    pub pssh: Vec<Pssh>,
 }
 
 impl Atom for Moov {
@@ -29,7 +30,7 @@ impl Atom for Moov {
     nested! {
         required: [ Mvhd ],
         optional: [ Ainf, Meta, Mvex, Udta ],
-        multiple: [ Trak ],
+        multiple: [ Trak, Pssh ],
     }
 }
 
