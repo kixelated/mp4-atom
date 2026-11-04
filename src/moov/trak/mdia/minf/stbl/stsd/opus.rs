@@ -20,8 +20,8 @@ impl Atom for Opus {
         // Find d0ps in mp4a or wave
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Dops(atom) => dops = atom.into(),
-                Any::Btrt(atom) => btrt = atom.into(),
+                Any::Dops(atom) => dops.insert_once(atom)?,
+                Any::Btrt(atom) => btrt.insert_once(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }

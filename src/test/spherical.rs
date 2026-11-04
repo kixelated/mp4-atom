@@ -719,12 +719,12 @@ fn sample_entry() {
             max_bitrate: 8_000_000,
             avg_bitrate: 6_000_000,
         }),
-        colr: Some(Colr::Nclx {
+        colr: vec![Colr::Nclx {
             colour_primaries: 1,
             transfer_characteristics: 1,
             matrix_coefficients: 1,
             full_range_flag: false,
-        }),
+        }],
         pasp: Some(Pasp {
             h_spacing: 1,
             v_spacing: 1,

@@ -98,7 +98,7 @@ fn bbb() {
                                         ext: None,
                                     },
                                     btrt: Some(Btrt { buffer_size_db: 0, max_bitrate: 1991287, avg_bitrate: 1991287 }),
-                                    colr: None,
+                                    colr: Vec::new(),
                                     pasp: Some(Pasp {
                                         h_spacing: 1,
                                         v_spacing: 1,

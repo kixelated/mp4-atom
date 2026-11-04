@@ -7,7 +7,7 @@ pub struct Vp09 {
     pub visual: Visual,
     pub vpcc: VpcC,
     pub btrt: Option<Btrt>,
-    pub colr: Option<Colr>,
+    pub colr: Vec<Colr>,
     pub pasp: Option<Pasp>,
     pub spatial: Option<Box<Spatial>>,
 }
@@ -20,15 +20,15 @@ impl Atom for Vp09 {
 
         let mut vpcc = None;
         let mut btrt = None;
-        let mut colr = None;
+        let mut colr = Vec::new();
         let mut pasp = None;
         let mut spatial = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::VpcC(atom) => vpcc = atom.into(),
-                Any::Btrt(atom) => btrt = atom.into(),
-                Any::Colr(atom) => colr = atom.into(),
-                Any::Pasp(atom) => pasp = atom.into(),
+                Any::VpcC(atom) => vpcc.insert_once(atom)?,
+                Any::Btrt(atom) => btrt.insert_once(atom)?,
+                Any::Colr(atom) => colr.push(atom),
+                Any::Pasp(atom) => pasp.insert_once(atom)?,
                 atom => Spatial::decode_child::<Self>(&mut spatial, atom)?,
             }
         }
@@ -72,7 +72,7 @@ mod tests {
             },
             vpcc: VpcC::default(),
             btrt: None,
-            colr: None,
+            colr: Vec::new(),
             pasp: None,
             spatial: Default::default(),
         };

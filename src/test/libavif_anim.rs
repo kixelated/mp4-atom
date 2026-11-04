@@ -246,12 +246,12 @@ fn av1_anim() {
                                         intra_pred_used: true,
                                         max_ref_per_pic: 15
                                     }),
-                                    colr: Some(Colr::Nclx {
+                                    colr: vec![Colr::Nclx {
                                         colour_primaries: 1,
                                         transfer_characteristics: 13,
                                         matrix_coefficients: 6,
                                         full_range_flag: true
-                                    }),
+                                    }],
                                     ..Default::default()
                                 }
                                 .into()],

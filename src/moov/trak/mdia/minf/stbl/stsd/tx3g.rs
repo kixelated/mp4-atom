@@ -118,8 +118,8 @@ impl Atom for Tx3g {
         let mut disp = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Ftab(atom) => ftab = atom.into(),
-                Any::Disp(atom) => disp = atom.into(),
+                Any::Ftab(atom) => ftab.insert_once(atom)?,
+                Any::Disp(atom) => disp.insert_once(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }

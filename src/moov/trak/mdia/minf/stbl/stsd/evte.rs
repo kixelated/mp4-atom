@@ -24,8 +24,8 @@ impl Atom for Evte {
         let mut silb = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::Btrt(atom) => btrt = atom.into(),
-                Any::Silb(atom) => silb = atom.into(),
+                Any::Btrt(atom) => btrt.insert_once(atom)?,
+                Any::Silb(atom) => silb.insert_once(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }

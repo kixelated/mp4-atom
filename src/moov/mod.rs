@@ -233,7 +233,7 @@ mod test {
                                             ext: None,
                                         },
                                         btrt: None,
-                                        colr: None,
+                                        colr: Vec::new(),
                                         pasp: None,
                                         taic: None,
                                         fiel: None,

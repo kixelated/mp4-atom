@@ -148,12 +148,12 @@ fn avcc_ext() {
                                         max_bitrate: 2453499,
                                         avg_bitrate: 2453499,
                                     }),
-                                    colr: Some(Colr::Nclx {
+                                    colr: vec![Colr::Nclx {
                                         colour_primaries: 1,
                                         transfer_characteristics: 1,
                                         matrix_coefficients: 1,
                                         full_range_flag: false,
-                                    }),
+                                    }],
                                     pasp: Some(Pasp {
                                         h_spacing: 1,
                                         v_spacing: 1,

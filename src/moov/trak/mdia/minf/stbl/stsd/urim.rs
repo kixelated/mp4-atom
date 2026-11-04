@@ -74,8 +74,8 @@ impl Atom for Urim {
         let mut btrt = None;
         while let Some(atom) = Any::decode_maybe(buf)? {
             match atom {
-                Any::UriI(atom) => init = atom.into(),
-                Any::Btrt(atom) => btrt = atom.into(),
+                Any::UriI(atom) => init.insert_once(atom)?,
+                Any::Btrt(atom) => btrt.insert_once(atom)?,
                 unknown => Self::decode_unknown(&unknown)?,
             }
         }
