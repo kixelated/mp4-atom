@@ -22,31 +22,21 @@ impl Atom for Ftab {
     const KIND: FourCC = FourCC::new(b"ftab");
 
     fn decode_body<B: Buf>(buf: &mut B) -> Result<Self> {
-        let entry_count = u16::decode(buf)?;
-        let mut font_entries = Vec::with_capacity(std::cmp::min(8, entry_count as usize));
-        for _ in 0..entry_count {
-            let font_id = u16::decode(buf)?;
-            let font = decode_length_prefixed_bom_string::<u8>(buf)?;
-            let font_entry = FontEntry { font_id, font };
-            font_entries.push(font_entry);
-        }
+        let font_entries = buf.decode_list(8u16, |buf| {
+            Ok(FontEntry {
+                font_id: u16::decode(buf)?,
+                font: decode_length_prefixed_bom_string::<u8>(buf)?,
+            })
+        })?;
         Ok(Ftab { font_entries })
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        let entry_count: u16 = self
-            .font_entries
-            .len()
-            .try_into()
-            .map_err(|_| Error::TooLarge(Self::KIND))?;
-        entry_count.encode(buf)?;
-        for font_entry in &self.font_entries {
+        buf.encode_list::<u16, _>(&self.font_entries, Self::KIND, |buf, font_entry| {
             font_entry.font_id.encode(buf)?;
             // We always encode as UTF-8, so there won't be round tripping of UTF-16. That is OK.
-            encode_length_prefixed_string::<u8>(buf, &font_entry.font, Self::KIND)?;
-        }
-
-        Ok(())
+            encode_length_prefixed_string::<u8>(buf, &font_entry.font, Self::KIND)
+        })
     }
 }
 

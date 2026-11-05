@@ -36,15 +36,12 @@ impl Atom for Chpl {
             <[u8; 4]>::decode(buf)?; // reserved, version 1 only
         }
 
-        let count = u8::decode(buf)?;
-        let mut entries = Vec::with_capacity(count as usize);
-        for _ in 0..count {
-            let start = u64::decode(buf)?;
-
-            let title = decode_length_prefixed_utf8_string::<u8>(buf)?;
-
-            entries.push(ChplEntry { start, title });
-        }
+        let entries = buf.decode_list(64u8, |buf| {
+            Ok(ChplEntry {
+                start: u64::decode(buf)?,
+                title: decode_length_prefixed_utf8_string::<u8>(buf)?,
+            })
+        })?;
 
         Ok(Self { entries })
     }
@@ -54,20 +51,11 @@ impl Atom for Chpl {
         [0u8; 3].encode(buf)?; // flags
         [0u8; 4].encode(buf)?; // reserved
 
-        let count: u8 = self
-            .entries
-            .len()
-            .try_into()
-            .map_err(|_| Error::TooLarge(Self::KIND))?;
-        count.encode(buf)?;
-
-        for entry in &self.entries {
+        buf.encode_list::<u8, _>(&self.entries, Self::KIND, |buf, entry| {
             entry.start.encode(buf)?;
 
-            encode_length_prefixed_string::<u8>(buf, &entry.title, Self::KIND)?;
-        }
-
-        Ok(())
+            encode_length_prefixed_string::<u8>(buf, &entry.title, Self::KIND)
+        })
     }
 }
 

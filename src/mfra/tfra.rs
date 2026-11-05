@@ -106,23 +106,19 @@ impl AtomExt for Tfra {
         let length_size_of_sample_num = lengths & 0b11;
         let length_size_of_trun_num = (lengths >> 2) & 0b11;
         let length_size_of_traf_num = (lengths >> 4) & 0b11;
-        let number_of_entry = u32::decode(buf)?;
-        // Don't trust the entry count, just start with a small-ish reservation
-        let mut entries = Vec::with_capacity(std::cmp::min(128, number_of_entry as usize));
-        for _ in 0..number_of_entry {
+        let entries = buf.decode_list(128u32, |buf| {
             let (time, moof_offset) = match ext.version {
                 TfraVersion::V1 => (u64::decode(buf)?, u64::decode(buf)?),
                 TfraVersion::V0 => (u32::decode(buf)?.into(), u32::decode(buf)?.into()),
             };
-            let fragment_info = FragmentInfo {
+            Ok(FragmentInfo {
                 time,
                 moof_offset,
                 traf_number: decode_variable_unsigned_int(buf, length_size_of_traf_num)?,
                 trun_number: decode_variable_unsigned_int(buf, length_size_of_trun_num)?,
                 sample_delta: decode_variable_unsigned_int(buf, length_size_of_sample_num)?,
-            };
-            entries.push(fragment_info);
-        }
+            })
+        })?;
         Ok(Tfra { track_id, entries })
     }
 
@@ -134,13 +130,7 @@ impl AtomExt for Tfra {
             | (length_size_of_trun_num << 2)
             | (length_size_of_sample_num))
             .encode(buf)?;
-        let number_of_entry: u32 = self
-            .entries
-            .len()
-            .try_into()
-            .map_err(|_| Error::TooLarge(Self::KIND))?;
-        number_of_entry.encode(buf)?;
-        for entry in &self.entries {
+        buf.encode_list::<u32, _>(&self.entries, Self::KIND, |buf, entry| {
             match version {
                 TfraVersion::V1 => {
                     entry.time.encode(buf)?;
@@ -153,8 +143,8 @@ impl AtomExt for Tfra {
             }
             encode_variable_unsigned_int(buf, entry.traf_number, length_size_of_traf_num)?;
             encode_variable_unsigned_int(buf, entry.trun_number, length_size_of_trun_num)?;
-            encode_variable_unsigned_int(buf, entry.sample_delta, length_size_of_sample_num)?;
-        }
+            encode_variable_unsigned_int(buf, entry.sample_delta, length_size_of_sample_num)
+        })?;
         Ok(version.into())
     }
 }

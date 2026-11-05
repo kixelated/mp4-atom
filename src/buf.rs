@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use crate::{Encode, Error, FourCC, Result};
+use crate::{Decode, Encode, Error, FourCC, Result};
 
 /// A contiguous buffer of bytes.
 // We're not using bytes::Buf because of some strange bugs with take().
@@ -12,6 +12,30 @@ pub trait Buf {
 
     fn slice(&self, size: usize) -> &[u8];
     fn advance(&mut self, n: usize);
+
+    /// Read a count of type `T`, followed by that many items as decoded by
+    /// `f`. The inverse of [`BufMut::encode_list`].
+    ///
+    /// The count is untrusted, so at most `max_initial_capacity` items are
+    /// reserved up front; its type is also the type of the count.
+    fn decode_list<T: Decode + TryInto<usize>, I>(
+        &mut self,
+        max_initial_capacity: T,
+        mut f: impl FnMut(&mut Self) -> Result<I>,
+    ) -> Result<Vec<I>>
+    where
+        Self: Sized,
+    {
+        let count: usize = T::decode(self)?
+            .try_into()
+            .map_err(|_| Error::OutOfBounds)?;
+        let max_initial_capacity = max_initial_capacity.try_into().unwrap_or(usize::MAX);
+        let mut items = Vec::with_capacity(count.min(max_initial_capacity));
+        for _ in 0..count {
+            items.push(f(self)?);
+        }
+        Ok(items)
+    }
 }
 
 impl Buf for &[u8] {
@@ -125,6 +149,52 @@ pub trait BufMut {
             .map_err(|_| Error::TooLarge(kind))?;
         self.set_slice(start, &size.to_be_bytes());
         Ok(())
+    }
+
+    /// Write the number of `items` as a count of type `T`, followed by each
+    /// item as encoded by `f`. Fails with [`Error::TooLarge`] for `kind` if the
+    /// count doesn't fit in `T`.
+    fn encode_list<T: Encode + TryFrom<usize>, I: IntoIterator>(
+        &mut self,
+        items: I,
+        kind: impl Into<FourCC>,
+        mut f: impl FnMut(&mut Self, I::Item) -> Result<()>,
+    ) -> Result<()>
+    where
+        I::IntoIter: ExactSizeIterator,
+        Self: Sized,
+    {
+        let items = items.into_iter();
+        let count: T = items
+            .len()
+            .try_into()
+            .map_err(|_| Error::TooLarge(kind.into()))?;
+        count.encode(self)?;
+        for item in items {
+            f(self, item)?;
+        }
+        Ok(())
+    }
+
+    /// Write an atom of `kind` whose body is the encoding of `value`, see
+    /// [`BufMut::encode_atom`].
+    fn encode_atom_value(&mut self, kind: impl Into<FourCC>, value: &impl Encode) -> Result<()>
+    where
+        Self: Sized,
+    {
+        self.encode_atom(kind, |buf| value.encode(buf))
+    }
+
+    /// Write an atom of `kind` whose body is `text` as raw UTF-8, see
+    /// [`BufMut::encode_atom`].
+    fn encode_atom_string(&mut self, kind: impl Into<FourCC>, text: &str) -> Result<()>
+    where
+        Self: Sized,
+    {
+        self.encode_atom(kind, |buf| {
+            buf.append_slice(text.as_bytes());
+            Ok(())
+        })
     }
 }
 

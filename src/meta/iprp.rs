@@ -95,16 +95,9 @@ impl PropertyAssociations {
         } else {
             self.item_id.encode(buf)?;
         }
-        let association_count: u8 = self
-            .associations
-            .len()
-            .try_into()
-            .map_err(|_| Error::TooLarge(Ipma::KIND))?;
-        association_count.encode(buf)?;
-        for association in &self.associations {
-            association.encode(buf, prop_index_15_bit)?;
-        }
-        Ok(())
+        buf.encode_list::<u8, _>(&self.associations, Ipma::KIND, |buf, association| {
+            association.encode(buf, prop_index_15_bit)
+        })
     }
 }
 
@@ -160,29 +153,27 @@ impl AtomExt for Ipma {
             } else {
                 u32::decode(buf)?
             };
-            let mut associations = vec![];
-            let association_count = u8::decode(buf)?;
             // The duplicate use of i in the standard is apparently fixed in Ed 8.
             // See https://github.com/MPEGGroup/FileFormat/issues/86
-            for _j in 0..association_count {
+            let associations = buf.decode_list(8u8, |buf| {
                 if ext.prop_index_15_bits {
                     let flag_and_prop_index = u16::decode(buf)?;
                     let essential = (flag_and_prop_index & 0x8000) == 0x8000;
                     let property_index = flag_and_prop_index & 0x7fff;
-                    associations.push(PropertyAssociation {
+                    Ok(PropertyAssociation {
                         essential,
                         property_index,
-                    });
+                    })
                 } else {
                     let flag_and_prop_index = u8::decode(buf)?;
                     let essential = (flag_and_prop_index & 0x80) == 0x80;
                     let property_index = (flag_and_prop_index & 0x7f) as u16;
-                    associations.push(PropertyAssociation {
+                    Ok(PropertyAssociation {
                         essential,
                         property_index,
-                    });
+                    })
                 }
-            }
+            })?;
             item_properties.push(PropertyAssociations {
                 item_id,
                 associations,
