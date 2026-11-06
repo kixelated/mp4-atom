@@ -6,9 +6,9 @@ ext! {
     flags: {}
 }
 
-/// ProtectionSystemSpecificHeaderBox (`pssh`), ISO/IEC 23001-7:2023 Sect 8.1:
-/// what one DRM system needs to obtain a license. It sits in `moov`, or in `moof`
-/// when keys rotate.
+/// ProtectionSystemSpecificHeaderBox (`pssh`), ISO/IEC 23001-7:2023 Section 8.1:
+/// data for one DRM system, typically what it needs to request a license. It sits in
+/// `moov`, or in `moof`, mostly for key rotation.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pssh {

@@ -10,7 +10,7 @@ use crate::*;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Moof {
     pub mfhd: Mfhd,
-    /// Only with key rotation; usually the `pssh` boxes are in `moov`.
+    /// Mostly for key rotation; the `pssh` boxes are usually in `moov`.
     pub pssh: Vec<Pssh>,
     pub traf: Vec<Traf>,
 }

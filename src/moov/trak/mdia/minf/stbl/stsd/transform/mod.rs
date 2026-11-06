@@ -12,7 +12,7 @@ pub use tenc::*;
 
 use crate::*;
 
-/// A protected video sample entry (`encv`), ISO/IEC 14496-12:2026 Sect 13.4.
+/// A protected video sample entry (`encv`), ISO/IEC 14496-12:2026 Section 13.4.
 ///
 /// On the wire it is the original sample entry renamed to `encv`, with one or more
 /// `sinf` added that name the original type in `frma`. Here it is that original entry,
@@ -20,19 +20,19 @@ use crate::*;
 ///
 /// An original type this crate does not decode stays [`Codec::Unknown`], which has
 /// no visual fields and cannot be encoded; so does a restricted entry (`resv`), since
-/// `rinf` is not handled yet (Sect 13.5.3). The other protected entries (`encm`, `enct`,
-/// `encs` and the rest of Table 13, Sect 13.4.1) are not handled.
+/// `rinf` is not handled yet (Section 13.5.3). The other protected entries (`encm`, `enct`,
+/// `encs` and the rest of Table 13, Section 13.4.1) are not handled.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Encv {
     /// The original sample entry, of the type every `sinf`'s `frma` names.
     pub codec: Box<Codec>,
     /// At least one. Several are equivalent descriptions of the same protection
-    /// (Sect 13.4.2), so they name the same original type.
+    /// (Section 13.4.2), so they name the same original type.
     pub sinf: Vec<Sinf>,
 }
 
-/// A protected audio sample entry (`enca`), ISO/IEC 14496-12:2026 Sect 13.4.
+/// A protected audio sample entry (`enca`), ISO/IEC 14496-12:2026 Section 13.4.
 ///
 /// See [`Encv`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -41,7 +41,7 @@ pub struct Enca {
     /// The original sample entry, of the type every `sinf`'s `frma` names.
     pub codec: Box<Codec>,
     /// At least one. Several are equivalent descriptions of the same protection
-    /// (Sect 13.4.2), so they name the same original type.
+    /// (Section 13.4.2), so they name the same original type.
     pub sinf: Vec<Sinf>,
 }
 
@@ -135,7 +135,7 @@ fn decode_protected<B: Buf>(
         }
     }
     let original = original_format(&sinf)?;
-    // At most one transformation of each type (Sect 13.2).
+    // At most one transformation of each type (Section 13.2).
     if original == Encv::KIND || original == Enca::KIND {
         return Err(Error::InvalidCombination(
             "a protected sample entry cannot wrap another",

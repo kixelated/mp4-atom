@@ -180,7 +180,7 @@ pub enum Codec {
     // Structured/"boxed" timed metadata, QuickTime "Metadata Media"
     Mebx(Mebx),
 
-    // A protected video or audio entry (ISO/IEC 14496-12 Sect 8.12), wrapping the original
+    // A protected video or audio entry (ISO/IEC 14496-12:2026 Section 13.4), wrapping the original
     Encv(Encv),
     Enca(Enca),
 

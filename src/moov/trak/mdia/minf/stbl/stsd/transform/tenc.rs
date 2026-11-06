@@ -6,7 +6,7 @@ ext! {
     flags: {}
 }
 
-/// TrackEncryptionBox (`tenc`), ISO/IEC 23001-7:2023 Sect 8.2.
+/// TrackEncryptionBox (`tenc`), ISO/IEC 23001-7:2023 Section 8.2.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tenc {
@@ -21,7 +21,7 @@ pub struct Tenc {
     pub default_per_sample_iv_size: u8,
     pub default_kid: [u8; 16],
     /// 8 or 16 bytes, present exactly when the track is protected with no per-sample IV,
-    /// as `cbcs` does.
+    /// as in Shaka Packager's `cbcs` output.
     pub default_constant_iv: Option<Vec<u8>>,
 }
 
@@ -114,7 +114,7 @@ impl AtomExt for Tenc {
     }
 }
 
-/// The IV sizes ISO/IEC 23001-7 allows, with the error for any other.
+/// The IV sizes this crate accepts, the same as Shaka Packager, with the error for any other.
 type IvSizes = (&'static [u8], &'static str);
 const PER_SAMPLE_IV_SIZES: IvSizes = (
     &[0, 8, 16],

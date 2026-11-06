@@ -8,14 +8,14 @@ ext! {
     }
 }
 
-/// SchemeTypeBox (`schm`), ISO/IEC 14496-12:2026 Sect 13.4.6: the protection or
+/// SchemeTypeBox (`schm`), ISO/IEC 14496-12:2026 Section 13.4.6: the protection or
 /// restriction scheme, such as `cenc` or `cbcs` for Common Encryption (ISO/IEC 23001-7).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Schm {
     pub scheme_type: FourCC,
-    /// The major version in the upper 16 bits, the minor in the lower; `0x00010000` for
-    /// Common Encryption.
+    /// The scheme's version. ffmpeg and Shaka Packager write `0x00010000` for Common
+    /// Encryption.
     pub scheme_version: u32,
     pub scheme_uri: Option<String>,
 }

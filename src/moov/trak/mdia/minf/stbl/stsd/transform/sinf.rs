@@ -1,11 +1,11 @@
 use crate::*;
 
-/// ProtectionSchemeInfoBox (`sinf`), ISO/IEC 14496-12:2026 Sect 13.4.2.
+/// ProtectionSchemeInfoBox (`sinf`), ISO/IEC 14496-12:2026 Section 13.4.2.
 ///
-/// `schm` and `schi` occur together or not at all. For a Common Encryption scheme
-/// (ISO/IEC 23001-7:2023 Sect 10: `cenc`, `cbc1`, `cens`, `cbcs`), decoding and
-/// encoding also require a `tenc` in `schi`. Other schemes, `sve1` included, are not
-/// checked.
+/// `schm` and `schi` occur together or not at all. For the Common Encryption schemes
+/// `cenc`, `cbc1`, `cens` and `cbcs` (ISO/IEC 23001-7:2023 Section 10.1 to 10.4),
+/// decoding and encoding also require a `tenc` in `schi`. Other schemes, `sve1`
+/// (Section 10.5) included, are not checked.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sinf {

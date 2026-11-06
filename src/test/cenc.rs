@@ -664,7 +664,7 @@ fn sinf_accepts_tenc_version_0_for_every_scheme() {
     }
 }
 
-/// `schm` and `schi` occur together or not at all (14496-12:2026 Sect 13.4.2).
+/// `schm` and `schi` occur together or not at all (14496-12:2026 Section 13.4.2).
 #[test]
 fn sinf_refuses_schm_without_schi_and_the_reverse() {
     let full = sinf(b"odkm", None);
@@ -706,7 +706,7 @@ fn sinf_refuses_schm_without_schi_and_the_reverse() {
 }
 
 /// Several `sinf` boxes describe the same protection in different ways (14496-12:2026
-/// Sect 13.4.2): here scheme signalling and the frma-only (IPMP) form. All are kept, in
+/// Section 13.4.2): here scheme signalling and the frma-only (IPMP) form. All are kept, in
 /// order, wherever they sit among the entry's children.
 #[test]
 fn encv_keeps_every_sinf() {
