@@ -1,6 +1,7 @@
 use crate::{Any, FourCC};
 
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum Error {
     #[error("out of bounds")]
     OutOfBounds,
