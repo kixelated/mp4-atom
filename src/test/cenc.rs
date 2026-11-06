@@ -44,7 +44,7 @@ fn cenc_init() {
         panic!("expected encv, got {video:?}");
     };
     assert!(matches!(*encv.codec, Codec::Avc1(_)));
-    assert_eq!(encv.sinf, sinf(b"cenc", b"avc1"));
+    assert_eq!(encv.sinf, vec![sinf(b"cenc", b"avc1")]);
     assert_eq!(video.visual(), encv.codec.visual());
     assert_eq!(
         video.visual().map(|v| (v.width, v.height)),
@@ -56,7 +56,7 @@ fn cenc_init() {
         panic!("expected enca, got {audio:?}");
     };
     assert!(matches!(*enca.codec, Codec::Mp4a(_)));
-    assert_eq!(enca.sinf, sinf(b"cenc", b"mp4a"));
+    assert_eq!(enca.sinf, vec![sinf(b"cenc", b"mp4a")]);
     assert_eq!(audio.audio(), enca.codec.audio());
 
     assert_eq!(
@@ -118,12 +118,12 @@ fn cbcs_shaka_inits() {
                     codec.visual().map(|v| (v.width, v.height)),
                     Some((320, 180))
                 );
-                &encv.sinf
+                &encv.sinf[0]
             }
             Codec::Enca(enca) => {
                 assert!(matches!(*enca.codec, Codec::Mp4a(_)));
                 assert_eq!(codec.audio().map(|a| a.channel_count), Some(2));
-                &enca.sinf
+                &enca.sinf[0]
             }
             other => panic!("expected a protected entry, got {other:?}"),
         };
@@ -324,7 +324,7 @@ fn cenc_sinf(format: &[u8; 4]) -> Sinf {
 fn encv_wraps_the_original_entry() {
     let encv = Encv {
         codec: Box::new(avc1().into()),
-        sinf: cenc_sinf(b"avc1"),
+        sinf: vec![cenc_sinf(b"avc1")],
     };
     let stsd = Stsd {
         codecs: vec![encv.clone().into()],
@@ -372,7 +372,7 @@ fn encv_finds_sinf_between_children() {
 
     let encv = Encv::decode(&mut encoded.as_slice()).unwrap();
     assert_eq!(*encv.codec, Codec::Avc1(original));
-    assert_eq!(encv.sinf, sinf);
+    assert_eq!(encv.sinf, vec![sinf]);
 }
 
 #[test]
@@ -380,7 +380,7 @@ fn enca_round_trips() {
     let opus = opus();
     let enca = Enca {
         codec: Box::new(opus.into()),
-        sinf: cenc_sinf(b"Opus"),
+        sinf: vec![cenc_sinf(b"Opus")],
     };
     let mut encoded = Vec::new();
     enca.encode(&mut encoded).unwrap();
@@ -391,7 +391,7 @@ fn enca_round_trips() {
 fn encv_refuses_a_frma_that_names_another_type() {
     let encv = Encv {
         codec: Box::new(avc1().into()),
-        sinf: cenc_sinf(b"hvc1"),
+        sinf: vec![cenc_sinf(b"hvc1")],
     };
     assert!(matches!(
         encv.encode(&mut Vec::new()),
@@ -467,7 +467,7 @@ fn opus() -> Opus {
 fn protected_entries_refuse_the_wrong_media() {
     let encv = Encv {
         codec: Box::new(opus().into()),
-        sinf: cenc_sinf(b"Opus"),
+        sinf: vec![cenc_sinf(b"Opus")],
     };
     assert!(matches!(
         encv.encode(&mut Vec::new()),
@@ -476,7 +476,7 @@ fn protected_entries_refuse_the_wrong_media() {
 
     let enca = Enca {
         codec: Box::new(avc1().into()),
-        sinf: cenc_sinf(b"avc1"),
+        sinf: vec![cenc_sinf(b"avc1")],
     };
     assert!(matches!(
         enca.encode(&mut Vec::new()),
@@ -488,11 +488,11 @@ fn protected_entries_refuse_the_wrong_media() {
 fn encv_refuses_to_encode_a_nested_entry() {
     let inner = Encv {
         codec: Box::new(avc1().into()),
-        sinf: cenc_sinf(b"avc1"),
+        sinf: vec![cenc_sinf(b"avc1")],
     };
     let outer = Encv {
         codec: Box::new(inner.into()),
-        sinf: cenc_sinf(b"encv"),
+        sinf: vec![cenc_sinf(b"encv")],
     };
     assert!(matches!(
         outer.encode(&mut Vec::new()),
@@ -505,7 +505,7 @@ fn encv_refuses_to_encode_a_nested_entry() {
 fn encv_reports_a_truncated_sinf() {
     let encv = Encv {
         codec: Box::new(avc1().into()),
-        sinf: cenc_sinf(b"avc1"),
+        sinf: vec![cenc_sinf(b"avc1")],
     };
     let mut encoded = Vec::new();
     encv.encode(&mut encoded).unwrap();
@@ -642,36 +642,145 @@ fn sinf_refuses_common_encryption_without_tenc() {
     assert_eq!(Sinf::decode(&mut encoded.as_slice()).unwrap(), other);
 }
 
-/// `cens` and `cbcs` need the pattern only a version 1 `tenc` has.
+/// A version 0 `tenc` (no pattern) is accepted for every Common Encryption scheme;
+/// version 1 is not enforced for `cens` and `cbcs`.
 #[test]
-fn sinf_refuses_a_pattern_scheme_with_tenc_version_0() {
+fn sinf_accepts_tenc_version_0_for_every_scheme() {
     let tenc = Tenc {
         default_is_protected: true,
         default_per_sample_iv_size: 16,
         default_kid: KID,
         ..Default::default()
     };
-    for scheme in [b"cens", b"cbcs"] {
+    for scheme in [b"cenc", b"cbc1", b"cens", b"cbcs"] {
         let sinf = sinf(scheme, Some(tenc.clone()));
+        let mut encoded = Vec::new();
+        sinf.encode(&mut encoded).unwrap();
+        assert_eq!(
+            Sinf::decode(&mut encoded.as_slice()).unwrap(),
+            sinf,
+            "{scheme:?}"
+        );
+    }
+}
+
+/// `schm` and `schi` occur together or not at all (14496-12:2026 Sect 13.4.2).
+#[test]
+fn sinf_refuses_schm_without_schi_and_the_reverse() {
+    let full = sinf(b"odkm", None);
+    let only_schm = Sinf {
+        schi: None,
+        ..full.clone()
+    };
+    let only_schi = Sinf {
+        schm: None,
+        ..full.clone()
+    };
+    for (name, sinf) in [("schm only", only_schm), ("schi only", only_schi)] {
         assert!(
             matches!(
                 sinf.encode(&mut Vec::new()),
                 Err(Error::InvalidCombination(_))
             ),
-            "{scheme:?} encode"
+            "{name} encode"
         );
         let encoded = encode_unchecked(&sinf);
         assert!(
-            Sinf::decode(&mut encoded.as_slice()).is_err(),
-            "{scheme:?} decode"
+            matches!(
+                Sinf::decode(&mut encoded.as_slice()),
+                Err(Error::InvalidCombination(_))
+            ),
+            "{name} decode"
         );
     }
 
-    // `cenc` uses version 0.
-    let cenc = sinf(b"cenc", Some(tenc));
+    // Neither is fine: `frma` alone.
+    let bare = Sinf {
+        schm: None,
+        schi: None,
+        ..full
+    };
     let mut encoded = Vec::new();
-    cenc.encode(&mut encoded).unwrap();
-    assert_eq!(Sinf::decode(&mut encoded.as_slice()).unwrap(), cenc);
+    bare.encode(&mut encoded).unwrap();
+    assert_eq!(Sinf::decode(&mut encoded.as_slice()).unwrap(), bare);
+}
+
+/// Several `sinf` boxes describe the same protection in different ways (14496-12:2026
+/// Sect 13.4.2): here scheme signalling and the frma-only (IPMP) form. All are kept, in
+/// order, wherever they sit among the entry's children.
+#[test]
+fn encv_keeps_every_sinf() {
+    let mut original = avc1();
+    original.btrt = Some(Btrt {
+        buffer_size_db: 1,
+        max_bitrate: 2,
+        avg_bitrate: 3,
+    });
+    let scheme = cenc_sinf(b"avc1");
+    let ipmp = Sinf {
+        schm: None,
+        schi: None,
+        ..cenc_sinf(b"avc1")
+    };
+
+    // fields, sinf, avcC, sinf, btrt
+    let mut body = Vec::new();
+    original.visual.encode(&mut body).unwrap();
+    scheme.encode(&mut body).unwrap();
+    original.avcc.encode(&mut body).unwrap();
+    ipmp.encode(&mut body).unwrap();
+    original.btrt.encode(&mut body).unwrap();
+    let mut encoded = Vec::new();
+    encoded
+        .encode_atom(Encv::KIND, |buf| {
+            buf.append_slice(&body);
+            Ok(())
+        })
+        .unwrap();
+
+    let encv = Encv::decode(&mut encoded.as_slice()).unwrap();
+    assert_eq!(*encv.codec, Codec::Avc1(original));
+    assert_eq!(encv.sinf, vec![scheme, ipmp]);
+
+    let mut again = Vec::new();
+    encv.encode(&mut again).unwrap();
+    assert_eq!(Encv::decode(&mut again.as_slice()).unwrap(), encv);
+}
+
+/// Every `sinf` names the same original type, and there is at least one.
+#[test]
+fn encv_refuses_disagreeing_or_no_sinf() {
+    let disagree = Encv {
+        codec: Box::new(avc1().into()),
+        sinf: vec![cenc_sinf(b"avc1"), cenc_sinf(b"hvc1")],
+    };
+    assert!(matches!(
+        disagree.encode(&mut Vec::new()),
+        Err(Error::InvalidCombination(_))
+    ));
+
+    // The same on decode: the original entry, renamed, with two disagreeing `sinf`.
+    let mut encoded = Vec::new();
+    avc1().encode(&mut encoded).unwrap();
+    encoded[4..8].copy_from_slice(b"encv");
+    for format in [b"avc1", b"hvc1"] {
+        cenc_sinf(format).encode(&mut encoded).unwrap();
+    }
+    let size = (encoded.len() as u32).to_be_bytes();
+    encoded[..4].copy_from_slice(&size);
+    assert!(matches!(
+        Encv::decode(&mut encoded.as_slice()),
+        Err(Error::InvalidCombination(_))
+    ));
+
+    let none = Encv {
+        codec: Box::new(avc1().into()),
+        sinf: vec![],
+    };
+    assert!(matches!(
+        none.encode(&mut Vec::new()),
+        Err(Error::MissingBox(kind)) if kind == Sinf::KIND
+    ));
 }
 
 /// Boxes another scheme puts in `schi` survive a round trip.

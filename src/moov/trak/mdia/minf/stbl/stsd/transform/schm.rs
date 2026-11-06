@@ -8,8 +8,8 @@ ext! {
     }
 }
 
-/// SchemeTypeBox (`schm`), ISO/IEC 14496-12:2022 Sect 8.12.6: the protection scheme,
-/// such as `cenc` or `cbcs` for Common Encryption (ISO/IEC 23001-7).
+/// SchemeTypeBox (`schm`), ISO/IEC 14496-12:2026 Sect 13.4.6: the protection or
+/// restriction scheme, such as `cenc` or `cbcs` for Common Encryption (ISO/IEC 23001-7).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Schm {

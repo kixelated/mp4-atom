@@ -1,10 +1,11 @@
 use crate::*;
 
-/// ProtectionSchemeInfoBox (`sinf`), ISO/IEC 14496-12:2022 Sect 8.12.2.
+/// ProtectionSchemeInfoBox (`sinf`), ISO/IEC 14496-12:2026 Sect 13.4.2.
 ///
-/// For a Common Encryption scheme (ISO/IEC 23001-7: `cenc`, `cbc1`, `cens`, `cbcs`),
-/// decoding and encoding require a `tenc` in `schi`, and a version 1 `tenc` (with a
-/// pattern) for the pattern schemes `cens` and `cbcs`.
+/// `schm` and `schi` occur together or not at all. For a Common Encryption scheme
+/// (ISO/IEC 23001-7:2023 Sect 10: `cenc`, `cbc1`, `cens`, `cbcs`), decoding and
+/// encoding also require a `tenc` in `schi`. Other schemes, `sve1` included, are not
+/// checked.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sinf {
@@ -37,12 +38,12 @@ impl Atom for Sinf {
             schm,
             schi,
         };
-        sinf.check_common_encryption()?;
+        sinf.check()?;
         Ok(sinf)
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        self.check_common_encryption()?;
+        self.check()?;
         self.frma.encode(buf)?;
         self.schm.encode(buf)?;
         self.schi.encode(buf)
@@ -50,28 +51,30 @@ impl Atom for Sinf {
 }
 
 impl Sinf {
+    fn check(&self) -> Result<()> {
+        if self.schm.is_some() != self.schi.is_some() {
+            return Err(Error::InvalidCombination(
+                "sinf needs both schm and schi, or neither",
+            ));
+        }
+        self.check_common_encryption()
+    }
+
     fn check_common_encryption(&self) -> Result<()> {
         let Some(schm) = &self.schm else {
             return Ok(());
         };
-        let pattern = match &<[u8; 4]>::from(schm.scheme_type) {
-            b"cenc" | b"cbc1" => false,
-            b"cens" | b"cbcs" => true,
-            _ => return Ok(()),
-        };
-
-        let tenc = self
-            .schi
-            .as_ref()
-            .and_then(|schi| schi.tenc.as_ref())
-            .ok_or(Error::InvalidCombination(
-                "a Common Encryption scheme needs a tenc in schi",
-            ))?;
-        if pattern && tenc.default_pattern.is_none() {
-            return Err(Error::InvalidCombination(
-                "cens and cbcs need a version 1 tenc with a pattern",
-            ));
+        if !matches!(
+            &<[u8; 4]>::from(schm.scheme_type),
+            b"cenc" | b"cbc1" | b"cens" | b"cbcs"
+        ) {
+            return Ok(());
         }
-        Ok(())
+        match self.schi.as_ref().and_then(|schi| schi.tenc.as_ref()) {
+            Some(_) => Ok(()),
+            None => Err(Error::InvalidCombination(
+                "a Common Encryption scheme needs a tenc in schi",
+            )),
+        }
     }
 }

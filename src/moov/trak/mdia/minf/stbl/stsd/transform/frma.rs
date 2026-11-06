@@ -1,7 +1,8 @@
 use crate::*;
 
-/// OriginalFormatBox (`frma`), ISO/IEC 14496-12:2022 Sect 8.12.3:
-/// the sample entry type a protected entry (`encv`, `enca`) replaced.
+/// OriginalFormatBox (`frma`), ISO/IEC 14496-12:2026 Sect 13.4.3: the type of the
+/// sample entry a transformation replaced. It sits in a `sinf` (protection), `rinf`
+/// (restriction) or `cinf` (incomplete track); this crate handles `sinf`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Frma {

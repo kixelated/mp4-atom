@@ -12,32 +12,37 @@ pub use tenc::*;
 
 use crate::*;
 
-/// A protected video sample entry (`encv`), ISO/IEC 14496-12:2022 Sect 8.12.
+/// A protected video sample entry (`encv`), ISO/IEC 14496-12:2026 Sect 13.4.
 ///
-/// On the wire it is the original sample entry renamed to `encv`, with a `sinf`
-/// added that names the original type in `frma`. Here it is that original entry,
-/// decoded as usual, plus the `sinf`.
+/// On the wire it is the original sample entry renamed to `encv`, with one or more
+/// `sinf` added that name the original type in `frma`. Here it is that original entry,
+/// decoded as usual, plus the `sinf` boxes.
 ///
 /// An original type this crate does not decode stays [`Codec::Unknown`], which has
-/// no visual fields and cannot be encoded. Protected text, system and metadata
-/// entries (`enct`, `encs`, `encm`) are not handled.
+/// no visual fields and cannot be encoded; so does a restricted entry (`resv`), since
+/// `rinf` is not handled yet (Sect 13.5.3). The other protected entries (`encm`, `enct`,
+/// `encs` and the rest of Table 13, Sect 13.4.1) are not handled.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Encv {
-    /// The original sample entry, of the type `sinf.frma` names.
+    /// The original sample entry, of the type every `sinf`'s `frma` names.
     pub codec: Box<Codec>,
-    pub sinf: Sinf,
+    /// At least one. Several are equivalent descriptions of the same protection
+    /// (Sect 13.4.2), so they name the same original type.
+    pub sinf: Vec<Sinf>,
 }
 
-/// A protected audio sample entry (`enca`), ISO/IEC 14496-12:2022 Sect 8.12.
+/// A protected audio sample entry (`enca`), ISO/IEC 14496-12:2026 Sect 13.4.
 ///
 /// See [`Encv`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Enca {
-    /// The original sample entry, of the type `sinf.frma` names.
+    /// The original sample entry, of the type every `sinf`'s `frma` names.
     pub codec: Box<Codec>,
-    pub sinf: Sinf,
+    /// At least one. Several are equivalent descriptions of the same protection
+    /// (Sect 13.4.2), so they name the same original type.
+    pub sinf: Vec<Sinf>,
 }
 
 impl Atom for Encv {
@@ -92,7 +97,7 @@ fn check_kind(codec: &Codec, kind: FourCC) -> Result<()> {
     }
 }
 
-/// Split a protected entry's body into its `sinf` and the original entry, which is
+/// Split a protected entry's body into its `sinf` boxes and the original entry, which is
 /// decoded from the same fields and the remaining child boxes under the type `frma` names.
 ///
 /// `fields` reads the entry's fixed fields (visual or audio), to find where the
@@ -101,7 +106,7 @@ fn decode_protected<B: Buf>(
     buf: &mut B,
     kind: FourCC,
     fields: impl FnOnce(&mut &[u8]) -> Result<()>,
-) -> Result<(Box<Codec>, Sinf)> {
+) -> Result<(Box<Codec>, Vec<Sinf>)> {
     let len = buf.remaining();
     let body = buf.slice(len);
 
@@ -114,11 +119,11 @@ fn decode_protected<B: Buf>(
     entry.extend_from_slice(&[0; 8]);
     entry.extend_from_slice(&body[..fields_len]);
 
-    let mut sinf = None;
+    let mut sinf = Vec::new();
     loop {
         let before = children;
         match Any::decode_maybe(&mut children)? {
-            Some(Any::Sinf(atom)) => sinf.insert_once(atom)?,
+            Some(Any::Sinf(atom)) => sinf.push(atom),
             Some(_) => entry.extend_from_slice(&before[..before.len() - children.len()]),
             None if children.len() < 8 => {
                 // Padding shorter than a box; the original entry tolerates it the same way.
@@ -129,9 +134,8 @@ fn decode_protected<B: Buf>(
             None => return Err(Error::OverDecode(kind)),
         }
     }
-    let sinf: Sinf = sinf.ok_or(Error::MissingBox(Sinf::KIND))?;
-
-    let original = sinf.frma.data_format;
+    let original = original_format(&sinf)?;
+    // At most one transformation of each type (Sect 13.2).
     if original == Encv::KIND || original == Enca::KIND {
         return Err(Error::InvalidCombination(
             "a protected sample entry cannot wrap another",
@@ -151,12 +155,14 @@ fn decode_protected<B: Buf>(
     Ok((Box::new(codec), sinf))
 }
 
-/// Write the original entry's body, which must be the type `sinf.frma` names, then `sinf`.
-fn encode_protected<B: BufMut>(codec: &Codec, sinf: &Sinf, buf: &mut B) -> Result<()> {
+/// Write the original entry's body, which must be the type every `sinf`'s `frma` names,
+/// then each `sinf`.
+fn encode_protected<B: BufMut>(codec: &Codec, sinf: &[Sinf], buf: &mut B) -> Result<()> {
+    let original = original_format(sinf)?;
     let mut entry = Vec::new();
     codec.encode(&mut entry)?;
 
-    if entry[4..8] != <[u8; 4]>::from(sinf.frma.data_format) {
+    if entry[4..8] != <[u8; 4]>::from(original) {
         return Err(Error::InvalidCombination(
             "frma must name the protected sample entry's original type",
         ));
@@ -164,4 +170,16 @@ fn encode_protected<B: BufMut>(codec: &Codec, sinf: &Sinf, buf: &mut B) -> Resul
 
     buf.append_slice(&entry[8..]);
     sinf.encode(buf)
+}
+
+/// The original type the `sinf` boxes name: there must be at least one, and they must agree.
+fn original_format(sinf: &[Sinf]) -> Result<FourCC> {
+    let first = sinf.first().ok_or(Error::MissingBox(Sinf::KIND))?;
+    let original = first.frma.data_format;
+    if sinf.iter().any(|sinf| sinf.frma.data_format != original) {
+        return Err(Error::InvalidCombination(
+            "every sinf must name the same original format",
+        ));
+    }
+    Ok(original)
 }

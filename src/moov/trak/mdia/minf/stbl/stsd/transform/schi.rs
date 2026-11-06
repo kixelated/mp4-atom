@@ -1,6 +1,6 @@
 use crate::*;
 
-/// SchemeInformationBox (`schi`), ISO/IEC 14496-12:2022 Sect 8.12.7.
+/// SchemeInformationBox (`schi`), ISO/IEC 14496-12:2026 Sect 13.4.7.
 /// Its contents depend on the scheme; Common Encryption puts a `tenc` here.
 #[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
