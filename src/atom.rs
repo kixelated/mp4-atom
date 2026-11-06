@@ -115,6 +115,19 @@ impl<T: Atom> ReadUntil for Option<T> {
                 let body = &mut header.read_body(r)?;
                 return Ok(Some(T::decode_atom(&header, body)?));
             }
+
+            // Skip the body without buffering it, so the next header is read
+            // from after this box rather than from inside it.
+            match header.size {
+                Some(size) => {
+                    let n = std::io::copy(&mut r.take(size as u64), &mut std::io::sink())?;
+                    if n != size as u64 {
+                        return Err(Error::OutOfBounds);
+                    }
+                }
+                // The box extends to the end of the input, so nothing follows it.
+                None => return Ok(None),
+            }
         }
 
         Ok(None)
@@ -233,5 +246,53 @@ mod tests {
         let err =
             <Ftyp as ReadFrom>::read_from(&mut Cursor::new(FTYP_BODY_TAGGED_AS_MOOV)).unwrap_err();
         assert!(matches!(err, Error::UnexpectedBox(kind) if kind == Moov::KIND));
+    }
+
+    fn ftyp() -> Ftyp {
+        Ftyp {
+            major_brand: b"iso6".into(),
+            minor_version: 512,
+            compatible_brands: vec![b"mp41".into()],
+        }
+    }
+
+    fn encode(atom: &impl Encode) -> Vec<u8> {
+        let mut buf = Vec::new();
+        atom.encode(&mut buf).unwrap();
+        buf
+    }
+
+    #[test]
+    fn read_until_ignores_box_nested_in_skipped_body() {
+        // A free box whose body happens to contain a valid ftyp.
+        let forged = encode(&ftyp());
+        let mut input = (8 + forged.len() as u32).to_be_bytes().to_vec();
+        input.extend_from_slice(b"free");
+        input.extend_from_slice(&forged);
+
+        let found = <Option<Ftyp> as ReadUntil>::read_until(&mut Cursor::new(&input)).unwrap();
+        assert!(found.is_none());
+    }
+
+    #[test]
+    fn read_until_finds_box_after_skipped_box() {
+        let mut input = encode(&Free {
+            zeroed: Zeroed::new(16),
+        });
+        input.extend(encode(&ftyp()));
+
+        let found = <Ftyp as ReadUntil>::read_until(&mut Cursor::new(&input)).unwrap();
+        assert_eq!(found, ftyp());
+    }
+
+    #[test]
+    fn read_until_rejects_truncated_skipped_box() {
+        let mut input = encode(&Free {
+            zeroed: Zeroed::new(16),
+        });
+        input.truncate(input.len() - 4);
+
+        let err = <Ftyp as ReadUntil>::read_until(&mut Cursor::new(&input)).unwrap_err();
+        assert!(matches!(err, Error::OutOfBounds));
     }
 }
