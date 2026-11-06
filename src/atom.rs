@@ -15,6 +15,60 @@ pub trait Atom: Sized {
     }
 }
 
+/// The maximum number of atoms that may be nested inside each other.
+///
+/// Real files nest roughly a dozen levels deep. Untrusted input could
+/// otherwise recurse until the stack overflows: a debug build uses up to
+/// ~25 KB of stack per level (nested `trak`), so this keeps the worst case
+/// under half of a 2 MiB thread stack.
+pub(crate) const MAX_DEPTH: usize = 32;
+
+thread_local! {
+    static DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// Tracks the current atom nesting depth, decrementing on drop (including
+/// error and unwind paths).
+struct DepthGuard;
+
+impl DepthGuard {
+    fn enter() -> Result<Self> {
+        DEPTH.with(|depth| {
+            let next = depth.get() + 1;
+            if next > MAX_DEPTH {
+                return Err(Error::Unsupported("atom nesting too deep"));
+            }
+            depth.set(next);
+            Ok(DepthGuard)
+        })
+    }
+}
+
+impl Drop for DepthGuard {
+    fn drop(&mut self) {
+        DEPTH.with(|depth| depth.set(depth.get() - 1));
+    }
+}
+
+/// Decode an atom body, enforcing the nesting limit and requiring the body to
+/// be fully consumed. Every generic body decode should go through here.
+pub(crate) fn decode_body_checked<T: Atom, B: Buf>(body: &mut B) -> Result<T> {
+    let _guard = DepthGuard::enter()?;
+
+    let atom = match T::decode_body(body) {
+        Ok(atom) => atom,
+        Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
+        Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
+        Err(err) => return Err(err),
+    };
+
+    if body.has_remaining() {
+        return Err(Error::UnderDecode(T::KIND));
+    }
+
+    Ok(atom)
+}
+
 impl<T: Atom> Encode for T {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
         // TODO support sizes larger than u32 (4GB)
@@ -51,16 +105,7 @@ impl<T: Atom> DecodeMaybe for T {
         buf.advance(remaining - peek.remaining());
         let body = &mut buf.slice(size);
 
-        let atom = match Self::decode_body(body) {
-            Ok(atom) => atom,
-            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
-            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
-            Err(err) => return Err(err),
-        };
-
-        if body.has_remaining() {
-            return Err(Error::UnderDecode(T::KIND));
-        }
+        let atom = decode_body_checked::<T, _>(body)?;
 
         buf.advance(size);
 
@@ -87,16 +132,7 @@ impl<T: Atom> ReadFrom for Option<T> {
 
         let body = &mut header.read_body(r)?;
 
-        let atom = match T::decode_body(body) {
-            Ok(atom) => atom,
-            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
-            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
-            Err(err) => return Err(err),
-        };
-
-        if body.has_remaining() {
-            return Err(Error::UnderDecode(T::KIND));
-        }
+        let atom = decode_body_checked::<T, _>(body)?;
 
         Ok(Some(atom))
     }
@@ -134,16 +170,7 @@ impl<T: Atom> DecodeAtom for T {
 
         let body = &mut buf.slice(size);
 
-        let atom = match T::decode_body(body) {
-            Ok(atom) => atom,
-            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
-            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
-            Err(err) => return Err(err),
-        };
-
-        if body.has_remaining() {
-            return Err(Error::UnderDecode(T::KIND));
-        }
+        let atom = decode_body_checked::<T, _>(body)?;
 
         buf.advance(size);
 
@@ -226,6 +253,90 @@ mod tests {
     fn typed_decode_rejects_unexpected_box() {
         let err = Ftyp::decode(&mut Cursor::new(FTYP_BODY_TAGGED_AS_MOOV)).unwrap_err();
         assert!(matches!(err, Error::UnexpectedBox(kind) if kind == Moov::KIND));
+    }
+
+    /// Wrap an empty body in `depth` levels of `kind`, each with `prefix`.
+    fn nest(kind: &[u8; 4], prefix: &[u8], depth: usize) -> Vec<u8> {
+        let mut atom = Vec::new();
+        for _ in 0..depth {
+            let size = (8 + prefix.len() + atom.len()) as u32;
+            let mut outer = Vec::with_capacity(size as usize);
+            outer.extend_from_slice(&size.to_be_bytes());
+            outer.extend_from_slice(kind);
+            outer.extend_from_slice(prefix);
+            outer.extend_from_slice(&atom);
+            atom = outer;
+        }
+        atom
+    }
+
+    /// Run on a thread with the default 2 MiB test stack, so a regression
+    /// aborts with a stack overflow instead of passing on a larger main stack.
+    fn on_small_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+        std::thread::Builder::new()
+            .stack_size(2 << 20)
+            .spawn(f)
+            .unwrap()
+            .join()
+            .unwrap()
+    }
+
+    fn is_too_deep<T: std::fmt::Debug>(res: Result<T>) -> bool {
+        matches!(res, Err(Error::Unsupported("atom nesting too deep")))
+    }
+
+    #[test]
+    fn deep_nesting_is_rejected() {
+        // Containers with the largest debug stack frames, plus sample
+        // entries and stsd which decode their children via Any.
+        let containers: &[(&[u8; 4], &[u8])] = &[
+            (b"moov", &[]),
+            (b"trak", &[]),
+            (b"mdia", &[]),
+            (b"minf", &[]),
+            (b"stbl", &[]),
+            (b"traf", &[]),
+            (b"ipco", &[]),
+            (b"stsd", &[0, 0, 0, 0, 0, 0, 0, 1]),
+            (b"avc1", &[0; 78]),
+        ];
+
+        for &(kind, prefix) in containers {
+            let data = nest(kind, prefix, 5_001);
+            let data2 = data.clone();
+            assert!(
+                on_small_stack(move || is_too_deep(Any::decode(&mut data.as_slice()))),
+                "{}",
+                FourCC::new(kind)
+            );
+            assert!(
+                on_small_stack(move || is_too_deep(<Any as ReadFrom>::read_from(
+                    &mut Cursor::new(data2)
+                ))),
+                "{}",
+                FourCC::new(kind)
+            );
+        }
+
+        let data = nest(b"moov", &[], 5_001);
+        assert!(on_small_stack(move || {
+            is_too_deep(Moov::decode(&mut data.as_slice()))
+                && is_too_deep(<Moov as ReadFrom>::read_from(&mut Cursor::new(&data)))
+        }));
+    }
+
+    #[test]
+    fn nesting_up_to_limit_decodes() {
+        // ipco accepts any child, so nested ipco is valid at any depth.
+        on_small_stack(|| {
+            let deep = nest(b"ipco", &[], MAX_DEPTH + 1);
+            assert!(is_too_deep(Any::decode(&mut deep.as_slice())));
+
+            // The depth counter unwinds after an error, so the same thread
+            // can still decode up to the limit.
+            let ok = nest(b"ipco", &[], MAX_DEPTH);
+            Any::decode(&mut ok.as_slice()).expect("nesting at the limit should decode");
+        });
     }
 
     #[test]

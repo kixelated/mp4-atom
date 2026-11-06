@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::{Atom, Buf, DecodeAtom, Encode, Error, Header, Result};
+use crate::{Atom, DecodeAtom, Encode, Error, Header, Result};
 
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
@@ -34,16 +34,7 @@ impl<T: Atom> AsyncReadFrom for Option<T> {
 
         let mut buf = header.read_body_tokio(r).await?;
 
-        let atom = match T::decode_body(&mut buf) {
-            Ok(atom) => atom,
-            Err(Error::OutOfBounds) => return Err(Error::OverDecode(T::KIND)),
-            Err(Error::ShortRead) => return Err(Error::UnderDecode(T::KIND)),
-            Err(err) => return Err(err),
-        };
-
-        if buf.has_remaining() {
-            return Err(Error::UnderDecode(T::KIND));
-        }
+        let atom = crate::decode_body_checked::<T, _>(&mut buf)?;
 
         Ok(Some(atom))
     }
