@@ -126,6 +126,18 @@ pub trait BufMut {
         self.set_slice(start, &size.to_be_bytes());
         Ok(())
     }
+
+    /// Write an atom of `kind` whose body is `text` as raw UTF-8, see
+    /// [`BufMut::encode_atom`].
+    fn encode_atom_string(&mut self, kind: impl Into<FourCC>, text: &str) -> Result<()>
+    where
+        Self: Sized,
+    {
+        self.encode_atom(kind, |buf| {
+            buf.append_slice(text.as_bytes());
+            Ok(())
+        })
+    }
 }
 
 impl BufMut for Vec<u8> {

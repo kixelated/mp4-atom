@@ -163,6 +163,9 @@ mod styp;
 mod types;
 mod uuid;
 mod uuid_boxes;
+mod vtta;
+mod vttc;
+mod vtte;
 
 pub use any::*;
 pub use atom::*;
@@ -190,6 +193,9 @@ pub use styp::*;
 pub use types::*;
 pub use uuid::*;
 pub use uuid_boxes::*;
+pub use vtta::*;
+pub use vttc::*;
+pub use vtte::*;
 
 #[cfg(feature = "tokio")]
 mod tokio;

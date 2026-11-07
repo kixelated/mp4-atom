@@ -21,24 +21,13 @@ impl EvteSample {
         let mut emeb = None;
 
         while let Some(header) = Header::decode_maybe(buf)? {
-            let size = header.size.unwrap_or(buf.remaining());
-            if size > buf.remaining() {
-                return Err(Error::OutOfBounds);
-            }
-            let mut body = buf.slice(size);
-
             match header.kind {
-                Emib::KIND if emeb.is_none() => emibs.push(Emib::decode_body(&mut body)?),
+                Emib::KIND if emeb.is_none() => emibs.push(Emib::decode_atom(&header, buf)?),
                 Emeb::KIND if emeb.is_none() && emibs.is_empty() => {
-                    emeb = Some(Emeb::decode_body(&mut body)?)
+                    emeb = Some(Emeb::decode_atom(&header, buf)?)
                 }
                 kind => return Err(Error::UnexpectedBox(kind)),
             }
-
-            if body.has_remaining() {
-                return Err(Error::UnderDecode(header.kind));
-            }
-            buf.advance(size);
         }
 
         if buf.has_remaining() {

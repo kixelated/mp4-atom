@@ -107,6 +107,39 @@ impl ReadFrom for Option<Header> {
 
 // Utility methods
 impl Header {
+    /// Decode the body of this atom from `buf` using `decode`, and require that
+    /// the whole body was consumed.
+    pub(crate) fn decode_body<B: Buf, T>(
+        &self,
+        buf: &mut B,
+        decode: impl FnOnce(&mut &[u8]) -> Result<T>,
+    ) -> Result<T> {
+        let size = self.size.unwrap_or(buf.remaining());
+        if size > buf.remaining() {
+            return Err(Error::OutOfBounds);
+        }
+        let mut body = buf.slice(size);
+        let value = decode(&mut body)?;
+        if body.has_remaining() {
+            return Err(Error::UnderDecode(self.kind));
+        }
+        buf.advance(size);
+        Ok(value)
+    }
+
+    /// Skip the body of this atom in `buf`.
+    pub(crate) fn skip_body<B: Buf>(&self, buf: &mut B) -> Result<()> {
+        self.decode_body(buf, |body| {
+            body.advance(body.remaining());
+            Ok(())
+        })
+    }
+
+    /// Decode the body of this atom from `buf` as a UTF-8 string.
+    pub(crate) fn decode_utf8_string<B: Buf>(&self, buf: &mut B) -> Result<String> {
+        self.decode_body(buf, |body| decode_utf8_string(body))
+    }
+
     pub(crate) fn read_body<R: Read + ?Sized>(&self, r: &mut R) -> Result<Cursor<Vec<u8>>> {
         // TODO This allocates on the heap.
         // Ideally, we should use ReadFrom instead of Decode to avoid this.

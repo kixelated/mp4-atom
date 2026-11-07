@@ -31,11 +31,13 @@ impl AtomExt for Keys {
 
         for _ in 0..entry_count {
             let header = Header::decode(buf)?;
-            let size = header.size.ok_or(Error::InvalidSize)?;
+            if header.size.is_none() {
+                return Err(Error::InvalidSize);
+            }
 
             entries.push(KeyEntry {
                 key_namespace: header.kind,
-                key_value: decode_utf8_string_with_length(buf, size)?,
+                key_value: header.decode_utf8_string(buf)?,
             });
         }
 
