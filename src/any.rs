@@ -3,6 +3,15 @@ use crate::*;
 use std::fmt;
 use std::io::Read;
 
+type DecodeAny = fn(&mut &[u8]) -> Result<Any>;
+
+fn decode_any<T: Atom>(body: &mut &[u8]) -> Result<Any>
+where
+    Any: From<T>,
+{
+    Ok(decode_body_checked::<T, _>(body)?.into())
+}
+
 macro_rules! any {
     (basic: [$($kind:ident,)* $(,)?], boxed: [$($boxed:ident,)* $(,)?]) => {
         /// Any of the supported atoms.
@@ -74,29 +83,20 @@ macro_rules! any {
                     return Err(Error::OutOfBounds);
                 }
 
-                let mut body = &mut buf.slice(size);
+                let body = &mut buf.slice(size);
 
-                let atom = match header.kind {
-                    $(_ if header.kind == $kind::KIND => {
-                        Any::$kind(match $kind::decode_body(&mut body) {
-                            Ok(atom) => atom,
-                            Err(Error::OutOfBounds) => return Err(Error::OverDecode($kind::KIND)),
-                            Err(Error::ShortRead) => return Err(Error::UnderDecode($kind::KIND)),
-                            Err(err) => return Err(err),
-                        })
-                    },)*
-                    $(_ if header.kind == $boxed::KIND => {
-                        Any::$boxed(match $boxed::decode_body(&mut body) {
-                            Ok(atom) => Box::new(atom),
-                            Err(Error::OutOfBounds) => return Err(Error::OverDecode($boxed::KIND)),
-                            Err(Error::ShortRead) => return Err(Error::UnderDecode($boxed::KIND)),
-                            Err(err) => return Err(err),
-                        })
-                    },)*
-                    _ => {
-                        let body = Vec::decode(body)?;
-                        Any::Unknown(header.kind, body)
-                    },
+                // Select the decoder first and call it once. Matching on the
+                // decoded atoms directly makes debug builds reserve stack for
+                // every arm in this frame, which recursion multiplies.
+                let decode: Option<DecodeAny> = match header.kind {
+                    $(_ if header.kind == $kind::KIND => Some(decode_any::<$kind>),)*
+                    $(_ if header.kind == $boxed::KIND => Some(decode_any::<$boxed>),)*
+                    _ => None,
+                };
+
+                let atom = match decode {
+                    Some(decode) => decode(body)?,
+                    None => Any::Unknown(header.kind, Vec::decode(body)?),
                 };
 
                 if body.has_remaining() {
