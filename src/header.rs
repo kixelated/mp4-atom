@@ -15,16 +15,19 @@ pub struct Header {
 
 impl Encode for Header {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<()> {
-        match self.size.map(|size| size + 8) {
-            Some(size) if size > u32::MAX as usize => {
+        let too_large = || Error::TooLarge(self.kind);
+
+        match self.size {
+            Some(size) if size > u32::MAX as usize - 8 => {
                 1u32.encode(buf)?;
                 self.kind.encode(buf)?;
 
                 // Have to include the size of this extra field
-                ((size + 8) as u64).encode(buf)
+                let size = size.checked_add(16).ok_or_else(too_large)?;
+                u64::try_from(size).map_err(|_| too_large())?.encode(buf)
             }
             Some(size) => {
-                (size as u32).encode(buf)?;
+                (size as u32 + 8).encode(buf)?;
                 self.kind.encode(buf)
             }
             None => {
@@ -42,12 +45,9 @@ impl Decode for Header {
 
         let size = match size {
             0 => None,
-            1 => {
-                // Read another 8 bytes
-                let size = u64::decode(buf)?;
-                Some(size.checked_sub(16).ok_or(Error::InvalidSize)? as usize)
-            }
-            _ => Some(size.checked_sub(8).ok_or(Error::InvalidSize)? as usize),
+            // The real size follows in another 8 bytes.
+            1 => Some(body_size(kind, u64::decode(buf)?, 16)?),
+            _ => Some(body_size(kind, size.into(), 8)?),
         };
 
         Ok(Self { kind, size })
@@ -77,32 +77,34 @@ impl ReadFrom for Header {
 
 impl ReadFrom for Option<Header> {
     fn read_from<R: Read + ?Sized>(r: &mut R) -> Result<Self> {
-        let mut buf = [0u8; 8];
-        let n = r.read(&mut buf)?;
+        let mut buf = [0u8; 16];
+        let n = r.read(&mut buf[..8])?;
         if n == 0 {
             return Ok(None);
         }
 
-        r.read_exact(&mut buf[n..])?;
+        r.read_exact(&mut buf[n..8])?;
 
-        let size = u32::from_be_bytes(buf[0..4].try_into().unwrap());
-        let kind = u32::from_be_bytes(buf[4..8].try_into().unwrap()).into();
+        // A size of 1 means the real size follows in another 8 bytes.
+        let len = header_len(&buf);
+        r.read_exact(&mut buf[8..len])?;
 
-        let size = match size {
-            0 => None,
-            1 => {
-                // Read another 8 bytes
-                r.read_exact(&mut buf)?;
-                let size = u64::from_be_bytes(buf);
-                let size = size.checked_sub(16).ok_or(Error::InvalidSize)?;
-
-                Some(size as usize)
-            }
-            _ => Some(size.checked_sub(8).ok_or(Error::InvalidSize)? as usize),
-        };
-
-        Ok(Some(Header { kind, size }))
+        Header::decode(&mut &buf[..len]).map(Some)
     }
+}
+
+/// The length of a header, given its first 8 bytes.
+pub(crate) fn header_len(buf: &[u8]) -> usize {
+    match buf[0..4] {
+        [0, 0, 0, 1] => 16,
+        _ => 8,
+    }
+}
+
+/// Convert the size of an atom, as stored in its header, into the size of its body.
+fn body_size(kind: FourCC, size: u64, header_len: u64) -> Result<usize> {
+    let size = size.checked_sub(header_len).ok_or(Error::InvalidSize)?;
+    usize::try_from(size).map_err(|_| Error::TooLarge(kind))
 }
 
 // Utility methods
@@ -159,5 +161,86 @@ impl Header {
         };
 
         Ok(Cursor::new(buf))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const KIND: FourCC = FourCC::new(b"free");
+
+    #[test]
+    fn body_size_subtracts_header() {
+        assert_eq!(body_size(KIND, 8, 8).unwrap(), 0);
+        assert_eq!(body_size(KIND, 24, 16).unwrap(), 8);
+        assert!(matches!(body_size(KIND, 7, 8), Err(Error::InvalidSize)));
+        assert!(matches!(body_size(KIND, 15, 16), Err(Error::InvalidSize)));
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "32")]
+    fn body_size_rejects_usize_overflow() {
+        let size = u32::MAX as u64 + 17;
+        assert!(matches!(
+            body_size(KIND, size, 16),
+            Err(Error::TooLarge(KIND))
+        ));
+    }
+
+    #[test]
+    fn decode_large_size() {
+        let mut buf: &[u8] = &[0, 0, 0, 1, b'f', b'r', b'e', b'e', 0, 0, 0, 0, 0, 0, 0, 24];
+        let header = Header::decode(&mut buf).unwrap();
+        assert_eq!(header.size, Some(8));
+
+        let mut buf: &[u8] = &[0, 0, 0, 1, b'f', b'r', b'e', b'e', 0, 0, 0, 0, 0, 0, 0, 15];
+        assert!(matches!(Header::decode(&mut buf), Err(Error::InvalidSize)));
+    }
+
+    #[test]
+    fn read_from_matches_decode() {
+        let cases: &[&[u8]] = &[
+            &[0, 0, 0, 0, b'f', b'r', b'e', b'e'],
+            &[0, 0, 0, 16, b'f', b'r', b'e', b'e'],
+            &[0, 0, 0, 1, b'f', b'r', b'e', b'e', 0, 0, 0, 0, 0, 0, 0, 24],
+        ];
+
+        for case in cases {
+            let decoded = Header::decode(&mut &case[..]).unwrap();
+            let read = <Header as ReadFrom>::read_from(&mut &case[..]).unwrap();
+            assert_eq!(decoded.kind, read.kind);
+            assert_eq!(decoded.size, read.size);
+        }
+
+        let empty: &[u8] = &[];
+        assert!(<Option<Header> as ReadFrom>::read_from(&mut &empty[..])
+            .unwrap()
+            .is_none());
+    }
+
+    #[test]
+    fn encode_size_boundary() {
+        for size in [0, u32::MAX as usize - 8, u32::MAX as usize - 7] {
+            let header = Header {
+                kind: KIND,
+                size: Some(size),
+            };
+            let mut buf = Vec::new();
+            header.encode(&mut buf).unwrap();
+            assert_eq!(Header::decode(&mut &buf[..]).unwrap().size, Some(size));
+        }
+    }
+
+    #[test]
+    fn encode_rejects_overflow() {
+        let header = Header {
+            kind: KIND,
+            size: Some(usize::MAX - 8),
+        };
+        assert!(matches!(
+            header.encode(&mut Vec::new()),
+            Err(Error::TooLarge(KIND))
+        ));
     }
 }
