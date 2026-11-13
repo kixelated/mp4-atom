@@ -1,0 +1,34 @@
+name: 32 bit
+
+on:
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Install Just to run CI scripts
+      - uses: extractions/setup-just@v4
+
+      - name: Install 32-bit linker dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: i686-unknown-linux-gnu
+
+      - name: Build
+        run: cargo build --release --target i686-unknown-linux-gnu
+
+      - name: Run tests
+        run: cargo test --target i686-unknown-linux-gnu
