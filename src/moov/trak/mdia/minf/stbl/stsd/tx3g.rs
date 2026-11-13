@@ -139,6 +139,12 @@ impl Atom for Tx3g {
     }
 
     fn encode_body<B: BufMut>(&self, buf: &mut B) -> Result<()> {
+        if self.box_record.len() != 4 {
+            return Err(Error::InvalidSize);
+        }
+        if self.style_record.len() != 12 {
+            return Err(Error::InvalidSize);
+        }
         0u32.encode(buf)?; // reserved
         0u16.encode(buf)?; // reserved
         self.data_reference_index.encode(buf)?;
@@ -146,11 +152,11 @@ impl Atom for Tx3g {
         self.horizontal_justification.encode(buf)?;
         self.vertical_justification.encode(buf)?;
         self.bg_color_rgba.encode(buf)?;
-        for n in 0..4 {
-            (self.box_record[n]).encode(buf)?;
+        for record in &self.box_record {
+            record.encode(buf)?;
         }
-        for n in 0..12 {
-            (self.style_record[n]).encode(buf)?;
+        for style_record in &self.style_record {
+            style_record.encode(buf)?;
         }
         self.ftab.encode(buf)?;
         self.disp.encode(buf)?;
