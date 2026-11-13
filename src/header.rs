@@ -18,17 +18,18 @@ impl Encode for Header {
         let too_large = || Error::TooLarge(self.kind);
 
         match self.size {
-            Some(size) if size > u32::MAX as usize - 8 => {
-                1u32.encode(buf)?;
-                self.kind.encode(buf)?;
-
-                // Have to include the size of this extra field
-                let size = size.checked_add(16).ok_or_else(too_large)?;
-                u64::try_from(size).map_err(|_| too_large())?.encode(buf)
-            }
             Some(size) => {
-                (size as u32 + 8).encode(buf)?;
-                self.kind.encode(buf)
+                if size > u32::MAX as usize - 8 {
+                    1u32.encode(buf)?;
+                    self.kind.encode(buf)?;
+
+                    // Have to include the size of this extra field
+                    let size = size.checked_add(16).ok_or_else(too_large)?;
+                    u64::try_from(size).map_err(|_| too_large())?.encode(buf)
+                } else {
+                    (size as u32 + 8).encode(buf)?;
+                    self.kind.encode(buf)
+                }
             }
             None => {
                 0u32.encode(buf)?;
