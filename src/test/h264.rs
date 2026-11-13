@@ -395,6 +395,7 @@ fn avc_encrypted_segment() {
     assert_eq!(
         moof,
         Moof {
+            pssh: vec![],
             mfhd: Mfhd {
                 sequence_number: 4382715
             },

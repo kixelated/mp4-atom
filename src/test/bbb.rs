@@ -226,6 +226,7 @@ fn bbb() {
     assert_eq!(
         moof,
         Moof {
+            pssh: vec![],
             mfhd: Mfhd { sequence_number: 1 },
             traf: vec![Traf {
                 tfhd: Tfhd {
@@ -288,6 +289,7 @@ fn bbb() {
     assert_eq!(
         moof,
         Moof {
+            pssh: vec![],
             mfhd: Mfhd { sequence_number: 2 },
             traf: vec![Traf {
                 tfhd: Tfhd {
