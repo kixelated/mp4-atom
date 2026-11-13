@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn encode_size_boundary() {
-        for size in [0, u32::MAX as usize - 8, u32::MAX as usize - 7] {
+        for size in [0, u32::MAX as usize - 8] {
             let header = Header {
                 kind: KIND,
                 size: Some(size),
@@ -234,10 +234,24 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_pointer_width = "32")]
     fn encode_rejects_overflow() {
         let header = Header {
             kind: KIND,
-            size: Some(usize::MAX - 8),
+            size: Some((u32::MAX - 7) as usize),
+        };
+        assert!(matches!(
+            header.encode(&mut Vec::new()),
+            Err(Error::TooLarge(KIND))
+        ));
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn encode_rejects_overflow() {
+        let header = Header {
+            kind: KIND,
+            size: Some(usize::MAX - 15),
         };
         assert!(matches!(
             header.encode(&mut Vec::new()),
