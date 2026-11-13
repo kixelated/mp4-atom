@@ -161,9 +161,8 @@ impl AtomExt for Saio {
         let entry_count: u32 = self.offsets.len() as u32;
         entry_count.encode(buf)?;
         if ext.version == SaioVersion::V0 {
-            for i in 0..self.offsets.len() {
-                let offset: u32 = self.offsets[i] as u32;
-                offset.encode(buf)?;
+            for offset in &self.offsets {
+                (*offset as u32).encode(buf)?;
             }
         } else {
             for offset in &self.offsets {
