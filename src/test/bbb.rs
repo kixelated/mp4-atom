@@ -26,6 +26,7 @@ fn bbb() {
                 rate: 1.into(),
                 volume: 1.into(),
                 next_track_id: 2,
+                duration: Some(0),
                 ..Default::default()
             },
             mvex: Some(Mvex {
@@ -50,12 +51,14 @@ fn bbb() {
                     in_movie: true,
                     width: 1280.into(),
                     height: 720.into(),
+                    duration: Some(0),
                     ..Default::default()
                 },
                 mdia: Mdia {
                     mdhd: Mdhd {
                         timescale: 24000,
                         language: "und".into(),
+                        duration: Some(0),
                         ..Default::default()
                     },
                     hdlr: Hdlr {
@@ -133,12 +136,14 @@ fn bbb() {
                     enabled: true,
                     in_movie: true,
                     volume: 1.into(),
+                    duration: Some(0),
                     ..Default::default()
                 },
                 mdia: Mdia {
                     mdhd: Mdhd {
                         timescale: 44100,
                         language: "und".into(),
+                        duration: Some(0),
                         ..Default::default()
                     },
                     hdlr: Hdlr {

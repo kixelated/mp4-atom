@@ -17,7 +17,8 @@ pub struct Tkhd {
     pub creation_time: u64,
     pub modification_time: u64,
     pub track_id: u32,
-    pub duration: u64,
+    /// Duration can be indefinite (represented here by None).
+    pub duration: Option<u64>,
     pub layer: u16,
     pub alternate_group: u16,
     pub enabled: bool,
@@ -45,7 +46,10 @@ impl AtomExt for Tkhd {
                 u64::decode(buf)?,
                 u32::decode(buf)?,
                 u32::decode(buf)?,
-                u64::decode(buf)?,
+                match u64::decode(buf)? {
+                    u64::MAX => None,
+                    duration => Some(duration),
+                },
             ),
             TkhdVersion::V0 => (
                 u32::decode(buf)? as u64,
@@ -54,8 +58,8 @@ impl AtomExt for Tkhd {
                 u32::decode(buf)?,
                 // All 1s means unknown; keep it all 1s in 64 bits.
                 match u32::decode(buf)? {
-                    u32::MAX => u64::MAX,
-                    duration => duration as u64,
+                    u32::MAX => None,
+                    duration => Some(duration as u64),
                 },
             ),
         };
@@ -94,7 +98,10 @@ impl AtomExt for Tkhd {
         self.modification_time.encode(buf)?;
         self.track_id.encode(buf)?;
         0u32.encode(buf)?; // reserved
-        self.duration.encode(buf)?;
+        match self.duration {
+            None => u64::MAX.encode(buf)?,
+            _ => self.duration.encode(buf)?,
+        };
 
         0u64.encode(buf)?; // reserved
         self.layer.encode(buf)?;
@@ -199,7 +206,7 @@ mod tests {
             creation_time: 100,
             modification_time: 200,
             track_id: 1,
-            duration: 634634,
+            duration: Some(634634),
             layer: 0,
             alternate_group: 0,
             volume: 1.into(),
@@ -224,7 +231,7 @@ mod tests {
             creation_time: 100,
             modification_time: 200,
             track_id: 1,
-            duration: 634634,
+            duration: Some(634634),
             layer: 0,
             alternate_group: 0,
             volume: 1.into(),
@@ -270,20 +277,20 @@ mod tests {
         decoded.encode(&mut buf).unwrap();
         assert_eq!(buf[8], 1, "re-encoded as version 1");
         assert_eq!(buf[36..44], [0xFF; 8], "duration is still unknown");
-        assert_eq!(decoded.duration, u64::MAX);
+        assert_eq!(decoded.duration, None);
 
         // One below all 1s is still a finite duration.
         let mut finite = raw.to_vec();
         finite[31] = 0xFE;
         let decoded = Tkhd::decode(&mut finite.as_slice()).unwrap();
-        assert_eq!(decoded.duration, u32::MAX as u64 - 1);
+        assert_eq!(decoded.duration, Some(u32::MAX as u64 - 1));
     }
 
     #[test]
     fn test_tkhd64_duration_u32_max() {
         let expected = Tkhd {
             track_id: 1,
-            duration: u32::MAX as u64,
+            duration: Some(u32::MAX as u64),
             enabled: true,
             in_movie: true,
             ..Default::default()

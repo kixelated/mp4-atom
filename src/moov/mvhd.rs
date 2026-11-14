@@ -12,7 +12,7 @@ pub struct Mvhd {
     pub creation_time: u64,
     pub modification_time: u64,
     pub timescale: u32,
-    pub duration: u64,
+    pub duration: Option<u64>,
 
     pub rate: FixedPoint<u16>,
     pub volume: FixedPoint<u8>,
@@ -32,16 +32,19 @@ impl AtomExt for Mvhd {
                 u64::decode(buf)?,
                 u64::decode(buf)?,
                 u32::decode(buf)?,
-                u64::decode(buf)?,
+                match u64::decode(buf)? {
+                    u64::MAX => None,
+                    duration => Some(duration),
+                },
             ),
             MvhdVersion::V0 => (
                 u32::decode(buf)? as u64,
                 u32::decode(buf)? as u64,
                 u32::decode(buf)?,
-                // All 1s means unknown; keep it all 1s in 64 bits.
+                // All 1s means unknown.
                 match u32::decode(buf)? {
-                    u32::MAX => u64::MAX,
-                    duration => duration as u64,
+                    u32::MAX => None,
+                    duration => Some(duration as u64),
                 },
             ),
         };
@@ -74,7 +77,10 @@ impl AtomExt for Mvhd {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.timescale.encode(buf)?;
-        self.duration.encode(buf)?;
+        match self.duration {
+            None => u64::MAX.encode(buf)?,
+            _ => self.duration.encode(buf)?,
+        };
 
         self.rate.encode(buf)?;
         self.volume.encode(buf)?;
@@ -98,7 +104,7 @@ impl Default for Mvhd {
             creation_time: 0,
             modification_time: 0,
             timescale: 1000,
-            duration: 0,
+            duration: Some(0),
             rate: Default::default(),
             matrix: Default::default(),
             volume: Default::default(),
@@ -117,7 +123,7 @@ mod tests {
             creation_time: 100,
             modification_time: 200,
             timescale: 1000,
-            duration: 634634,
+            duration: Some(634634),
             rate: 1.into(),
             volume: 1.into(),
             matrix: Matrix::default(),
@@ -138,7 +144,7 @@ mod tests {
             creation_time: 100,
             modification_time: 200,
             timescale: 1000,
-            duration: 634634,
+            duration: Some(634634),
             rate: 1.into(),
             volume: 1.into(),
             matrix: Matrix::default(),
@@ -179,19 +185,19 @@ mod tests {
         decoded.encode(&mut buf).unwrap();
         assert_eq!(buf[8], 1, "re-encoded as version 1");
         assert_eq!(buf[32..40], [0xFF; 8], "duration is still unknown");
-        assert_eq!(decoded.duration, u64::MAX);
+        assert_eq!(decoded.duration, None);
 
         // One below all 1s is still a finite duration.
         let mut finite = raw.to_vec();
         finite[27] = 0xFE;
         let decoded = Mvhd::decode(&mut finite.as_slice()).unwrap();
-        assert_eq!(decoded.duration, u32::MAX as u64 - 1);
+        assert_eq!(decoded.duration, Some(u32::MAX as u64 - 1));
     }
 
     #[test]
     fn test_mvhd64_duration_u32_max() {
         let expected = Mvhd {
-            duration: u32::MAX as u64,
+            duration: Some(u32::MAX as u64),
             ..Default::default()
         };
         let mut buf = Vec::new();
