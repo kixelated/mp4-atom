@@ -219,6 +219,7 @@ fn esds() {
     assert_eq!(
         moof,
         Moof {
+            pssh: vec![],
             mfhd: Mfhd { sequence_number: 1 },
             traf: vec![Traf {
                 tfhd: Tfhd {
