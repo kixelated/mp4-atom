@@ -38,7 +38,11 @@ impl AtomExt for Mvhd {
                 u32::decode(buf)? as u64,
                 u32::decode(buf)? as u64,
                 u32::decode(buf)?,
-                u32::decode(buf)? as u64,
+                // All 1s means unknown; keep it all 1s in 64 bits.
+                match u32::decode(buf)? {
+                    u32::MAX => u64::MAX,
+                    duration => duration as u64,
+                },
             ),
         };
 
@@ -147,5 +151,53 @@ mod tests {
         let mut buf = buf.as_ref();
         let output = Mvhd::decode(&mut buf).unwrap();
         assert_eq!(output, expected);
+    }
+
+    // All 1s is an unknown duration (ISO/IEC 14496-12 §8.2.2.3) at either width.
+    #[test]
+    fn test_mvhd_v0_unknown_duration_reencode() {
+        let raw = [
+            &[0x00, 0x00, 0x00, 0x6C][..],
+            b"mvhd",
+            &[0x00, 0x00, 0x00, 0x00], // version 0, flags 0
+            &[0x00, 0x00, 0x00, 0x64], // creation_time = 100
+            &[0x00, 0x00, 0x00, 0xC8], // modification_time = 200
+            &[0x00, 0x00, 0x03, 0xE8], // timescale = 1000
+            &[0xFF, 0xFF, 0xFF, 0xFF], // duration = unknown
+            &[0x00, 0x01, 0x00, 0x00], // rate = 1.0
+            &[0x01, 0x00, 0x00, 0x00], // volume = 1.0, reserved
+            &[0; 8],                   // reserved
+            &[0x00, 0x01, 0x00, 0x00, 0, 0, 0, 0, 0, 0, 0, 0], // matrix
+            &[0, 0, 0, 0, 0x00, 0x01, 0x00, 0x00, 0, 0, 0, 0],
+            &[0, 0, 0, 0, 0, 0, 0, 0, 0x40, 0x00, 0x00, 0x00],
+            &[0; 24],                  // pre_defined
+            &[0x00, 0x00, 0x00, 0x02], // next_track_id = 2
+        ]
+        .concat();
+        let decoded = Mvhd::decode(&mut raw.as_slice()).unwrap();
+        let mut buf = Vec::new();
+        decoded.encode(&mut buf).unwrap();
+        assert_eq!(buf[8], 1, "re-encoded as version 1");
+        assert_eq!(buf[32..40], [0xFF; 8], "duration is still unknown");
+        assert_eq!(decoded.duration, u64::MAX);
+
+        // One below all 1s is still a finite duration.
+        let mut finite = raw.to_vec();
+        finite[27] = 0xFE;
+        let decoded = Mvhd::decode(&mut finite.as_slice()).unwrap();
+        assert_eq!(decoded.duration, u32::MAX as u64 - 1);
+    }
+
+    #[test]
+    fn test_mvhd64_duration_u32_max() {
+        let expected = Mvhd {
+            duration: u32::MAX as u64,
+            ..Default::default()
+        };
+        let mut buf = Vec::new();
+        expected.encode(&mut buf).unwrap();
+
+        let decoded = Mvhd::decode(&mut buf.as_slice()).unwrap();
+        assert_eq!(decoded, expected);
     }
 }

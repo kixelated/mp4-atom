@@ -52,7 +52,11 @@ impl AtomExt for Tkhd {
                 u32::decode(buf)? as u64,
                 u32::decode(buf)?,
                 u32::decode(buf)?,
-                u32::decode(buf)? as u64,
+                // All 1s means unknown; keep it all 1s in 64 bits.
+                match u32::decode(buf)? {
+                    u32::MAX => u64::MAX,
+                    duration => duration as u64,
+                },
             ),
         };
 
@@ -236,6 +240,58 @@ mod tests {
 
         let mut buf = buf.as_ref();
         let decoded = Tkhd::decode(&mut buf).unwrap();
+        assert_eq!(decoded, expected);
+    }
+
+    // All 1s is an unknown duration (ISO/IEC 14496-12 §8.3.2.3) at either width.
+    #[test]
+    fn test_tkhd_v0_unknown_duration_reencode() {
+        let raw = [
+            &[0x00, 0x00, 0x00, 0x5C][..],
+            b"tkhd",
+            &[0x00, 0x00, 0x00, 0x03], // version 0, flags: enabled, in_movie
+            &[0x00, 0x00, 0x00, 0x64], // creation_time = 100
+            &[0x00, 0x00, 0x00, 0xC8], // modification_time = 200
+            &[0x00, 0x00, 0x00, 0x01], // track_id = 1
+            &[0x00, 0x00, 0x00, 0x00], // reserved
+            &[0xFF, 0xFF, 0xFF, 0xFF], // duration = unknown
+            &[0; 8],                   // reserved
+            &[0; 4],                   // layer, alternate_group
+            &[0x01, 0x00, 0x00, 0x00], // volume = 1.0, reserved
+            &[0x00, 0x01, 0x00, 0x00, 0, 0, 0, 0, 0, 0, 0, 0], // matrix
+            &[0, 0, 0, 0, 0x00, 0x01, 0x00, 0x00, 0, 0, 0, 0],
+            &[0, 0, 0, 0, 0, 0, 0, 0, 0x40, 0x00, 0x00, 0x00],
+            &[0x02, 0x00, 0x00, 0x00], // width = 512
+            &[0x01, 0x20, 0x00, 0x00], // height = 288
+        ]
+        .concat();
+        let decoded = Tkhd::decode(&mut raw.as_slice()).unwrap();
+        let mut buf = Vec::new();
+        decoded.encode(&mut buf).unwrap();
+        assert_eq!(buf[8], 1, "re-encoded as version 1");
+        assert_eq!(buf[36..44], [0xFF; 8], "duration is still unknown");
+        assert_eq!(decoded.duration, u64::MAX);
+
+        // One below all 1s is still a finite duration.
+        let mut finite = raw.to_vec();
+        finite[31] = 0xFE;
+        let decoded = Tkhd::decode(&mut finite.as_slice()).unwrap();
+        assert_eq!(decoded.duration, u32::MAX as u64 - 1);
+    }
+
+    #[test]
+    fn test_tkhd64_duration_u32_max() {
+        let expected = Tkhd {
+            track_id: 1,
+            duration: u32::MAX as u64,
+            enabled: true,
+            in_movie: true,
+            ..Default::default()
+        };
+        let mut buf = Vec::new();
+        expected.encode(&mut buf).unwrap();
+
+        let decoded = Tkhd::decode(&mut buf.as_slice()).unwrap();
         assert_eq!(decoded, expected);
     }
 }
