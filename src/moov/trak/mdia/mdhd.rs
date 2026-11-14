@@ -12,7 +12,8 @@ pub struct Mdhd {
     pub creation_time: u64,
     pub modification_time: u64,
     pub timescale: u32,
-    pub duration: u64,
+    // None here means unknown - all 1s in the encoding
+    pub duration: Option<u64>,
     pub language: String,
 }
 
@@ -27,7 +28,10 @@ impl AtomExt for Mdhd {
                 u64::decode(buf)?,
                 u64::decode(buf)?,
                 u32::decode(buf)?,
-                u64::decode(buf)?,
+                match u64::decode(buf)? {
+                    u64::MAX => None,
+                    duration => Some(duration),
+                },
             ),
             MdhdVersion::V0 => (
                 u32::decode(buf)? as u64,
@@ -35,8 +39,8 @@ impl AtomExt for Mdhd {
                 u32::decode(buf)?,
                 // All 1s means unknown; keep it all 1s in 64 bits.
                 match u32::decode(buf)? {
-                    u32::MAX => u64::MAX,
-                    duration => duration as u64,
+                    u32::MAX => None,
+                    duration => Some(duration as u64),
                 },
             ),
         };
@@ -59,7 +63,10 @@ impl AtomExt for Mdhd {
         self.creation_time.encode(buf)?;
         self.modification_time.encode(buf)?;
         self.timescale.encode(buf)?;
-        self.duration.encode(buf)?;
+        match self.duration {
+            None => u64::MAX.encode(buf)?,
+            _ => self.duration.encode(buf)?,
+        }
 
         let language_code = language_code(&self.language);
         (language_code).encode(buf)?;
@@ -79,7 +86,7 @@ mod tests {
             creation_time: 100,
             modification_time: 200,
             timescale: 48000,
-            duration: 30439936,
+            duration: Some(30439936),
             language: String::from("und"),
         };
         let mut buf = Vec::new();
@@ -96,7 +103,7 @@ mod tests {
             creation_time: 100,
             modification_time: 200,
             timescale: 48000,
-            duration: 30439936,
+            duration: Some(30439936),
             language: String::from("eng"),
         };
         let mut buf = Vec::new();
@@ -124,20 +131,20 @@ mod tests {
         decoded.encode(&mut buf).unwrap();
         assert_eq!(buf[8], 1, "re-encoded as version 1");
         assert_eq!(buf[32..40], [0xFF; 8], "duration is still unknown");
-        assert_eq!(decoded.duration, u64::MAX);
+        assert_eq!(decoded.duration, None);
 
         // One below all 1s is still a finite duration.
         let mut finite = raw.to_vec();
         finite[27] = 0xFE;
         let decoded = Mdhd::decode(&mut finite.as_slice()).unwrap();
-        assert_eq!(decoded.duration, u32::MAX as u64 - 1);
+        assert_eq!(decoded.duration, Some(u32::MAX as u64 - 1));
     }
 
     #[test]
     fn test_mdhd64_duration_u32_max() {
         let expected = Mdhd {
             timescale: 48000,
-            duration: u32::MAX as u64,
+            duration: Some(u32::MAX as u64),
             language: String::from("und"),
             ..Default::default()
         };

@@ -36,7 +36,7 @@ fn av1_mdta() {
                 creation_time: 0,
                 modification_time: 0,
                 timescale: 25000,
-                duration: 1000,
+                duration: Some(1000),
                 rate: 1.into(),
                 volume: 1.into(),
                 matrix: Matrix {
@@ -58,7 +58,7 @@ fn av1_mdta() {
                     creation_time: 0,
                     modification_time: 0,
                     track_id: 1,
-                    duration: 1000,
+                    duration: Some(1000),
                     layer: 0,
                     alternate_group: 0,
                     enabled: true,
@@ -93,7 +93,7 @@ fn av1_mdta() {
                         creation_time: 0,
                         modification_time: 0,
                         timescale: 25000,
-                        duration: 1000,
+                        duration: Some(1000),
                         language: "und".into()
                     },
                     hdlr: Hdlr {
