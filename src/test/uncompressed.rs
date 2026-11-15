@@ -199,9 +199,10 @@ fn uncompressed() {
                                 ]
                                 .into()
                             },
-                            stsz: Stsz {
+                            stsz: Some(Stsz {
                                 samples: StszSamples::Identical { count: 2, size: 6 },
-                            },
+                            }),
+                            stz2: None,
                             stco: Some(Stco {
                                 entries: [856, 862].into()
                             }),
