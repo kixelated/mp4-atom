@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0](https://github.com/kixelated/mp4-atom/compare/v0.17.1...v0.18.0) - 2026-11-24
+
+### Added
+
+- [**breaking**] mark Error as non_exhaustive ([#270](https://github.com/kixelated/mp4-atom/pull/270))
+
+### Fixed
+
+- [**breaking**] modify the duration in mvhd, tkhd, mdhd to indicate unknown ([#276](https://github.com/kixelated/mp4-atom/pull/276))
+- keep an unknown version 0 duration unknown in mvhd, tkhd and mdhd ([#266](https://github.com/kixelated/mp4-atom/pull/266))
+- skip non-matching box bodies in read_until ([#272](https://github.com/kixelated/mp4-atom/pull/272))
+- reject box sizes that overflow usize ([#271](https://github.com/kixelated/mp4-atom/pull/271))
+- limit atom nesting depth ([#273](https://github.com/kixelated/mp4-atom/pull/273))
+
+### Other
+
+- *(agents)* replace verbose CLAUDE.md with concise AGENTS.md ([#278](https://github.com/kixelated/mp4-atom/pull/278))
+- fix clippy warnings for new stable release ([#275](https://github.com/kixelated/mp4-atom/pull/275))
+
 ## [0.17.1](https://github.com/kixelated/mp4-atom/compare/v0.17.0...v0.17.1) - 2026-11-04
 
 ### Added
