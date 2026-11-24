@@ -133,7 +133,7 @@ fn av1_anim() {
                 creation_time: 3852424385,
                 modification_time: 3852424385,
                 timescale: 25,
-                duration: 18446744073709551615,
+                duration: None,
                 rate: 1.into(),
                 volume: 1.into(),
                 matrix: Matrix {
@@ -156,7 +156,7 @@ fn av1_anim() {
                     creation_time: 3852424385,
                     modification_time: 3852424385,
                     track_id: 1,
-                    duration: 18446744073709551615,
+                    duration: None,
                     layer: 0,
                     alternate_group: 0,
                     enabled: true,
@@ -191,7 +191,7 @@ fn av1_anim() {
                         creation_time: 3852424385,
                         modification_time: 3852424385,
                         timescale: 25,
-                        duration: 2,
+                        duration: Some(2),
                         language: "und".into()
                     },
                     hdlr: Hdlr {

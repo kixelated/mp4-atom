@@ -166,6 +166,7 @@ mod test {
                         in_movie: true,
                         width: 1920.into(),
                         height: 1080.into(),
+                        duration: Some(0),
                         ..Default::default()
                     },
                     edts: Some(Edts {
@@ -182,7 +183,7 @@ mod test {
                             creation_time: 3773812694,
                             modification_time: 3773812694,
                             timescale: 90000,
-                            duration: 0,
+                            duration: Some(0),
                             language: "und".to_string(),
                         },
                         hdlr: Hdlr {

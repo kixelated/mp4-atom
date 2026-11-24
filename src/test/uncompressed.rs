@@ -28,7 +28,7 @@ fn uncompressed() {
                 creation_time: 3827291266,
                 modification_time: 3827291266,
                 timescale: 600,
-                duration: 1200,
+                duration: Some(1200),
                 rate: 1.into(),
                 volume: 1.into(),
                 matrix: Matrix {
@@ -49,7 +49,7 @@ fn uncompressed() {
                     creation_time: 3827291266,
                     modification_time: 3827291266,
                     track_id: 1,
-                    duration: 1200,
+                    duration: Some(1200),
                     layer: 0,
                     alternate_group: 0,
                     enabled: true,
@@ -75,7 +75,7 @@ fn uncompressed() {
                         creation_time: 3827291266,
                         modification_time: 3827291266,
                         timescale: 1,
-                        duration: 2,
+                        duration: Some(2),
                         language: "und".to_string(),
                     },
                     hdlr: Hdlr {

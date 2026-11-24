@@ -31,7 +31,7 @@ fn vp9() {
                 creation_time: 3576083626,
                 modification_time: 3576083626,
                 timescale: 1000000,
-                duration: 0,
+                duration: Some(0),
                 rate: 1.into(),
                 volume: 1.into(),
                 matrix: Matrix {
@@ -80,7 +80,7 @@ fn vp9() {
                     creation_time: 3576083626,
                     modification_time: 3576083626,
                     track_id: 1,
-                    duration: 0,
+                    duration: Some(0),
                     layer: 0,
                     alternate_group: 0,
                     enabled: true,
@@ -106,7 +106,7 @@ fn vp9() {
                         creation_time: 3576083626,
                         modification_time: 3576083626,
                         timescale: 1000000,
-                        duration: 0,
+                        duration: Some(0),
                         language: "und".to_string()
                     },
                     hdlr: Hdlr {
