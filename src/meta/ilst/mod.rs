@@ -60,13 +60,18 @@ impl Atom for Ilst {
                 // check report it, matching `Any::decode_maybe`.
                 break;
             }
+            // Some writers repeat items and players accept such files, so a
+            // repeated item replaces the earlier one with a warning (an error
+            // under strict).
             match header.kind {
-                Name::KIND => name.insert_once(Name::decode_atom(&header, buf)?)?,
-                Year::KIND => year.insert_once(Year::decode_atom(&header, buf)?)?,
-                Covr::KIND => covr.insert_once(Covr::decode_atom(&header, buf)?)?,
-                Desc::KIND => desc.insert_once(Desc::decode_atom(&header, buf)?)?,
-                Tool::KIND => ctoo.insert_once(Tool::decode_atom(&header, buf)?)?,
-                Copyright::KIND => cprt.insert_once(Copyright::decode_atom(&header, buf)?)?,
+                Name::KIND => name.insert_last(Name::decode_atom(&header, buf)?, Self::KIND)?,
+                Year::KIND => year.insert_last(Year::decode_atom(&header, buf)?, Self::KIND)?,
+                Covr::KIND => covr.insert_last(Covr::decode_atom(&header, buf)?, Self::KIND)?,
+                Desc::KIND => desc.insert_last(Desc::decode_atom(&header, buf)?, Self::KIND)?,
+                Tool::KIND => ctoo.insert_last(Tool::decode_atom(&header, buf)?, Self::KIND)?,
+                Copyright::KIND => {
+                    cprt.insert_last(Copyright::decode_atom(&header, buf)?, Self::KIND)?
+                }
                 kind => {
                     let index = u32::from(kind);
 
@@ -192,6 +197,64 @@ mod tests {
         let mut reencoded = Vec::new();
         decoded.encode(&mut reencoded).unwrap();
         assert_eq!(reencoded, encoded);
+    }
+
+    // An `ilst` with every known item set to `text`.
+    fn all_items(text: &str) -> Ilst {
+        Ilst {
+            name: Some(Name(text.into())),
+            year: Some(Year(text.into())),
+            covr: Some(Covr(text.into())),
+            desc: Some(Desc {
+                country_indicator: 0,
+                language_indicator: 0,
+                text: text.into(),
+            }),
+            ctoo: Some(Tool {
+                country_indicator: 0,
+                language_indicator: 0,
+                text: text.into(),
+            }),
+            cprt: Some(Copyright {
+                country_indicator: 0,
+                language_indicator: 0,
+                text: text.into(),
+            }),
+            mdta: vec![],
+        }
+    }
+
+    // Encode an `ilst` holding every known item twice, first with the items
+    // of `all_items("first")`, then with those of `all_items("last")`.
+    fn repeated_items() -> Vec<u8> {
+        let mut body = Vec::new();
+        for text in ["first", "last"] {
+            let mut encoded = Vec::new();
+            all_items(text).encode(&mut encoded).unwrap();
+            body.extend_from_slice(&encoded[8..]);
+        }
+        atom_box(b"ilst", &body)
+    }
+
+    // Some writers repeat every item, and players accept such files. A
+    // repeated item replaces the earlier one, as it did before #265.
+    #[cfg(not(feature = "strict"))]
+    #[test]
+    fn test_ilst_repeated_items_keep_last() {
+        let encoded = repeated_items();
+        let decoded = Ilst::decode(&mut encoded.as_slice()).unwrap();
+        assert_eq!(decoded, all_items("last"));
+    }
+
+    // Under strict, the first repeated item fails the decode.
+    #[cfg(feature = "strict")]
+    #[test]
+    fn test_ilst_repeated_items_strict() {
+        let encoded = repeated_items();
+        match Ilst::decode(&mut encoded.as_slice()) {
+            Err(Error::DuplicateBox(kind)) => assert_eq!(kind, Name::KIND),
+            other => panic!("expected DuplicateBox(name), got {other:?}"),
+        }
     }
 
     // Unknown ilst items still go through decode_unknown (an error in
