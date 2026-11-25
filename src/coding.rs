@@ -266,12 +266,36 @@ pub(crate) trait OptionExt<T> {
     /// Store `value` if the option is `None`, and fail with
     /// [`Error::DuplicateBox`] for `kind` if the box was already seen.
     fn insert_once_kind(&mut self, kind: FourCC, value: T) -> Result<()>;
+
+    /// Store the atom `value`, replacing a box of the same kind seen earlier
+    /// in `parent`. A repeat logs a warning, or fails with
+    /// [`Error::DuplicateBox`] under the `strict` feature.
+    fn insert_last(&mut self, value: T, parent: FourCC) -> Result<()>
+    where
+        T: Atom;
 }
 
 impl<T> OptionExt<T> for Option<T> {
     fn insert_once_kind(&mut self, kind: FourCC, value: T) -> Result<()> {
         if self.is_some() {
             return Err(Error::DuplicateBox(kind));
+        }
+        *self = Some(value);
+        Ok(())
+    }
+
+    fn insert_last(&mut self, value: T, parent: FourCC) -> Result<()>
+    where
+        T: Atom,
+    {
+        if self.is_some() {
+            // Unlike `decode_unknown`, this ignores `cfg!(test)`, so that the
+            // tests cover the lenient path by default.
+            if cfg!(feature = "strict") {
+                tracing::error!(kind = %T::KIND, parent = %parent, "duplicate box");
+                return Err(Error::DuplicateBox(T::KIND));
+            }
+            tracing::warn!(kind = %T::KIND, parent = %parent, "duplicate box, keeping the last");
         }
         *self = Some(value);
         Ok(())
