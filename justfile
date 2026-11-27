@@ -20,6 +20,15 @@ check:
 test:
 	cargo test --all-targets
 
+# Check and test on the MSRV, Cargo.toml's rust-version, when a change might need newer Rust.
+msrv:
+	cargo +1.88.0 check --all-targets --all-features
+	cargo +1.88.0 test --all-targets
+
+# Test on 32-bit, when a change converts sizes or counts to usize. Needs a 32-bit C toolchain.
+i686:
+	cargo test --all-targets --target i686-unknown-linux-gnu
+
 # Automatically fix some issues.
 fix:
 	cargo fix --allow-staged --all-targets --all-features
